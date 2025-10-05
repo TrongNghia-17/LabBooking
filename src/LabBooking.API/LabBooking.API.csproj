@@ -19,8 +19,4 @@
 		<ProjectReference Include="..\LabBooking.Infrastructure\LabBooking.Infrastructure.csproj" />
 	</ItemGroup>
 
-	<ItemGroup>
-		<Folder Include="Controllers\" />
-	</ItemGroup>
-
 </Project>
