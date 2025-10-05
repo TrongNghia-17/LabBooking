@@ -5,5 +5,6 @@ global using Microsoft.EntityFrameworkCore;
 global using Microsoft.Extensions.Configuration;
 global using Microsoft.Extensions.DependencyInjection;
 global using LabBooking.Domain.Entities;
+global using LabBooking.Domain.Repositories;
 global using LabBooking.Infrastructure.Persistence;
 global using System.Reflection;

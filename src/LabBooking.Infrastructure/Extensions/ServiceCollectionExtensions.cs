@@ -1,4 +1,6 @@
-﻿namespace LabBooking.Infrastructure.Extensions;
+﻿using LabBooking.Infrastructure.Repositories;
+
+namespace LabBooking.Infrastructure.Extensions;
 
 public static class ServiceCollectionExtensions
 {
@@ -21,5 +23,7 @@ public static class ServiceCollectionExtensions
                 .AddRoles<IdentityRole<Guid>>()
                 //.AddClaimsPrincipalFactory<LabsUserClaimsPrincipalFactory>()
                 .AddEntityFrameworkStores<LabBookingDbContext>();
+
+        services.AddScoped<IIncidentRepository, IncidentRepository>();
     }
 }
