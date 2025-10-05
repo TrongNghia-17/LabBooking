@@ -1,0 +1,25 @@
+﻿namespace LabBooking.Infrastructure.Extensions;
+
+public static class ServiceCollectionExtensions
+{
+    public static void AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
+    {
+        var connectionString = configuration.GetConnectionString("LabBookingDb");
+        services.AddDbContext<LabBookingDbContext>(options =>
+        {
+            options.UseNpgsql(connectionString)
+                   .UseQueryTrackingBehavior(QueryTrackingBehavior.NoTracking)
+                   .UseLazyLoadingProxies(false);
+
+            if (Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") == "Development")
+            {
+                options.EnableSensitiveDataLogging();
+            }
+        });
+
+        services.AddIdentityApiEndpoints<User>()
+                .AddRoles<IdentityRole<Guid>>()
+                //.AddClaimsPrincipalFactory<LabsUserClaimsPrincipalFactory>()
+                .AddEntityFrameworkStores<LabBookingDbContext>();
+    }
+}
