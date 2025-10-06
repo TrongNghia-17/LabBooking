@@ -9,13 +9,8 @@ internal class IncidentRepository(LabBookingDbContext dbContext) : IIncidentRepo
         return entity;
     }
 
-    public async Task<IEnumerable<Incident>> GetAllAsync()
-    {
-        var incidents = await dbContext.Incidents.ToListAsync();
-        return incidents;
-    }
-
-    public async Task<(IEnumerable<Incident>, int)> GetAllMatchingAsync(string? searchPhrase,
+    public async Task<(IEnumerable<Incident>, int)> GetAllMatchingAsync(
+        string? searchPhrase,
         int pageSize,
         int pageNumber,
         string? sortBy,

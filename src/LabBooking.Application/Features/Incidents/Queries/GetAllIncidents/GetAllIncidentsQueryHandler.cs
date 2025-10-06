@@ -15,10 +15,10 @@ public class GetAllIncidentsQueryHandler(
             request.SortBy,
             request.SortDirection);
 
-        var incidentResponses = mapper.Map<IEnumerable<IncidentsResponse>>(incidents);
+        var incidentsResponse = mapper.Map<IEnumerable<IncidentsResponse>>(incidents);
 
         var result = new PagedResult<IncidentsResponse>(
-            incidentResponses,
+            incidentsResponse,
             totalCount,
             request.PageSize,
             request.PageNumber);
