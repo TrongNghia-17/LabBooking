@@ -2,8 +2,12 @@
 
 [Route("api/[controller]")]
 [ApiController]
-public class IncidentsController(IMediator mediator) : ControllerBase
+public class IncidentsController(
+    IMediator mediator,
+    ICachingService cachingService) : ControllerBase
 {
+    private const string GetAllIncidentsCacheKey = "get_all_incidents";
+
     /// <summary>
     /// Get all incidents with optional filtering
     /// </summary>
@@ -15,7 +19,12 @@ public class IncidentsController(IMediator mediator) : ControllerBase
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<ActionResult<PagedResult<GetAllIncidentsResponse>>> GetAll([FromQuery] GetAllIncidentsQuery query)
     {
-        var incidents = await mediator.Send(query);
+        var incidents = await cachingService.GetOrSetAsync(
+            GetAllIncidentsCacheKey,
+            () => mediator.Send(query),
+            TimeSpan.FromMinutes(10)
+            );
+
         return Ok(incidents);
     }
 }

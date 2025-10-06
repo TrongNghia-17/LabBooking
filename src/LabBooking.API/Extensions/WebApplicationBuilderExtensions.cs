@@ -1,4 +1,6 @@
-﻿namespace LabBooking.API.Extensions;
+﻿using Serilog;
+
+namespace LabBooking.API.Extensions;
 
 public static class WebApplicationBuilderExtensions
 {
@@ -28,5 +30,9 @@ public static class WebApplicationBuilderExtensions
         });
 
         builder.Services.AddEndpointsApiExplorer();
+
+        builder.Host.UseSerilog((context, configuration) =>
+            configuration.ReadFrom.Configuration(context.Configuration)
+        );
     }
 }

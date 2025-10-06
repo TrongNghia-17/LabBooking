@@ -1,4 +1,5 @@
 ﻿using LabBooking.Infrastructure.Repositories;
+using LabBooking.Infrastructure.Services;
 
 namespace LabBooking.Infrastructure.Extensions;
 
@@ -24,6 +25,13 @@ public static class ServiceCollectionExtensions
                 //.AddClaimsPrincipalFactory<LabsUserClaimsPrincipalFactory>()
                 .AddEntityFrameworkStores<LabBookingDbContext>();
 
+        services.AddStackExchangeRedisCache(options =>
+        {
+            options.Configuration = configuration.GetConnectionString("Redis");
+        });
+
         services.AddScoped<IIncidentRepository, IncidentRepository>();
+
+        services.AddScoped<ICachingService, CachingService>();
     }
 }
