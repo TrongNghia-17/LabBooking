@@ -1,6 +1,6 @@
 ﻿namespace LabBooking.Application.Features.Incidents.Dtos;
 
-public record GetAllIncidentsResponse(
+public record IncidentsResponse(
     Guid Id,
     Guid LabRoomId,
     Guid ReportedById,

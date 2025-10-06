@@ -2,6 +2,13 @@
 
 internal class IncidentRepository(LabBookingDbContext dbContext) : IIncidentRepository
 {
+    public async Task<Incident> Create(Incident entity)
+    {
+        dbContext.Incidents.Add(entity);
+        await dbContext.SaveChangesAsync();
+        return entity;
+    }
+
     public async Task<IEnumerable<Incident>> GetAllAsync()
     {
         var incidents = await dbContext.Incidents.ToListAsync();

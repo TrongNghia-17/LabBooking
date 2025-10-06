@@ -21,4 +21,8 @@
 		<ProjectReference Include="..\LabBooking.Infrastructure\LabBooking.Infrastructure.csproj" />
 	</ItemGroup>
 
+	<ItemGroup>
+	  <Folder Include="Logs\" />
+	</ItemGroup>
+
 </Project>

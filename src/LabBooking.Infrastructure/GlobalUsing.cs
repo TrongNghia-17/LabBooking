@@ -10,6 +10,8 @@ global using LabBooking.Domain.Repositories;
 global using LabBooking.Domain.Constants;
 global using LabBooking.Application.Services;
 global using LabBooking.Infrastructure.Persistence;
+global using LabBooking.Infrastructure.Repositories;
+global using LabBooking.Infrastructure.Services;
 global using System.Reflection;
 global using System.Linq.Expressions;
 global using System.Text;

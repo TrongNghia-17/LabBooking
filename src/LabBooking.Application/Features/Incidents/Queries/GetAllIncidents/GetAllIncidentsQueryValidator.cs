@@ -4,7 +4,7 @@ public class GetAllIncidentsQueryValidator : AbstractValidator<GetAllIncidentsQu
 {
     private int[] allowPageSizes = [5, 10, 15, 30];
     private string[] allowedSortByColumnNames =
-        [nameof(GetAllIncidentsResponse.Description)];
+        [nameof(IncidentsResponse.Description)];
 
     public GetAllIncidentsQueryValidator()
     {

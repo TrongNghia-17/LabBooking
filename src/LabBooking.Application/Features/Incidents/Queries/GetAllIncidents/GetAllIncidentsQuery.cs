@@ -6,4 +6,4 @@ public record GetAllIncidentsQuery(
     int PageSize,
     string? SortBy,
     SortDirection SortDirection
-    ) : IRequest<PagedResult<GetAllIncidentsResponse>>;
+    ) : IRequest<PagedResult<IncidentsResponse>>;
