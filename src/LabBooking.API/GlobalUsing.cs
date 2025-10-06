@@ -3,6 +3,8 @@ global using LabBooking.Application.Extensions;
 global using LabBooking.Application.Features.Incidents.Dtos;
 global using LabBooking.Application.Features.Incidents.Queries.GetAllIncidents;
 global using LabBooking.Application.Features.Incidents.Commands.CreateIncident;
+global using LabBooking.Application.Features.DoorRequests.Dtos;
+global using LabBooking.Application.Features.DoorRequests.Queries.GetAllDoorRequests;
 global using LabBooking.Application.Common;
 global using LabBooking.Application.Services;
 global using LabBooking.Domain.Entities;

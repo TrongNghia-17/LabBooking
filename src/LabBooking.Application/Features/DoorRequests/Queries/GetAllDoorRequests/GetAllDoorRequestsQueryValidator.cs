@@ -1,12 +1,12 @@
-﻿namespace LabBooking.Application.Features.Incidents.Queries.GetAllIncidents;
+﻿namespace LabBooking.Application.Features.DoorRequests.Queries.GetAllDoorRequests;
 
-public class GetAllIncidentsQueryValidator : AbstractValidator<GetAllIncidentsQuery>
+public class GetAllDoorRequestsQueryValidator : AbstractValidator<GetAllDoorRequestsQuery>
 {
     private readonly int[] allowPageSizes = [5, 10, 15, 30];
     private readonly string[] allowedSortByColumnNames =
-        [nameof(IncidentsResponse.Description)];
+        [nameof(DoorRequestsResponse.RequestTime)];
 
-    public GetAllIncidentsQueryValidator()
+    public GetAllDoorRequestsQueryValidator()
     {
         RuleFor(r => r.PageNumber)
             .GreaterThanOrEqualTo(1);

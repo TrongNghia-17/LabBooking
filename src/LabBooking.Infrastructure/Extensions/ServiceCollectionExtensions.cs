@@ -28,6 +28,7 @@ public static class ServiceCollectionExtensions
         });
 
         services.AddScoped<IIncidentRepository, IncidentRepository>();
+        services.AddScoped<IDoorRequestRepository, DoorRequestRepository>();
 
         services.AddScoped<ICachingService, CachingService>();
     }

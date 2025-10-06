@@ -1,5 +1,6 @@
 ﻿global using LabBooking.Application.Features.Incidents.Dtos;
 global using LabBooking.Application.Features.Incidents.Commands.CreateIncident;
+global using LabBooking.Application.Features.DoorRequests.Dtos;
 global using LabBooking.Application.Common;
 global using LabBooking.Domain.Entities;
 global using LabBooking.Domain.Repositories;
