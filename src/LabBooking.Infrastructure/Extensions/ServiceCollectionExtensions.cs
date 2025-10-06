@@ -1,7 +1,4 @@
-﻿using LabBooking.Infrastructure.Repositories;
-using LabBooking.Infrastructure.Services;
-
-namespace LabBooking.Infrastructure.Extensions;
+﻿namespace LabBooking.Infrastructure.Extensions;
 
 public static class ServiceCollectionExtensions
 {

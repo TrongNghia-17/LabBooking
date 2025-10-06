@@ -3,9 +3,9 @@
 public class GetAllIncidentsQueryHandler(
     ILogger<GetAllIncidentsQueryHandler> logger,
     IIncidentRepository incidentRepository,
-    IMapper mapper) : IRequestHandler<GetAllIncidentsQuery, PagedResult<GetAllIncidentsResponse>>
+    IMapper mapper) : IRequestHandler<GetAllIncidentsQuery, PagedResult<IncidentsResponse>>
 {
-    public async Task<PagedResult<GetAllIncidentsResponse>> Handle(GetAllIncidentsQuery request, CancellationToken cancellationToken)
+    public async Task<PagedResult<IncidentsResponse>> Handle(GetAllIncidentsQuery request, CancellationToken cancellationToken)
     {
         logger.LogInformation("Getting all incidents");
         var (incidents, totalCount) = await incidentRepository.GetAllMatchingAsync(
@@ -15,9 +15,9 @@ public class GetAllIncidentsQueryHandler(
             request.SortBy,
             request.SortDirection);
 
-        var incidentResponses = mapper.Map<IEnumerable<GetAllIncidentsResponse>>(incidents);
+        var incidentResponses = mapper.Map<IEnumerable<IncidentsResponse>>(incidents);
 
-        var result = new PagedResult<GetAllIncidentsResponse>(
+        var result = new PagedResult<IncidentsResponse>(
             incidentResponses,
             totalCount,
             request.PageSize,

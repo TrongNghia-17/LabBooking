@@ -9,4 +9,5 @@ public interface IIncidentRepository
        int pageNumber,
        string? sortBy,
        SortDirection sortDirection);
+    Task<Incident> Create(Incident entity);
 }
