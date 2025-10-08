@@ -18,8 +18,4 @@
 		<ProjectReference Include="..\LabBooking.Domain\LabBooking.Domain.csproj" />
 	</ItemGroup>
 
-	<ItemGroup>
-		<Folder Include="Common\" />
-	</ItemGroup>
-
 </Project>
