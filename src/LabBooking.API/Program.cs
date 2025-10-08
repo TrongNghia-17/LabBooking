@@ -18,11 +18,16 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
-app.MapGroup("api/identity")
-   .WithTags("Identity")
-   .MapIdentityApi<User>();
+//app.MapGroup("api/identity")
+//   .WithTags("Identity")
+//   .MapIdentityApi<User>();
 
+app.UseAuthentication();
 app.UseAuthorization();
+
+//app.MapGroup("api/identity")
+//   .WithTags("Identity")
+//   .MapIdentityApi<User>();
 
 app.MapControllers();
 
