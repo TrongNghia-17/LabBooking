@@ -1,4 +1,4 @@
-﻿namespace LabBooking.Application.Services;
+﻿namespace LabBooking.Application.Services.Caching;
 
 /// <summary>
 /// Interface for caching operations

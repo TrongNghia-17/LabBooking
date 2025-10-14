@@ -1,4 +1,7 @@
-﻿namespace LabBooking.Infrastructure.Extensions;
+﻿using LabBooking.Application.Services.Caching;
+using LabBooking.Infrastructure.Services.Caching;
+
+namespace LabBooking.Infrastructure.Extensions;
 
 public static class ServiceCollectionExtensions
 {

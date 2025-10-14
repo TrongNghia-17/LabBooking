@@ -1,4 +1,4 @@
-﻿namespace LabBooking.Application.Common.Interfaces;
+﻿namespace LabBooking.Application.Services.Authentication;
 
 public interface IJwtService
 {

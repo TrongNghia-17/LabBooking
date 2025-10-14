@@ -1,4 +1,6 @@
-﻿namespace LabBooking.API.Controllers;
+﻿using LabBooking.Application.Services.Caching;
+
+namespace LabBooking.API.Controllers;
 
 [Route("api/[controller]")]
 [ApiController]
