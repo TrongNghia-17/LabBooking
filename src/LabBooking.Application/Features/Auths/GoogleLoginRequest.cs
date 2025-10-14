@@ -1,4 +1,4 @@
-﻿namespace LabBooking.Application.Auth;
+﻿namespace LabBooking.Application.Features.Auths;
 
 public class GoogleLoginRequest
 {

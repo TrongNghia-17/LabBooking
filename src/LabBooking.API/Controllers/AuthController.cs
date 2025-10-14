@@ -1,5 +1,5 @@
-﻿using LabBooking.Application.Auth;
-using LabBooking.Infrastructure.Authentication;
+﻿using LabBooking.Application.Features.Auths;
+using LabBooking.Infrastructure.Services.Authentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using System.Security.Claims;

@@ -1,9 +1,4 @@
-﻿using LabBooking.Application.Common.Interfaces;
-using Microsoft.IdentityModel.Tokens;
-using System.IdentityModel.Tokens.Jwt;
-using System.Security.Claims;
-
-namespace LabBooking.Infrastructure.Authentication;
+﻿namespace LabBooking.Infrastructure.Services.Authentication;
 
 public class JwtService : IJwtService
 {

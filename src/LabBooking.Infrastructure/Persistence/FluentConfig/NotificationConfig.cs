@@ -1,4 +1,4 @@
-﻿namespace LabBooking.Infrastructure.FluentConfig;
+﻿namespace LabBooking.Infrastructure.Persistence.FluentConfig;
 
 public class NotificationConfig : IEntityTypeConfiguration<Notification>
 {

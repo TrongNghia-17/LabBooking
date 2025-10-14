@@ -1,6 +1,4 @@
-﻿using Google.Apis.Auth;
-
-namespace LabBooking.Infrastructure.Authentication;
+﻿namespace LabBooking.Infrastructure.Services.Authentication;
 
 public class GoogleAuthService
 {
