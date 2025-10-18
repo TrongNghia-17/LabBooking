@@ -1,3 +1,5 @@
+using LabBooking.Domain.Entities;
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
@@ -16,7 +18,9 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-app.UseHttpsRedirection();
+//app.UseHttpsRedirection();
+
+app.UseCors("AllowAll");
 
 //app.MapGroup("api/identity")
 //   .WithTags("Identity")
@@ -24,10 +28,6 @@ app.UseHttpsRedirection();
 
 app.UseAuthentication();
 app.UseAuthorization();
-
-//app.MapGroup("api/identity")
-//   .WithTags("Identity")
-//   .MapIdentityApi<User>();
 
 app.MapControllers();
 

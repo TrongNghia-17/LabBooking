@@ -21,6 +21,16 @@ public static class WebApplicationBuilderExtensions
                 };
             });
 
+        builder.Services.AddCors(options =>
+        {
+            options.AddPolicy("AllowAll", policy =>
+            {
+                policy.AllowAnyOrigin()
+                      .AllowAnyMethod()
+                      .AllowAnyHeader();
+            });
+        });
+
         builder.Services.AddControllers();
         builder.Services.AddSwaggerGen(c =>
         {
