@@ -1,4 +1,4 @@
-﻿namespace LabBooking.Infrastructure.Persistence;
+﻿namespace LabBooking.Application.Persistence;
 
 internal class LabBookingDbContext(DbContextOptions<LabBookingDbContext> options)
     : IdentityDbContext<User, IdentityRole<Guid>, Guid>(options)

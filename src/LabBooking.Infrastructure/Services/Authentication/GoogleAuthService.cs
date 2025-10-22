@@ -1,36 +1,27 @@
 ﻿namespace LabBooking.Infrastructure.Services.Authentication;
 
-public class GoogleAuthService
+public class GoogleAuthService(
+    IConfiguration config,
+    ILogger<GoogleAuthService> logger
+    ) : IGoogleAuthService
 {
-    private readonly IConfiguration _config;
-
-    public GoogleAuthService(IConfiguration config)
-    {
-        _config = config;
-    }
-
-    public async Task<UserInfo?> VerifyGoogleTokenAsync(string idToken)
+    public async Task<GoogleJsonWebSignature.Payload?> VerifyGoogleTokenAsync(string idToken)
     {
         try
         {
-            var clientId = _config["Google:ClientId"];
+            var clientId = config["Google:ClientId"];
 
             var payload = await GoogleJsonWebSignature.ValidateAsync(idToken,
                 new GoogleJsonWebSignature.ValidationSettings
                 {
-                    Audience = new[] { clientId }
+                    Audience = [clientId]
                 });
-            //var payload = await GoogleJsonWebSignature.ValidateAsync(idToken);
 
-            return new UserInfo
-            {
-                Email = payload.Email,
-                Name = payload.Name,
-                Picture = payload.Picture
-            };
+            return payload;
         }
-        catch (InvalidJwtException)
+        catch (InvalidJwtException ex)
         {
+            logger.LogWarning(ex, "Invalid Google JWT received. Token: {IdToken}", idToken);
             return null;
         }
     }

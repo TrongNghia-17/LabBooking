@@ -4,7 +4,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
 
-namespace LabBooking.Infrastructure.Migrations
+namespace LabBooking.Application.Migrations
 {
     /// <inheritdoc />
     public partial class Initproject : Migration
