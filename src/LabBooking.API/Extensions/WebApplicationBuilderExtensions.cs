@@ -58,8 +58,5 @@ public static class WebApplicationBuilderExtensions
         builder.Host.UseSerilog((context, configuration) =>
             configuration.ReadFrom.Configuration(context.Configuration)
         );
-
-        builder.Services.AddScoped<JwtService>();
-        builder.Services.AddScoped<GoogleAuthService>();
     }
 }

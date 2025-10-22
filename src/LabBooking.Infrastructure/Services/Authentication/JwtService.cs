@@ -1,17 +1,10 @@
 ﻿namespace LabBooking.Infrastructure.Services.Authentication;
 
-public class JwtService : IJwtService
+public class JwtService(IConfiguration config) : IJwtService
 {
-    private readonly IConfiguration _config;
-
-    public JwtService(IConfiguration config)
-    {
-        _config = config;
-    }
-
     public string GenerateToken(string email, string name)
     {
-        var jwt = _config.GetSection("Jwt");
+        var jwt = config.GetSection("Jwt");
 
         var claims = new[]
         {

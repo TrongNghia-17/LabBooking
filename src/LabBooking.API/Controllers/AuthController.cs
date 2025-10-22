@@ -1,8 +1,6 @@
 ﻿using LabBooking.Application.Features.Auths;
-using LabBooking.Infrastructure.Services.Authentication;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
+using LabBooking.Application.Services.Authentication;
 using Microsoft.AspNetCore.Authorization;
-using System.Security.Claims;
 
 namespace LabBooking.API.Controllers;
 
@@ -10,10 +8,10 @@ namespace LabBooking.API.Controllers;
 [ApiController]
 public class AuthController : ControllerBase
 {
-    private readonly GoogleAuthService _googleAuthService;
-    private readonly JwtService _jwtService;
+    private readonly IGoogleAuthService _googleAuthService;
+    private readonly IJwtService _jwtService;
 
-    public AuthController(GoogleAuthService googleAuthService, JwtService jwtService)
+    public AuthController(IGoogleAuthService googleAuthService, IJwtService jwtService)
     {
         _googleAuthService = googleAuthService;
         _jwtService = jwtService;

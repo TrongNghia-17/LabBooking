@@ -1,6 +1,6 @@
 ﻿namespace LabBooking.Infrastructure.Services.Authentication;
 
-public class GoogleAuthService
+public class GoogleAuthService : IGoogleAuthService
 {
     private readonly IConfiguration _config;
 
@@ -20,7 +20,6 @@ public class GoogleAuthService
                 {
                     Audience = new[] { clientId }
                 });
-            //var payload = await GoogleJsonWebSignature.ValidateAsync(idToken);
 
             return new UserInfo
             {

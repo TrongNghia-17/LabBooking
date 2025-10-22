@@ -1,4 +1,4 @@
-﻿using LabBooking.Application.Services.Caching;
+﻿using LabBooking.Infrastructure.Services.Authentication;
 using LabBooking.Infrastructure.Services.Caching;
 
 namespace LabBooking.Infrastructure.Extensions;
@@ -34,5 +34,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IDoorRequestRepository, DoorRequestRepository>();
 
         services.AddScoped<ICachingService, CachingService>();
+        services.AddScoped<IJwtService, JwtService>();
+        services.AddScoped<IGoogleAuthService, GoogleAuthService>();
     }
 }
