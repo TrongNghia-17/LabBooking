@@ -1,4 +1,4 @@
-﻿namespace LabBooking.Infrastructure.Services.Authentication;
+﻿namespace LabBooking.Application.Services.Authentication;
 
 public class JwtService(IConfiguration config) : IJwtService
 {

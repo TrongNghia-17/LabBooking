@@ -1,4 +1,4 @@
-﻿namespace LabBooking.Infrastructure.Services.Caching;
+﻿namespace LabBooking.Application.Services.Caching;
 
 internal class CachingService(IDistributedCache cache) : ICachingService
 {

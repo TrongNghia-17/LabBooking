@@ -1,8 +1,9 @@
-﻿
-namespace LabBooking.Infrastructure.Services.Authentication
+﻿using Google.Apis.Auth;
+using LabBooking.Application.Dtos.Authentication;
+
+namespace LabBooking.Application.Services.Authentication;
+
+public interface IGoogleAuthService
 {
-    public interface IGoogleAuthService
-    {
-        Task<UserInfo?> VerifyGoogleTokenAsync(string idToken);
-    }
+    Task<GoogleJsonWebSignature.Payload?> VerifyGoogleTokenAsync(string idToken);
 }

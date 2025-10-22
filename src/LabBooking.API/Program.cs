@@ -1,4 +1,6 @@
+using LabBooking.API.Middlewares;
 using LabBooking.Domain.Entities;
+using LabBooking.Infrastructure.Extensions;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -10,6 +12,9 @@ builder.Services.AddInfrastructure(builder.Configuration);
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
+app.UseMiddleware<ErrorHandlingMiddleware>();
+app.UseMiddleware<RequestTimeLoggingMiddleware>();
+
 app.UseSerilogRequestLogging();
 
 if (app.Environment.IsDevelopment())
@@ -18,13 +23,13 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-//app.UseHttpsRedirection();
+app.UseHttpsRedirection();
 
 app.UseCors("AllowAll");
 
-//app.MapGroup("api/identity")
-//   .WithTags("Identity")
-//   .MapIdentityApi<User>();
+app.MapGroup("api/identity")
+   .WithTags("Identity")
+   .MapIdentityApi<User>();
 
 app.UseAuthentication();
 app.UseAuthorization();
