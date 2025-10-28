@@ -15,6 +15,7 @@ global using LabBooking.Application.Services.Caching;
 global using LabBooking.Domain.Exceptions;
 global using LabBooking.Domain.Entities;
 global using LabBooking.Infrastructure.Extensions;
+global using LabBooking.Infrastructure.Seeders;
 global using LabBooking.API.Middlewares;
 global using Microsoft.AspNetCore.Authentication.JwtBearer;
 global using Microsoft.AspNetCore.Authorization;
