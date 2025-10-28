@@ -1,6 +1,4 @@
-﻿using LabBooking.Domain.Exceptions;
-
-namespace LabBooking.API.Middlewares;
+﻿namespace LabBooking.API.Middlewares;
 
 public class ErrorHandlingMiddleware(ILogger<ErrorHandlingMiddleware> logger) : IMiddleware
 {

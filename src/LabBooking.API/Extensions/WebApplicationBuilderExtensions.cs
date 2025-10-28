@@ -1,6 +1,4 @@
-﻿using LabBooking.API.Middlewares;
-
-namespace LabBooking.API.Extensions;
+﻿namespace LabBooking.API.Extensions;
 
 public static class WebApplicationBuilderExtensions
 {

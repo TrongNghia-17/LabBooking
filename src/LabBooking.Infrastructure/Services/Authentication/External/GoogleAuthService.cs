@@ -1,4 +1,4 @@
-﻿namespace LabBooking.Infrastructure.Services.Authentication;
+﻿namespace LabBooking.Infrastructure.Services.Authentication.External;
 
 public class GoogleAuthService(
     IConfiguration config,

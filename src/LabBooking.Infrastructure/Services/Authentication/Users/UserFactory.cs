@@ -1,8 +1,6 @@
-﻿using System.Text.RegularExpressions;
+﻿namespace LabBooking.Infrastructure.Services.Authentication.Users;
 
-namespace LabBooking.Infrastructure.Services.Authentication;
-
-public class FptUserFactory : IUserFactory
+public class UserFactory : IUserFactory
 {
     public User CreateUserFromGooglePayload(GoogleJsonWebSignature.Payload payload)
     {

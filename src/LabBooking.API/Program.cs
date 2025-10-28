@@ -1,13 +1,12 @@
-using LabBooking.API.Middlewares;
-using LabBooking.Domain.Entities;
-using LabBooking.Infrastructure.Extensions;
-
 var builder = WebApplication.CreateBuilder(args);
+
+var configuration = builder.Configuration;
+var isDevelopment = builder.Environment.IsDevelopment();
 
 // Add services to the container.
 builder.AddPresentation();
 builder.Services.AddApplication();
-builder.Services.AddInfrastructure(builder.Configuration);
+builder.Services.AddInfrastructure(configuration, isDevelopment);
 
 var app = builder.Build();
 

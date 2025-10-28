@@ -1,4 +1,4 @@
-﻿namespace LabBooking.Application.Repositories;
+﻿namespace LabBooking.Infrastructure.Repositories;
 
 internal class DoorRequestRepository(LabBookingDbContext dbContext) : IDoorRequestRepository
 {
