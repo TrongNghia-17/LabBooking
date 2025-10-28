@@ -1,10 +1,15 @@
-﻿using LabBooking.Infrastructure.Services.Authentication;
+﻿using LabBooking.Infrastructure.Services.Authentication.External;
+using LabBooking.Infrastructure.Services.Authentication.Token;
+using LabBooking.Infrastructure.Services.Authentication.Users;
 
 namespace LabBooking.Infrastructure.Extensions;
 
 public static class ServiceCollectionExtensions
 {
-    public static void AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
+    public static void AddInfrastructure(
+        this IServiceCollection services,
+        IConfiguration configuration,
+        bool isDevelopment)
     {
         var connectionString = configuration.GetConnectionString("LabBookingDb");
         services.AddDbContext<LabBookingDbContext>(options =>
@@ -13,10 +18,8 @@ public static class ServiceCollectionExtensions
                    .UseQueryTrackingBehavior(QueryTrackingBehavior.NoTracking)
                    .UseLazyLoadingProxies(false);
 
-            if (Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") == "Development")
-            {
+            if (isDevelopment)
                 options.EnableSensitiveDataLogging();
-            }
         });
 
         services.AddIdentityApiEndpoints<User>(options =>
@@ -35,10 +38,13 @@ public static class ServiceCollectionExtensions
 
         services.AddScoped<IIncidentRepository, IncidentRepository>();
         services.AddScoped<IDoorRequestRepository, DoorRequestRepository>();
+        services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
 
         services.AddScoped<ICachingService, CachingService>();
         services.AddScoped<IJwtService, JwtService>();
         services.AddScoped<IGoogleAuthService, GoogleAuthService>();
-        services.AddScoped<IUserFactory, FptUserFactory>();
+        services.AddScoped<IUserFactory, UserFactory>();
+        services.AddScoped<IRefreshTokenFactory, RefreshTokenFactory>();
+        services.AddScoped<IClaimsGenerator, ClaimsGenerator>();
     }
 }

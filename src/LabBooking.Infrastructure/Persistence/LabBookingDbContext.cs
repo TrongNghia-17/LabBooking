@@ -1,4 +1,4 @@
-﻿namespace LabBooking.Application.Persistence;
+﻿namespace LabBooking.Infrastructure.Persistence;
 
 internal class LabBookingDbContext(DbContextOptions<LabBookingDbContext> options)
     : IdentityDbContext<User, IdentityRole<Guid>, Guid>(options)
@@ -12,6 +12,7 @@ internal class LabBookingDbContext(DbContextOptions<LabBookingDbContext> options
     public DbSet<LabRoom> LabRooms { get; set; }
     public DbSet<Notification> Notifications { get; set; }
     public DbSet<Project> Projects { get; set; }
+    public DbSet<RefreshToken> RefreshTokens { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

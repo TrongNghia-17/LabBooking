@@ -1,4 +1,4 @@
-﻿namespace LabBooking.Application.Features.Auths.Dtos;
+﻿namespace LabBooking.Application.Features.Authentication.Dtos;
 
 public class UserDto
 {

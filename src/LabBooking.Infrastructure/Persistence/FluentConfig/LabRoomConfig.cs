@@ -1,4 +1,4 @@
-﻿namespace LabBooking.Application.Persistence.FluentConfig;
+﻿namespace LabBooking.Infrastructure.Persistence.FluentConfig;
 
 public class LabRoomConfig : IEntityTypeConfiguration<LabRoom>
 {

@@ -1,6 +1,4 @@
-﻿using System.Diagnostics;
-
-namespace LabBooking.API.Middlewares;
+﻿namespace LabBooking.API.Middlewares;
 
 public class RequestTimeLoggingMiddleware(ILogger<RequestTimeLoggingMiddleware> logger) : IMiddleware
 {

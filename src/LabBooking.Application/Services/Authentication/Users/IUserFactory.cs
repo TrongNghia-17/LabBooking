@@ -1,6 +1,4 @@
-﻿using Google.Apis.Auth;
-
-namespace LabBooking.Application.Services.Authentication;
+﻿namespace LabBooking.Application.Services.Authentication.Users;
 
 public interface IUserFactory
 {

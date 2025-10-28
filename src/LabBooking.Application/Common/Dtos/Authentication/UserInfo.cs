@@ -1,4 +1,4 @@
-﻿namespace LabBooking.Application.Dtos.Authentication;
+﻿namespace LabBooking.Application.Common.Dtos.Authentication;
 
 public class UserInfo
 {
