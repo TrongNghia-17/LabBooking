@@ -9,27 +9,36 @@ public class GoogleLoignController(IMediator mediator) : ControllerBase
     {
         var authResponse = await mediator.Send(command);
 
-        SetRefreshTokenCookie(authResponse.RefreshToken, authResponse.RefreshTokenExpiry);
+        //SetRefreshTokenCookie(authResponse.RefreshToken, authResponse.RefreshTokenExpiry);
 
         return Ok(new
         {
-            authResponse.AccessToken
+            authResponse.AccessToken,
+            authResponse.RefreshToken,
+            authResponse.RefreshTokenExpiry
         });
     }
 
     [HttpPost("refresh-token")]
-    public async Task<IActionResult> RefreshToken()
+    public async Task<IActionResult> RefreshToken([FromBody] RefreshTokenRequest requestBody)
     {
-        var refreshToken = Request.Cookies["refreshToken"];
+        //var refreshToken = Request.Cookies["refreshToken"];
+        var refreshToken = requestBody?.RefreshToken;
         if (string.IsNullOrEmpty(refreshToken))
             return Unauthorized(new { message = "No refresh token provided." });
 
         var command = new RefreshTokenCommand(refreshToken);
         var response = await mediator.Send(command);
 
-        SetRefreshTokenCookie(response.RefreshToken, response.RefreshTokenExpiry);
+        //SetRefreshTokenCookie(response.RefreshToken, response.RefreshTokenExpiry);
 
-        return Ok(new { response.AccessToken });
+        return Ok(new
+        {
+            response.AccessToken,
+            response.RefreshToken,
+            response.RefreshTokenExpiry
+
+        });
     }
 
     [HttpGet("profile")]

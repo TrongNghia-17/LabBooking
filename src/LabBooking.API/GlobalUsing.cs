@@ -23,6 +23,7 @@ global using Microsoft.IdentityModel.Tokens;
 global using Microsoft.OpenApi.Models;
 global using MediatR;
 global using Serilog;
+global using Google.Apis.Auth.OAuth2.Requests;
 
 
 
