@@ -12,7 +12,6 @@ global using LabBooking.Infrastructure.Seeders;
 global using LabBooking.Infrastructure.Services.Authentication.External;
 global using LabBooking.Infrastructure.Services.Authentication.Token;
 global using LabBooking.Infrastructure.Services.Authentication.Users;
-global using LabBooking.Infrastructure.Services.Authentication;
 global using Microsoft.AspNetCore.Identity;
 global using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 global using Microsoft.EntityFrameworkCore;
