@@ -10,6 +10,11 @@ builder.Services.AddInfrastructure(configuration, isDevelopment);
 
 var app = builder.Build();
 
+var scope = app.Services.CreateScope();
+var seeder = scope.ServiceProvider.GetRequiredService<ILabBookingSeeder>();
+
+await seeder.Seed();
+
 // Configure the HTTP request pipeline.
 app.UseMiddleware<ErrorHandlingMiddleware>();
 app.UseMiddleware<RequestTimeLoggingMiddleware>();

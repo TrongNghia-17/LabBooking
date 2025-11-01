@@ -1,8 +1,4 @@
-﻿using LabBooking.Infrastructure.Services.Authentication.External;
-using LabBooking.Infrastructure.Services.Authentication.Token;
-using LabBooking.Infrastructure.Services.Authentication.Users;
-
-namespace LabBooking.Infrastructure.Extensions;
+﻿namespace LabBooking.Infrastructure.Extensions;
 
 public static class ServiceCollectionExtensions
 {
@@ -36,6 +32,7 @@ public static class ServiceCollectionExtensions
             options.Configuration = configuration.GetConnectionString("Redis");
         });
 
+        services.AddScoped<ILabBookingSeeder, LabBookingSeeder>();
         services.AddScoped<IIncidentRepository, IncidentRepository>();
         services.AddScoped<IDoorRequestRepository, DoorRequestRepository>();
         services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
