@@ -9,4 +9,5 @@ public class User : IdentityUser<Guid>
     public ICollection<Notification>? Notifications { get; set; }
     public ICollection<Booking>? Bookings { get; set; }
     public ICollection<Incident>? Incidents { get; set; } // chỉ cho bảo vệ
+    public ICollection<UserDevice>? UserDevices { get; set; }
 }
