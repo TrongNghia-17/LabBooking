@@ -10,4 +10,12 @@ public class Equipment
     public Guid LabRoomId { get; set; }
     [ForeignKey(nameof(LabRoomId))]
     public LabRoom? LabRoom { get; set; }
+    public EquipmentStatus Status { get; set; } = EquipmentStatus.Available;
+}
+public enum EquipmentStatus
+{
+    Maintain,
+    Available,
+    Broken,
+    Other
 }

@@ -1,4 +1,6 @@
-﻿namespace LabBooking.Infrastructure.Persistence.FluentConfig;
+﻿using Microsoft.EntityFrameworkCore;
+
+namespace LabBooking.Infrastructure.Persistence.FluentConfig;
 
 public class BookingConfig : IEntityTypeConfiguration<Booking>
 {
@@ -11,7 +13,9 @@ public class BookingConfig : IEntityTypeConfiguration<Booking>
         //primary key
 
         //other validations
-
+        builder.Property(b => b.Status).HasConversion<string>();
+        builder.Property(b => b.Type).HasConversion<string>();
+        builder.Property(b => b.Priority).HasConversion<string>();
         //relations
         builder.HasOne(b => b.LabRoom)
                .WithMany(r => r.Bookings)

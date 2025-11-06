@@ -11,8 +11,6 @@ public class Project
     [ForeignKey(nameof(OwnerId))]
     public ProjectType ProjectType { get; set; } = ProjectType.Other;
     public User? Owner { get; set; } // Lecturer hoặc Student đều được
-
-    public ICollection<User>? Members { get; set; } // Nhóm sinh viên hoặc giảng viên được mời
 }
 
 public enum ProjectType
