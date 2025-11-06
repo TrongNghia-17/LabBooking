@@ -1,17 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿namespace LabBooking.Domain.Entities;
 
-namespace LabBooking.Domain.Entities
+public class Support
 {
-    public class Support
-    {
-        public Guid Id { get; set; }
-        public string Title { get; set; }
-        public string Content { get; set; }
-        public string Answer { get; set; } 
-        public Guid CreatedById { get; set; }
-    }
+    public Guid Id { get; set; }
+    public string Title { get; set; } = default!;
+    public string Content { get; set; } = default!;
+    public string Answer { get; set; } = default!;
+    public Guid CreatedById { get; set; }
 }

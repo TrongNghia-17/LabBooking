@@ -23,6 +23,11 @@ global using Serilog;
 global using System.Diagnostics;
 global using System.Security.Claims;
 global using System.Text;
+global using LabBooking.Application.Features.Supports.Commands.CreateSupport;
+global using LabBooking.Application.Features.Supports.Commands.UpdateSupport;
+global using LabBooking.Application.Features.Supports.Dtos;
+global using LabBooking.Application.Features.Supports.Queries.GetAllSupports;
+global using LabBooking.Application.Features.Supports.Queries.GetByIdSupport;
 
 
 
