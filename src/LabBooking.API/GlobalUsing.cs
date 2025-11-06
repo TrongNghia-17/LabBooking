@@ -28,6 +28,11 @@ global using LabBooking.Application.Features.Supports.Commands.UpdateSupport;
 global using LabBooking.Application.Features.Supports.Dtos;
 global using LabBooking.Application.Features.Supports.Queries.GetAllSupports;
 global using LabBooking.Application.Features.Supports.Queries.GetByIdSupport;
+global using LabBooking.Application.Features.LabRooms.Commands.CreateLabRoom;
+global using LabBooking.Application.Features.LabRooms.Commands.UpdateLabRoom;
+global using LabBooking.Application.Features.LabRooms.Dtos;
+global using LabBooking.Application.Features.LabRooms.Queries.GetAllLabRooms;
+global using LabBooking.Application.Features.LabRooms.Queries.GetByIdLabRoom;
 
 
 
