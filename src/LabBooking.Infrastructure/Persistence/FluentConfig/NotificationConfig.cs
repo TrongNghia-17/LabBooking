@@ -1,4 +1,6 @@
-﻿namespace LabBooking.Infrastructure.Persistence.FluentConfig;
+﻿using Microsoft.EntityFrameworkCore;
+
+namespace LabBooking.Infrastructure.Persistence.FluentConfig;
 
 public class NotificationConfig : IEntityTypeConfiguration<Notification>
 {
@@ -14,5 +16,9 @@ public class NotificationConfig : IEntityTypeConfiguration<Notification>
         //other validations
 
         //relations
+        builder.HasOne(n => n.User)
+                .WithMany(u => u.Notifications)
+                .HasForeignKey(n => n.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
     }
 }

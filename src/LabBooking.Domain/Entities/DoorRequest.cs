@@ -7,8 +7,13 @@ public enum DoorRequestStatus
     Rejected,
     Completed
 }
+public enum DoorRequestType
+{
+    Open,
+    Close
+}
 
-public class DoorRequest
+public class DoorOpeningRequest
 {
     public Guid Id { get; set; } = (Guid)Uuid7.NewUuid7();
 
@@ -21,10 +26,14 @@ public class DoorRequest
     public LabRoom? LabRoom { get; set; }
 
     public DateTime RequestTime { get; set; } = DateTime.UtcNow;
-
     public DoorRequestStatus Status { get; set; } = DoorRequestStatus.Pending;
+    public DoorRequestType Type { get; set; } = DoorRequestType.Open;
 
     public Guid? HandledById { get; set; } // bảo vệ xử lý
     [ForeignKey(nameof(HandledById))]
     public User? HandledBy { get; set; }
+
+    public Guid? BookingId { get; set; }
+    [ForeignKey(nameof(BookingId))]
+    public Booking? Booking { get; set; }
 }

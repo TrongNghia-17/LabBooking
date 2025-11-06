@@ -12,4 +12,5 @@ public class BookingParticipant
     [ForeignKey(nameof(UserId))]
     public User? User { get; set; }
     public bool IsApproved { get; set; } = false;
+    public string Email { get; set; }
 }

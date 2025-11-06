@@ -18,8 +18,5 @@ public class ProjectConfig : IEntityTypeConfiguration<Project>
                .HasForeignKey(p => p.OwnerId)
                .OnDelete(DeleteBehavior.Restrict);
 
-        builder.HasMany(p => p.Members)
-               .WithMany() // simple many-to-many (ProjectMembers table auto-created)
-               .UsingEntity(j => j.ToTable("ProjectMembers"));
     }
 }

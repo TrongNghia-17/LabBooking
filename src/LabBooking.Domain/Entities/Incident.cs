@@ -23,6 +23,10 @@ public class Incident
     [ForeignKey(nameof(ReportedById))]
     public User? ReportedBy { get; set; }
 
+    public Guid BookingId { get; set; }
+    [ForeignKey(nameof(BookingId))]
+    public Booking? Booking { get; set; }
+
     public IncidentType Type { get; set; }
     public string Description { get; set; } = string.Empty;
     public bool IsResolved { get; set; } = false;
