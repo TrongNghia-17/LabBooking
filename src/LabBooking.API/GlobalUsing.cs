@@ -33,6 +33,10 @@ global using LabBooking.Application.Features.LabRooms.Commands.UpdateLabRoom;
 global using LabBooking.Application.Features.LabRooms.Dtos;
 global using LabBooking.Application.Features.LabRooms.Queries.GetAllLabRooms;
 global using LabBooking.Application.Features.LabRooms.Queries.GetByIdLabRoom;
+global using LabBooking.Application.Features.Equipments.Commands.CreateEquipment;
+global using LabBooking.Application.Features.Equipments.Commands.UpdateEquipment;
+global using LabBooking.Application.Features.Equipments.Dtos;
+global using LabBooking.Application.Features.Equipments.Queries.GetByIdEquipment;
 
 
 

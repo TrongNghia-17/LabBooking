@@ -1,4 +1,6 @@
-﻿namespace LabBooking.API.Extensions;
+﻿using System.Text.Json.Serialization;
+
+namespace LabBooking.API.Extensions;
 
 public static class WebApplicationBuilderExtensions
 {
@@ -36,7 +38,11 @@ public static class WebApplicationBuilderExtensions
             });
         });
 
-        builder.Services.AddControllers();
+        builder.Services.AddControllers()
+            .AddJsonOptions(options =>
+            {
+                options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
+            });
         builder.Services.AddSwaggerGen(c =>
         {
             c.AddSecurityDefinition("bearerAuth", new OpenApiSecurityScheme

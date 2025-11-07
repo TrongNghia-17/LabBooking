@@ -37,6 +37,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ISupportRepository, SupportRepository>();
         services.AddScoped<ILabRoomRepository, LabRoomRepository>();
         services.AddScoped<IUserRepository, UserRepository>();
+        services.AddScoped<IEquipmentRepository, EquipmentRepository>();
         services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
 
         services.AddScoped<ICachingService, CachingService>();
