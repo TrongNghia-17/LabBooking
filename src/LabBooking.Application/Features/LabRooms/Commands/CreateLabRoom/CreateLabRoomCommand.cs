@@ -9,11 +9,9 @@ namespace LabBooking.Application.Features.LabRooms.Commands.CreateLabRoom;
 /// <param name="Location">Vị trí của phòng lab.</param>
 /// <param name="MaximumLimit">Số lượng người tối đa.</param>
 /// <param name="MainManagerId">ID người quản lý chính (nếu có).</param>
-/// <param name="CreatedById">ID của người dùng tạo phòng lab.</param>
 public record CreateLabRoomCommand(
     string LabName,
     string? Location,
     int? MaximumLimit,
-    Guid? MainManagerId,
-    Guid CreatedById
+    Guid? MainManagerId
 ) : IRequest<Guid>;

@@ -1,14 +1,25 @@
-﻿namespace LabBooking.Application.Features.LabRooms.Commands.CreateLabRoom;
+﻿using LabBooking.Application.Services.Users;
+
+namespace LabBooking.Application.Features.LabRooms.Commands.CreateLabRoom;
 
 public class CreateLabRoomCommandHandler(
     ILogger<CreateLabRoomCommandHandler> logger,
     IMapper mapper,
-    ILabRoomRepository labRoomRepository // Sử dụng repository của LabRoom
+    ILabRoomRepository labRoomRepository,
+    ICurrentUserService currentUserService
     ) : IRequestHandler<CreateLabRoomCommand, Guid>
 {
     public async Task<Guid> Handle(CreateLabRoomCommand request, CancellationToken cancellationToken)
     {
-        logger.LogInformation("Creating a new lab room");
+        var creatorId = currentUserService.UserId;
+
+        if (creatorId == null)
+        {
+            logger.LogWarning("Không tìm thấy thông tin người dùng (chưa đăng nhập).");
+            throw new UnauthorizedAccessException("Người dùng không được xác thực.");
+        }
+
+        logger.LogInformation("Người dùng {CreatorId} đang tạo phòng lab mới", creatorId.Value);
 
         var labRoom = mapper.Map<LabRoom>(request);
 

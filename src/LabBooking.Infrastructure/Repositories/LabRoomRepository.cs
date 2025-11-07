@@ -67,4 +67,11 @@ internal class LabRoomRepository(LabBookingDbContext dbContext) : ILabRoomReposi
 
         return (labRooms, totalCount);
     }
+
+    public async Task<bool> IsLabNameUniqueAsync(string labName)
+    {
+        var labNameLower = labName.ToLower();
+        return !await dbContext.LabRooms
+            .AnyAsync(r => r.LabName != null && r.LabName.ToLower() == labNameLower);
+    }
 }

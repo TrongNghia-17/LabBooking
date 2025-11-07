@@ -79,4 +79,9 @@ internal class UserRepository(LabBookingDbContext dbContext) : IUserRepository
 
         return (users, totalCount);
     }
+
+    public async Task<bool> ExistsAsync(Guid id)
+    {
+        return await dbContext.Users.AnyAsync(u => u.Id == id);
+    }
 }
