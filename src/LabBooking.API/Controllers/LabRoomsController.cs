@@ -4,8 +4,8 @@ namespace LabBooking.API.Controllers;
 
 [Route("api/[controller]")]
 [ApiController]
-public class LabRoomsController(
-    IMediator mediator) : ControllerBase
+[Authorize]
+public class LabRoomsController(IMediator mediator) : ControllerBase
 {
     /// <summary>
     /// Create a new lab room
@@ -13,14 +13,15 @@ public class LabRoomsController(
     /// <param name="command">The data for the new lab room</param>
     /// <returns>The newly created lab room</returns>
     [HttpPost]
-    [ProducesResponseType(typeof(LabRoomResponse), StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-    public async Task<ActionResult<LabRoomResponse>> Create([FromBody] CreateLabRoomCommand command)
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> Create([FromBody] CreateLabRoomCommand command)
     {
-        var newLabRoomId = await mediator.Send(command);
+        var id = await mediator.Send(command);
 
-        return CreatedAtAction(nameof(GetById), new { newLabRoomId }, null);
+        return CreatedAtAction(nameof(GetById), new { id }, null);
     }
 
     /// <summary>

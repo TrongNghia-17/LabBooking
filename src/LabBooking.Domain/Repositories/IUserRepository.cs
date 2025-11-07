@@ -10,4 +10,6 @@ public interface IUserRepository
         SortDirection sortDirection,
         string? roleName
     );
+
+    Task<bool> ExistsAsync(Guid id);
 }

@@ -1,4 +1,7 @@
-﻿namespace LabBooking.Infrastructure.Extensions;
+﻿using LabBooking.Application.Services.Users;
+using LabBooking.Infrastructure.Services.Users;
+
+namespace LabBooking.Infrastructure.Extensions;
 
 public static class ServiceCollectionExtensions
 {
@@ -46,5 +49,6 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IUserFactory, UserFactory>();
         services.AddScoped<IRefreshTokenFactory, RefreshTokenFactory>();
         services.AddScoped<IClaimsGenerator, ClaimsGenerator>();
+        services.AddScoped<ICurrentUserService, CurrentUserService>();
     }
 }
