@@ -18,7 +18,6 @@ internal class SupportRepository(LabBookingDbContext dbContext) : ISupportReposi
     {
         var searchPhraseLower = searchPhrase?.ToLower();
 
-        // 1. Thay đổi logic filter (Where) cho Support (tìm theo Title và Content)
         var baseQuery = dbContext
             .Supports
             .Where(r => searchPhraseLower == null ||
@@ -29,8 +28,6 @@ internal class SupportRepository(LabBookingDbContext dbContext) : ISupportReposi
 
         if (sortBy != null)
         {
-            // 2. Thay đổi các cột dùng để sort
-            // Dựa trên file Support.cs, chúng ta dùng Title và Content
             var columnsSelector = new Dictionary<string, Expression<Func<Support, object>>>
             {
                 { nameof(Support.Title), r => r.Title },
