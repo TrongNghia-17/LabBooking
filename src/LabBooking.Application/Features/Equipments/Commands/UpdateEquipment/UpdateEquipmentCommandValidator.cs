@@ -1,8 +1,10 @@
-﻿namespace LabBooking.Application.Features.Equipments.Commands.CreateEquipment;
+﻿using FluentValidation;
 
-public class CreateEquipmentCommandValidator : AbstractValidator<CreateEquipmentCommand>
+namespace LabBooking.Application.Features.Equipments.Commands.UpdateEquipment;
+
+public class UpdateEquipmentCommandValidator : AbstractValidator<UpdateEquipmentCommand>
 {
-    public CreateEquipmentCommandValidator()
+    public UpdateEquipmentCommandValidator()
     {
         RuleFor(c => c.EquipmentName)
             .NotEmpty()

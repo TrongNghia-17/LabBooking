@@ -6,4 +6,11 @@ public interface IEquipmentRepository
     Task<Equipment?> GetByIdAsync(Guid id);
     Task Update(Equipment entity);
     Task DeleteAsync(Equipment entity);
+
+    Task<(IEnumerable<Equipment>, int)> GetAllMatchingAsync(
+        string? searchPhrase,
+        int pageSize,
+        int pageNumber,
+        string? sortBy,
+        SortDirection sortDirection);
 }

@@ -12,6 +12,6 @@ public record CreateEquipmentCommand(
     string EquipmentName,
     string? Description,
     Guid LabRoomId,
-    string? Status,
-    bool? IsAvailable
+    string Status,
+    bool IsAvailable
 ) : IRequest<Guid>;
