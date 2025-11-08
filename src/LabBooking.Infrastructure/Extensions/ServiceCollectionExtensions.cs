@@ -1,5 +1,7 @@
 ﻿using LabBooking.Application.Services.Users;
 using LabBooking.Infrastructure.Services.Users;
+using Microsoft.Extensions.DependencyInjection;
+
 
 namespace LabBooking.Infrastructure.Extensions;
 
@@ -21,14 +23,14 @@ public static class ServiceCollectionExtensions
                 options.EnableSensitiveDataLogging();
         });
 
-        services.AddIdentityApiEndpoints<User>(options =>
+        services.AddIdentityCore<User>(options =>
         {
             options.User.AllowedUserNameCharacters =
-                "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-._@+ "; // <-- Đã thêm khoảng trắng ở cuối
+                "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-._@+ ";
         })
         .AddRoles<IdentityRole<Guid>>()
-        //.AddClaimsPrincipalFactory<LabsUserClaimsPrincipalFactory>()
-        .AddEntityFrameworkStores<LabBookingDbContext>();
+        .AddEntityFrameworkStores<LabBookingDbContext>()
+        .AddDefaultTokenProviders();
 
         services.AddStackExchangeRedisCache(options =>
         {

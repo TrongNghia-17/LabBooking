@@ -10,6 +10,7 @@ public class ClaimsGenerator(UserManager<User> userManager) : IClaimsGenerator
             new(ClaimTypes.NameIdentifier, user.Id.ToString()),
             new(ClaimTypes.Email, user.Email!),
             new(ClaimTypes.Name, user.UserName!),
+            new("AspNet.Identity.SecurityStamp", user.SecurityStamp!)
         };
 
         foreach (var role in userRoles)
