@@ -5,7 +5,8 @@ namespace LabBooking.API.Controllers;
 [Route("api/[controller]")]
 [ApiController]
 [Authorize]
-public class LabRoomsController(IMediator mediator) : ControllerBase
+public class LabRoomsController(
+    IMediator mediator) : ControllerBase
 {
     /// <summary>
     /// Create a new lab room
@@ -15,6 +16,8 @@ public class LabRoomsController(IMediator mediator) : ControllerBase
     [HttpPost]
     [ProducesResponseType(StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     [Authorize(Roles = "Admin")]
     public async Task<IActionResult> Create([FromBody] CreateLabRoomCommand command)
@@ -33,8 +36,11 @@ public class LabRoomsController(IMediator mediator) : ControllerBase
     [HttpPut("{id:guid}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    [Authorize(Roles = "Admin")]
     public async Task<ActionResult> Update(
         [FromRoute] Guid id,
         [FromBody] UpdateLabRoomCommand command)
@@ -52,8 +58,11 @@ public class LabRoomsController(IMediator mediator) : ControllerBase
     /// <returns>No content</returns>
     [HttpDelete("{id:guid}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    [Authorize(Roles = "Admin")]
     public async Task<ActionResult> Delete([FromRoute] Guid id)
     {
         var command = new DeleteLabRoomCommand(id);
@@ -70,7 +79,10 @@ public class LabRoomsController(IMediator mediator) : ControllerBase
     [HttpGet]
     [ProducesResponseType(typeof(PagedResult<LabRoomResponse>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    [Authorize(Roles = "Admin")]
     public async Task<ActionResult<PagedResult<LabRoomResponse>>> GetAll([FromQuery] GetAllLabRoomsQuery query)
     {
         var labRooms = await mediator.Send(query);
@@ -85,7 +97,10 @@ public class LabRoomsController(IMediator mediator) : ControllerBase
     [HttpGet("{id:guid}")]
     [ProducesResponseType(typeof(LabRoomResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    [Authorize(Roles = "Admin")]
     public async Task<ActionResult<LabRoomResponse>> GetById([FromRoute] Guid id)
     {
         var query = new GetLabRoomByIdQuery(id);

@@ -17,7 +17,7 @@ public class DeleteLabRoomCommandHandler(
             throw new NotFoundException(nameof(LabRoom), request.Id.ToString());
         }
 
-        await labRoomRepository.DeleteAsync(labRoomToDelete);
+        await labRoomRepository.DeleteAsync(labRoomToDelete, cancellationToken);
 
         return Unit.Value;
     }

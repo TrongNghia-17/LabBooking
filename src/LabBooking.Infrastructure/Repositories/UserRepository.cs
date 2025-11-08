@@ -80,8 +80,8 @@ internal class UserRepository(LabBookingDbContext dbContext) : IUserRepository
         return (users, totalCount);
     }
 
-    public async Task<bool> ExistsAsync(Guid id)
+    public async Task<bool> ExistsAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        return await dbContext.Users.AnyAsync(u => u.Id == id);
+        return await dbContext.Users.AnyAsync(u => u.Id == id, cancellationToken);
     }
 }

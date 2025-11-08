@@ -1,4 +1,7 @@
-﻿namespace LabBooking.Application.Features.LabRooms.Commands.CreateLabRoom;
+﻿using LabBooking.Application.Resources;
+using Microsoft.Extensions.Localization;
+
+namespace LabBooking.Application.Features.LabRooms.Commands.CreateLabRoom;
 
 public class CreateLabRoomCommandValidator
     : AbstractValidator<CreateLabRoomCommand>
@@ -6,47 +9,50 @@ public class CreateLabRoomCommandValidator
 
     private readonly IUserRepository _userRepository;
     private readonly ILabRoomRepository _labRoomRepository;
+    private readonly IStringLocalizer<LabRoomMessages> _localizer;
 
     public CreateLabRoomCommandValidator(
         IUserRepository userRepository,
-        ILabRoomRepository labRoomRepository)
+        ILabRoomRepository labRoomRepository,
+        IStringLocalizer<LabRoomMessages> localizer)
     {
         _userRepository = userRepository;
         _labRoomRepository = labRoomRepository;
+        _localizer = localizer;
 
         RuleFor(c => c.LabName)
             .NotEmpty()
-            .WithMessage("Lab Name is required.")
+            .WithMessage(_localizer["LabNameRequired"])
             .MaximumLength(100)
-            .WithMessage("Lab Name cannot be longer than 100 characters.")
+            .WithMessage(_localizer["LabNameMaxLength"])
             .MustAsync(BeUniqueLabName)
-            .WithMessage("Lab Name đã tồn tại.");
+            .WithMessage(_localizer["LabNameUnique"]);
 
         RuleFor(c => c.Location)
             .MaximumLength(200)
-            .WithMessage("Location cannot be longer than 200 characters.");
+            .WithMessage(_localizer["LocationMaxLength"]);
 
         RuleFor(c => c.MaximumLimit)
             .GreaterThan(0)
             .When(c => c.MaximumLimit.HasValue)
-            .WithMessage("Maximum Limit must be greater than 0.");
+            .WithMessage(_localizer["MaximumLimitGreaterThan"]);
 
         RuleFor(c => c.MainManagerId)
             .MustAsync(UserMustExist)
             .When(c => c.MainManagerId.HasValue)
-            .WithMessage("Người quản lý (MainManagerId) không tồn tại.");
+            .WithMessage(_localizer["MainManagerNotFound"]);
     }
 
     private async Task<bool> UserMustExist(Guid? id, CancellationToken token)
     {
         if (id == null) return true;
 
-        return await _userRepository.ExistsAsync(id.Value);
+        return await _userRepository.ExistsAsync(id.Value, token);
     }
 
     private async Task<bool> BeUniqueLabName(string labName, CancellationToken token)
     {
-        return await _labRoomRepository.IsLabNameUniqueAsync(labName);
+        return await _labRoomRepository.IsLabNameUniqueAsync(labName, token);
     }
 
 }

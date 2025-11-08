@@ -11,5 +11,5 @@ public interface IUserRepository
         string? roleName
     );
 
-    Task<bool> ExistsAsync(Guid id);
+    Task<bool> ExistsAsync(Guid id, CancellationToken cancellationToken = default);
 }

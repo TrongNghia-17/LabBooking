@@ -2,29 +2,29 @@
 
 internal class LabRoomRepository(LabBookingDbContext dbContext) : ILabRoomRepository
 {
-    public async Task<Guid> Create(LabRoom entity)
+    public async Task<Guid> Create(LabRoom entity, CancellationToken cancellationToken = default)
     {
         dbContext.LabRooms.Add(entity);
-        await dbContext.SaveChangesAsync();
+        await dbContext.SaveChangesAsync(cancellationToken);
         return entity.Id;
     }
 
-    public async Task<LabRoom?> GetByIdAsync(Guid id)
+    public async Task<LabRoom?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        var labRoom = await dbContext.LabRooms.FindAsync(id);
+        var labRoom = await dbContext.LabRooms.FindAsync(id, cancellationToken);
         return labRoom;
     }
 
-    public async Task Update(LabRoom entity)
+    public async Task Update(LabRoom entity, CancellationToken cancellationToken = default)
     {
         dbContext.Entry(entity).State = EntityState.Modified;
-        await dbContext.SaveChangesAsync();
+        await dbContext.SaveChangesAsync(cancellationToken);
     }
 
-    public async Task DeleteAsync(LabRoom entity)
+    public async Task DeleteAsync(LabRoom entity, CancellationToken cancellationToken = default)
     {
         dbContext.LabRooms.Remove(entity);
-        await dbContext.SaveChangesAsync();
+        await dbContext.SaveChangesAsync(cancellationToken);
     }
 
     public async Task<(IEnumerable<LabRoom>, int)> GetAllMatchingAsync(
@@ -32,7 +32,7 @@ internal class LabRoomRepository(LabBookingDbContext dbContext) : ILabRoomReposi
         int pageSize,
         int pageNumber,
         string? sortBy,
-        SortDirection sortDirection)
+        SortDirection sortDirection, CancellationToken cancellationToken = default)
     {
         var searchPhraseLower = searchPhrase?.ToLower();
 
@@ -63,15 +63,23 @@ internal class LabRoomRepository(LabBookingDbContext dbContext) : ILabRoomReposi
         var labRooms = await baseQuery
             .Skip(pageSize * (pageNumber - 1))
             .Take(pageSize)
-            .ToListAsync();
+            .ToListAsync(cancellationToken);
 
         return (labRooms, totalCount);
     }
 
-    public async Task<bool> IsLabNameUniqueAsync(string labName)
+    public async Task<bool> IsLabNameUniqueAsync(string labName, CancellationToken cancellationToken = default)
     {
         var labNameLower = labName.ToLower();
         return !await dbContext.LabRooms
-            .AnyAsync(r => r.LabName != null && r.LabName.ToLower() == labNameLower);
+            .AnyAsync(r => r.LabName != null && r.LabName.ToLower() == labNameLower, cancellationToken);
+    }
+
+    public async Task<bool> IsLabNameUniqueAsync(Guid id, string labName, CancellationToken cancellationToken = default)
+    {
+        var isDuplicate = await dbContext.LabRooms
+            .AnyAsync(room => room.LabName == labName && room.Id != id, cancellationToken);
+
+        return !isDuplicate;
     }
 }

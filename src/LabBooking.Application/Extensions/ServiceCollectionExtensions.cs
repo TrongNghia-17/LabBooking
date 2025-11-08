@@ -1,4 +1,6 @@
-﻿namespace LabBooking.Application.Extensions;
+﻿using LabBooking.Application.Behaviors;
+
+namespace LabBooking.Application.Extensions;
 
 public static class ServiceCollectionExtensions
 {
@@ -9,7 +11,9 @@ public static class ServiceCollectionExtensions
         services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(applicationAssembly));
         services.AddAutoMapper(cfg => { }, applicationAssembly);
 
-        services.AddValidatorsFromAssembly(applicationAssembly)
-           .AddFluentValidationAutoValidation();
+        services.AddValidatorsFromAssembly(applicationAssembly);
+        //   .AddFluentValidationAutoValidation();
+        services.AddTransient(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
+        services.AddLocalization();
     }
 }

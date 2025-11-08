@@ -11,7 +11,7 @@ public class GetLabRoomByIdQueryHandler(
     {
         logger.LogInformation("Getting LabRoom by Id: {LabRoomId}", request.Id);
 
-        var labRoom = await labRoomRepository.GetByIdAsync(request.Id)
+        var labRoom = await labRoomRepository.GetByIdAsync(request.Id, cancellationToken)
             ?? throw new NotFoundException(nameof(LabRoom), request.Id.ToString());
 
         var labRoomResponse = mapper.Map<LabRoomResponse>(labRoom);

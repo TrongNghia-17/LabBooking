@@ -23,7 +23,7 @@ public class CreateLabRoomCommandHandler(
 
         var labRoom = mapper.Map<LabRoom>(request);
 
-        var labRoomId = await labRoomRepository.Create(labRoom);
+        var labRoomId = await labRoomRepository.Create(labRoom, cancellationToken);
 
         return labRoomId;
     }

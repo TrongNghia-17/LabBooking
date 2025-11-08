@@ -16,7 +16,8 @@ public class GetAllLabRoomsQueryHandler(
             request.PageSize,
             request.PageNumber,
             request.SortBy,
-            request.SortDirection);
+            request.SortDirection,
+            cancellationToken);
 
         var labRoomsResponse = mapper.Map<IEnumerable<LabRoomResponse>>(labRooms);
 
