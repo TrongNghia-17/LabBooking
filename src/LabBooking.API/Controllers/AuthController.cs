@@ -64,7 +64,7 @@ public class AuthController(IMediator mediator) : ControllerBase
     public async Task<IActionResult> Register([FromBody] RegisterUserCommand command)
     {
         await mediator.Send(command);
-        return CreatedAtAction(nameof(GetProfileAsync), null, new { message = "Đăng ký thành công." });
+        return CreatedAtAction(nameof(GetProfile), null, new { message = "Registration successful." });
     }
 
     /// <summary>
@@ -93,7 +93,7 @@ public class AuthController(IMediator mediator) : ControllerBase
     [ProducesResponseType(typeof(UserProfileResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<ActionResult<UserProfileResponse>> GetProfileAsync()
+    public async Task<ActionResult<UserProfileResponse>> GetProfile()
     {
         var query = new GetProfileQuery();
         var userProfile = await mediator.Send(query);

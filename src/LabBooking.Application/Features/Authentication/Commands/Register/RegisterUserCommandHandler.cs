@@ -1,4 +1,6 @@
-﻿namespace LabBooking.Application.Features.Authentication.Commands.Register;
+﻿using AutoMapper;
+
+namespace LabBooking.Application.Features.Authentication.Commands.Register;
 
 /// <summary>
 /// Command handler responsible for processing the <see cref="RegisterUserCommand"/>.
@@ -6,7 +8,8 @@
 public class RegisterUserCommandHandler(
     ILogger<RegisterUserCommandHandler> logger,
     UserManager<User> userManager,
-    RoleManager<IdentityRole<Guid>> roleManager
+    RoleManager<IdentityRole<Guid>> roleManager,
+    IMapper mapper
 ) : IRequestHandler<RegisterUserCommand, Unit>
 {
     private const string DefaultRole = "User";
@@ -24,12 +27,7 @@ public class RegisterUserCommandHandler(
         }
 
         // 2. Create the User object
-        var newUser = new User
-        {
-            UserName = request.Email,
-            Email = request.Email,
-            EmailConfirmed = true
-        };
+        var newUser = mapper.Map<User>(request);
 
         // 3. Create the User in the database
         var createResult = await userManager.CreateAsync(newUser, request.Password);

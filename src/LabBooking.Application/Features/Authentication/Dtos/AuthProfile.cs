@@ -1,4 +1,6 @@
-﻿namespace LabBooking.Application.Features.Authentication.Dtos;
+﻿using LabBooking.Application.Features.Authentication.Commands.Register;
+
+namespace LabBooking.Application.Features.Authentication.Dtos;
 
 /// <summary>
 /// AutoMapper profile for authentication-related DTOs.
@@ -9,5 +11,9 @@ public class AuthProfile : Profile
     {
         CreateMap<User, UserProfileResponse>()
             .ForMember(dest => dest.Roles, opt => opt.MapFrom(src => new List<string>()));
+
+        CreateMap<RegisterUserCommand, User>()
+            .ForMember(dest => dest.UserName, opt => opt.MapFrom(src => src.Email))
+            .ForMember(dest => dest.EmailConfirmed, opt => opt.MapFrom(src => true));
     }
 }
