@@ -1,23 +1,26 @@
 ﻿namespace LabBooking.Application.Features.Supports.Commands.UpdateSupport;
 
+/// <summary>
+/// Defines the validation rules for the <see cref="UpdateSupportCommand"/>.
+/// </summary>
 public class UpdateSupportCommandValidator : AbstractValidator<UpdateSupportCommand>
 {
     public UpdateSupportCommandValidator()
     {
         RuleFor(c => c.Title)
             .NotEmpty()
-            .WithMessage("Title is required.")
+            .WithMessage("A title is required for the support ticket.")
             .MaximumLength(100)
-            .WithMessage("Title cannot be longer than 100 characters.");
+            .WithMessage("The title must not exceed 100 characters.");
 
         RuleFor(c => c.Content)
             .NotEmpty()
-            .WithMessage("Content is required.")
+            .WithMessage("Content is required for the support ticket.")
             .MaximumLength(1000)
-            .WithMessage("Content cannot be longer than 1000 characters.");
+            .WithMessage("The content must not exceed 1000 characters.");
 
         RuleFor(c => c.Answer)
             .MaximumLength(2000)
-            .WithMessage("Answer cannot be longer than 2000 characters.");
+            .WithMessage("The answer must not exceed 2000 characters.");
     }
 }

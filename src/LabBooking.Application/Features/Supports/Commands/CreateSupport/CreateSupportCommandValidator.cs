@@ -1,23 +1,22 @@
 ﻿namespace LabBooking.Application.Features.Supports.Commands.CreateSupport;
 
+/// <summary>
+/// Defines the validation rules for the <see cref="CreateSupportCommand"/>.
+/// </summary>
 public class CreateSupportCommandValidator : AbstractValidator<CreateSupportCommand>
 {
     public CreateSupportCommandValidator()
     {
         RuleFor(c => c.Title)
             .NotEmpty()
-            .WithMessage("Title is required.")
+            .WithMessage("A title is required for the support ticket.")
             .MaximumLength(100)
-            .WithMessage("Title cannot be longer than 100 characters.");
+            .WithMessage("The title must not exceed 100 characters.");
 
         RuleFor(c => c.Content)
             .NotEmpty()
-            .WithMessage("Content is required.")
+            .WithMessage("Content is required for the support ticket.")
             .MaximumLength(1000)
-            .WithMessage("Content cannot be longer than 1000 characters.");
-
-        RuleFor(c => c.CreatedById)
-            .NotEmpty()
-            .WithMessage("Created By ID cannot be empty.");
+            .WithMessage("The content must not exceed 1000 characters.");
     }
 }

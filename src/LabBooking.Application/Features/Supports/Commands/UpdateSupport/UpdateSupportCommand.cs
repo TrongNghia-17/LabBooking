@@ -3,7 +3,7 @@
 namespace LabBooking.Application.Features.Supports.Commands.UpdateSupport;
 
 /// <summary>
-/// Command để xử lý logic cập nhật một support ticket.
+/// Represents the command used to update an existing support ticket.
 /// </summary>
 public record UpdateSupportCommand() : IRequest<Unit>
 {
