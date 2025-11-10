@@ -1,6 +1,7 @@
-﻿using LabBooking.Application.Services.Users;
+using LabBooking.Application.Services.Notifications;
+using LabBooking.Application.Services.Users;
+using LabBooking.Infrastructure.Services.Notifications;
 using LabBooking.Infrastructure.Services.Users;
-using Microsoft.Extensions.DependencyInjection;
 
 
 namespace LabBooking.Infrastructure.Extensions;
@@ -44,13 +45,18 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<IEquipmentRepository, EquipmentRepository>();
         services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
+        services.AddScoped<IUserDeviceRepository, UserDeviceRepository>();
 
         services.AddScoped<ICachingService, CachingService>();
         services.AddScoped<IJwtService, JwtService>();
         services.AddScoped<IGoogleAuthService, GoogleAuthService>();
+        services.AddScoped<INotificationService, NotificationService>();
+
         services.AddScoped<IUserFactory, UserFactory>();
         services.AddScoped<IRefreshTokenFactory, RefreshTokenFactory>();
         services.AddScoped<IClaimsGenerator, ClaimsGenerator>();
         services.AddScoped<ICurrentUserService, CurrentUserService>();
+
+        services.AddHttpClient();
     }
 }
