@@ -3,8 +3,14 @@ using LabBooking.Application.Features.Equipments.Commands.UpdateEquipment;
 
 namespace LabBooking.Application.Features.Equipments.Dtos;
 
+/// <summary>
+/// Defines AutoMapper profiles for Equipment entities and DTOs.
+/// </summary>
 public class EquipmentProfile : Profile
 {
+    /// <summary>
+    /// Initializes a new instance of the <see cref="EquipmentProfile"/> class.
+    /// </summary>
     public EquipmentProfile()
     {
         CreateMap<CreateEquipmentCommand, Equipment>()

@@ -12,12 +12,13 @@ public class EquipmentsController(
     /// Create a new equipment
     /// </summary>
     /// <param name="command">The data for the new equipment</param>
-    /// <returns>The newly created equipment</returns>
+    /// <returns>A 201 Created response with the location of the new resource</returns>
     [HttpPost]
+    [Authorize(Roles = "Admin")]
     [ProducesResponseType(StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-    public async Task<ActionResult> Create([FromBody] CreateEquipmentCommand command)
+    public async Task<IActionResult> Create([FromBody] CreateEquipmentCommand command)
     {
         var newEquipmentId = await mediator.Send(command);
 
@@ -31,11 +32,12 @@ public class EquipmentsController(
     /// <param name="command">The new data for the equipment</param>
     /// <returns>No content</returns>
     [HttpPut("{id:guid}")]
+    [Authorize(Roles = "Admin")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-    public async Task<ActionResult> Update(
+    public async Task<IActionResult> Update(
         [FromRoute] Guid id,
         [FromBody] UpdateEquipmentCommand command)
     {
@@ -51,6 +53,7 @@ public class EquipmentsController(
     /// <param name="id">The Id of the equipment</param>
     /// <returns>The equipment</returns>
     [HttpGet("{id:guid}")]
+    [Authorize(Roles = "Admin")]
     [ProducesResponseType(typeof(EquipmentResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
@@ -65,9 +68,10 @@ public class EquipmentsController(
     /// <summary>
     /// Get all equipments with optional filtering, sorting, and pagination
     /// </summary>
-    /// <param name="query">Query parameters for filtering equipments</param>
-    /// <returns>List of equipments</returns>
+    /// <param name="query">Query parameters for filtering, sorting, and pagination</param>
+    /// <returns>A paged list of equipments</returns>
     [HttpGet]
+    [Authorize(Roles = "Admin")]
     [ProducesResponseType(typeof(PagedResult<EquipmentResponse>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
@@ -83,10 +87,11 @@ public class EquipmentsController(
     /// <param name="id">The Id of the equipment to delete</param>
     /// <returns>No content</returns>
     [HttpDelete("{id:guid}")]
+    [Authorize(Roles = "Admin")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-    public async Task<ActionResult> Delete([FromRoute] Guid id)
+    public async Task<IActionResult> Delete([FromRoute] Guid id)
     {
         var command = new DeleteEquipmentCommand(id);
         await mediator.Send(command);
