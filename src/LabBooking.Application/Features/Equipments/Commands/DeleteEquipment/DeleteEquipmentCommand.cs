@@ -1,6 +1,6 @@
 ﻿namespace LabBooking.Application.Features.Equipments.Commands.DeleteEquipment;
 
 /// <summary>
-/// Command để xử lý logic xóa một Equipment.
+/// Represents the command to delete an equipment by its ID.
 /// </summary>
 public record DeleteEquipmentCommand(Guid Id) : IRequest<Unit>;

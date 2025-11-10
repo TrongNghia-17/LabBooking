@@ -1,17 +1,15 @@
 ﻿namespace LabBooking.Application.Features.Equipments.Commands.CreateEquipment;
 
 /// <summary>
-/// Record chứa dữ liệu đầu vào để tạo một Equipment mới.
+/// Represents the command to create a new equipment.
 /// </summary>
-/// <param name="EquipmentName">Tên của thiết bị.</param>
-/// <param name="Description">Mô tả thiết bị.</param>
-/// <param name="LabRoomId">ID của phòng lab chứa thiết bị này.</param>
-/// <param name="Status">Trạng thái của thiết bị (mặc định là Available nếu null).</param>
-/// <param name="IsAvailable">Thiết bị có sẵn sàng (mặc định là true nếu null).</param>
+/// <param name="EquipmentName">The name of the equipment.</param>
+/// <param name="Description">An optional description for the equipment.</param>
+/// <param name="LabRoomId">The unique identifier of the lab room where the equipment is located.</param>
+/// <param name="Status">The initial status of the equipment (e.g., "Available").</param>
 public record CreateEquipmentCommand(
     string EquipmentName,
     string? Description,
     Guid LabRoomId,
-    string Status,
-    bool IsAvailable
+    string Status
 ) : IRequest<Guid>;

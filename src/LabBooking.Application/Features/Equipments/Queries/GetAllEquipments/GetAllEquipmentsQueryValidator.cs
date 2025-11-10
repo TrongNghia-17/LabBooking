@@ -2,11 +2,13 @@
 
 namespace LabBooking.Application.Features.Equipments.Queries.GetAllEquipments;
 
+/// <summary>
+/// Defines validation rules for the <see cref="GetAllEquipmentsQuery"/>.
+/// </summary>
 public class GetAllEquipmentsQueryValidator : AbstractValidator<GetAllEquipmentsQuery>
 {
     private readonly int[] allowPageSizes = [5, 10, 15, 30];
 
-    // Cập nhật các cột được phép sắp xếp
     private readonly string[] allowedSortByColumnNames =
     [
         nameof(EquipmentResponse.EquipmentName),
