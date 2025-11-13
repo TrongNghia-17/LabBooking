@@ -19,7 +19,6 @@ namespace LabBooking.Domain.Entities
         public int? NumberOfSlot { get; set; }
         public EquimentpMaintainStatus? EquimentpMaintainStatus { get; set; }
         public string? Description { get; set; }
-        public int? NumberOf { get; set; }
     }
     public enum EquimentpMaintainStatus
     {

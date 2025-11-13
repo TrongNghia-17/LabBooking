@@ -5,7 +5,6 @@ internal class LabBookingDbContext(DbContextOptions<LabBookingDbContext> options
 {
     public DbSet<Booking> Bookings { get; set; }
     public DbSet<BookingChangeRequest> BookingChangeRequests { get; set; }
-    public DbSet<BookingParticipant> BookingParticipants { get; set; }
     public DbSet<BookingSlot> BookingSlots { get; set; }
     public DbSet<Course> Courses { get; set; }
     public DbSet<DoorOpeningRequest> DoorOpeningRequests { get; set; }

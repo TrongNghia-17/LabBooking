@@ -55,5 +55,4 @@ public class Booking
     public Project? Project { get; set; }
     public int? NumberOfParticipants { get; set; }
     public ICollection<BookingSlot>? Slots { get; set; }
-    public ICollection<BookingParticipant>? Participants { get; set; }
 }
