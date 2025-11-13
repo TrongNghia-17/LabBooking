@@ -10,7 +10,6 @@ public class BookingSlot
 
 
     public DateTime Date { get; set; }  // Ngày
-    public int SlotIndex { get; set; }  // 1 - 5
 
     public Guid SlotId { get; set; }
     [ForeignKey(nameof(SlotId))]
