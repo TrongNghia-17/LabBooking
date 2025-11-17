@@ -27,6 +27,11 @@ internal class LabRoomRepository(LabBookingDbContext dbContext) : ILabRoomReposi
         await dbContext.SaveChangesAsync(cancellationToken);
     }
 
+    public async Task<bool> ExistsAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        return await dbContext.LabRooms.AnyAsync(r => r.Id == id, cancellationToken);
+    }
+
     public async Task<(IEnumerable<LabRoom>, int)> GetAllMatchingAsync(
         string? searchPhrase,
         int pageSize,
