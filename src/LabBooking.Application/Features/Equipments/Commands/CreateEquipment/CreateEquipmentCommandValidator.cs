@@ -18,12 +18,12 @@ public class CreateEquipmentCommandValidator : AbstractValidator<CreateEquipment
             .NotEmpty()
             .WithMessage("Lab Room ID is required.");
 
-        RuleFor(c => c.Status)
-            .NotEmpty()
-            .WithMessage("'Status' is required.")
-            .Must(BeValidEquipmentStatus)
-            .When(c => !string.IsNullOrEmpty(c.Status))
-            .WithMessage($"'Status' is not valid. Must be one of: {GetValidStatuses()}");
+        //RuleFor(c => c.Status)
+        //    .NotEmpty()
+        //    .WithMessage("'Status' is required.")
+        //    .Must(BeValidEquipmentStatus)
+        //    .When(c => !string.IsNullOrEmpty(c.Status))
+        //    .WithMessage($"'Status' is not valid. Must be one of: {GetValidStatuses()}");
     }
 
     /// <summary>

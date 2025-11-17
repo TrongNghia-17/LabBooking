@@ -49,6 +49,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<INotificationRepository, NotificationRepository>();
         services.AddScoped<IUsagePolicyRepository, UsagePolicyRepository>();
         services.AddScoped<IRoomMaintainScheduleRepository, RoomMaintainScheduleRepository>();
+        services.AddScoped<IEquipmentMaintainScheduleRepository, EquipmentMaintainScheduleRepository>();
 
         services.AddScoped<ICachingService, CachingService>();
         services.AddScoped<IJwtService, JwtService>();
