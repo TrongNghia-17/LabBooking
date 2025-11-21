@@ -9,9 +9,21 @@ public class BookingSlot
     public Booking? Booking { get; set; }
 
 
-    public DateTime Date { get; set; }  // Ngày
+    public DateOnly Date { get; set; }  // Ngày
 
     public Guid SlotId { get; set; }
     [ForeignKey(nameof(SlotId))]
     public Slot? Slot { get; set; }
+
+    public UnavailableReason Reason { get; set; } = UnavailableReason.Booked;
+    public int Priority { get; set; } = 2;
+    // 0 -> Maintenance
+    // 1 -> UniversityEvent
+    // 2 -> Standard
+}
+
+public enum UnavailableReason
+{
+    Booked , //0
+    Maintenance //1
 }

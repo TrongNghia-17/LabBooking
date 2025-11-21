@@ -11,7 +11,9 @@ internal class LabRoomRepository(LabBookingDbContext dbContext) : ILabRoomReposi
 
     public async Task<LabRoom?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        var labRoom = await dbContext.LabRooms.FindAsync(id, cancellationToken);
+        var labRoom = await dbContext.LabRooms
+            .Include(x => x.Equipments)
+            .FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
         return labRoom;
     }
 
@@ -38,6 +40,7 @@ internal class LabRoomRepository(LabBookingDbContext dbContext) : ILabRoomReposi
 
         var baseQuery = dbContext
             .LabRooms
+            .Include(x => x.Equipments)
             .Where(r => searchPhraseLower == null ||
                         (r.LabName != null && r.LabName.ToLower().Contains(searchPhraseLower)) ||
                         (r.Location != null && r.Location.ToLower().Contains(searchPhraseLower)));
