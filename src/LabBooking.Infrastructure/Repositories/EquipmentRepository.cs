@@ -79,4 +79,9 @@ internal class EquipmentRepository(LabBookingDbContext dbContext) : IEquipmentRe
 
         return (equipments, totalCount);
     }
+
+    public async Task<bool> ExistsAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        return await dbContext.Equipments.AnyAsync(e => e.Id == id, cancellationToken);
+    }
 }

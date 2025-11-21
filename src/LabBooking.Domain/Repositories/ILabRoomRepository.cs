@@ -8,6 +8,7 @@ public interface ILabRoomRepository
     Task DeleteAsync(LabRoom entity, CancellationToken cancellationToken = default);
     Task<bool> IsLabNameUniqueAsync(string labName, CancellationToken cancellationToken = default);
     Task<bool> IsLabNameUniqueAsync(Guid id, string labName, CancellationToken cancellationToken = default);
+    Task<bool> ExistsAsync(Guid id, CancellationToken cancellationToken = default);
     Task<(IEnumerable<LabRoom>, int)> GetAllMatchingAsync(
         string? searchPhrase,
         int pageSize,

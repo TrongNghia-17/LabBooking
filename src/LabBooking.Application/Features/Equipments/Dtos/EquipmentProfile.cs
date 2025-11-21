@@ -13,10 +13,10 @@ public class EquipmentProfile : Profile
     /// </summary>
     public EquipmentProfile()
     {
-        CreateMap<CreateEquipmentCommand, Equipment>()
-            .ForMember(dest => dest.Status, opt => opt.MapFrom(src =>
-                Enum.Parse<EquipmentStatus>(src.Status, true)
-            ));
+        CreateMap<CreateEquipmentCommand, Equipment>();
+            //.ForMember(dest => dest.Status, opt => opt.MapFrom(src =>
+            //    Enum.Parse<EquipmentStatus>(src.Status, true)
+            //));
 
         CreateMap<UpdateEquipmentCommand, Equipment>()
             .ForMember(dest => dest.Status, opt => opt.MapFrom(src =>

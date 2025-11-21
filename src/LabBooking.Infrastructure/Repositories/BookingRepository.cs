@@ -48,27 +48,40 @@ namespace LabBooking.Infrastructure.Repositories
 
                 // --- GIAI ĐOẠN 3: XỬ LÝ XUNG ĐỘT (OVERRIDE LOGIC) ---
 
-                foreach (var conflict in realConflicts)
-                {
-                    // Lấy Priority cũ (Mặc định là Standard=2 nếu null)
-                    var oldPriority = conflict.Booking?.Priority ?? BookingPriority.Standard;
+                var hasConflict = realConflicts.Any();
 
-                    // QUY TẮC: Số nhỏ hơn (1) ĐÈ ĐƯỢC Số lớn hơn (2)
-                    if (newBooking.Priority < oldPriority)
+                if (hasConflict)
+                {
+                    // Check quyền
+                    foreach (var conflict in realConflicts)
                     {
-                        // === ĐƯỢC PHÉP ĐÈ ===
-                        // Xóa slot cũ đi để nhường chỗ
-                        // (Chỉ xóa slot bị trùng, các slot khác của booking cũ vẫn sống)
-                        dbContext.BookingSlots.Remove(conflict);
+                        var oldPriority = conflict.Booking?.Priority ?? BookingPriority.Standard;
+                        if (newBooking.Priority >= oldPriority) // Số càng nhỏ càng to
+                        {
+                            throw new InvalidOperationException($"Xung đột ngày {conflict.Date}...");
+                        }
                     }
-                    else
-                    {
-                        // === KHÔNG ĐỦ TUỔI ĐÈ ===
-                        // Rollback và báo lỗi ngay lập tức
-                        throw new InvalidOperationException(
-                            $"Xung đột lịch: Slot ngày {conflict.Date:dd/MM/yyyy} đã bị đặt và bạn không đủ quyền ưu tiên để ghi đè."
-                        );
-                    }
+
+                    // === QUYẾT ĐỊNH: KHÔNG XÓA CŨ - KHÔNG THÊM MỚI ===
+
+                    // 1. Serialize danh sách slot mong muốn lại
+                    newBooking.PendingSlotsJson = JsonSerializer.Serialize(newBooking.Slots);
+
+                    // 2. Xóa sạch list Slots để EF Core KHÔNG insert vào bảng BookingSlot
+                    newBooking.Slots = null; // <--- KEY POINT
+
+                    // 3. Set trạng thái Pending
+                    newBooking.Status = BookingStatus.Pending;
+                }
+                else
+                {
+                    // Nếu KHÔNG có xung đột -> Insert thẳng vào BookingSlot luôn (nếu logic cho phép tự duyệt)
+                    // Hoặc nếu quy trình bắt buộc duyệt -> Cũng làm y chang như trên (lưu JSON, Slots=null).
+
+                    // Giả sử Priority Booking luôn cần duyệt:
+                    newBooking.PendingSlotsJson = JsonSerializer.Serialize(newBooking.Slots);
+                    newBooking.Slots = null;
+                    newBooking.Status = BookingStatus.Pending;
                 }
 
                 // --- GIAI ĐOẠN 4: LƯU MỚI ---
