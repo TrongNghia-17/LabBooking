@@ -2,6 +2,12 @@
 
 public interface IRoomMaintainScheduleRepository
 {
+        Task<IEnumerable<RoomMaintainSchedule>> GetOverlappingSchedulesAsync(
+            Guid labRoomId,
+            DateOnly startDate,
+            DateOnly endDate,
+            CancellationToken cancellationToken);
+    
     Task<Guid> Create(RoomMaintainSchedule entity, CancellationToken cancellationToken = default);
     Task Update(RoomMaintainSchedule entity, CancellationToken cancellationToken = default);
     Task DeleteAsync(RoomMaintainSchedule entity, CancellationToken cancellationToken = default);

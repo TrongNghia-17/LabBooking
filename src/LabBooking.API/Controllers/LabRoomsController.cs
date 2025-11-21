@@ -4,7 +4,7 @@ namespace LabBooking.API.Controllers;
 
 [Route("api/[controller]")]
 [ApiController]
-[Authorize]
+//[Authorize]
 public class LabRoomsController(
     IMediator mediator) : ControllerBase
 {
@@ -77,7 +77,7 @@ public class LabRoomsController(
     /// <param name="query">Query parameters for filtering lab rooms</param>
     /// <returns>List of lab rooms</returns>
     [HttpGet]
-    [Authorize(Roles = "Admin")]
+    //[Authorize(Roles = "Admin")]
     [ProducesResponseType(typeof(PagedResult<LabRoomResponse>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
@@ -95,7 +95,7 @@ public class LabRoomsController(
     /// <param name="id">The Id of the lab room</param>
     /// <returns>The lab room</returns>
     [HttpGet("{id:guid}")]
-    [Authorize(Roles = "Admin")]
+    //[Authorize(Roles = "Admin")]
     [ProducesResponseType(typeof(LabRoomResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]

@@ -47,8 +47,15 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
         services.AddScoped<IUserDeviceRepository, UserDeviceRepository>();
         services.AddScoped<INotificationRepository, NotificationRepository>();
-        services.AddScoped<IUsagePolicyRepository, UsagePolicyRepository>();
+        services.AddScoped<ISlotRepository, SlotRepository>();
+        services.AddScoped<IBookingSlotRepository, BookingSlotRepository>();
         services.AddScoped<IRoomMaintainScheduleRepository, RoomMaintainScheduleRepository>();
+        services.AddScoped<IBookingRepository, BookingRepository>();
+        services.AddScoped<IProjectRepository, ProjectRepository>();
+        services.AddScoped<ICourseRepository, CourseRepository>();
+        services.AddScoped<IBookingChangeRequestRepository, BookingChangeRequestRepository>();
+
+        services.AddScoped<IUsagePolicyRepository, UsagePolicyRepository>();
         services.AddScoped<IEquipmentMaintainScheduleRepository, EquipmentMaintainScheduleRepository>();
 
         services.AddScoped<ICachingService, CachingService>();

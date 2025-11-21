@@ -12,11 +12,8 @@ namespace LabBooking.Domain.Entities
         public Guid EquipmentId { get; set; }
         [ForeignKey(nameof(EquipmentId))]
         public Equipment? Equipment { get; set; }
-        public bool IsManyDay { get; set; }
-        public bool? IsAllDay { get; set; }
-        public DateTime? StartTime { get; set; }
-        public DateTime? EndTime { get; set; }
-        public int? NumberOfSlot { get; set; }
+        public DateTime StartTime { get; set; }
+        public DateTime EndTime { get; set; }
         public EquimentpMaintainStatus? EquimentpMaintainStatus { get; set; }
         public string? Description { get; set; }
     }

@@ -9,8 +9,8 @@ namespace LabBooking.Domain.Entities
     public class Slot
     {
         public Guid Id { get; set; }
-        public DateTime StartTime { get; set; }
-        public DateTime EndTime { get; set; }
+        public TimeOnly StartTime { get; set; }
+        public TimeOnly EndTime { get; set; }
         public int SlotIndex { get; set; } // Chỉ số của slot 1->4
         public string Label { get; set; }
     }
