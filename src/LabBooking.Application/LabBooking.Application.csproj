@@ -28,7 +28,6 @@
 	  <Folder Include="Features\Course\Commands\" />
 	  <Folder Include="Features\ExternalEquipment\Commands\" />
 	  <Folder Include="Features\ExternalEquipment\Queries\" />
-	  <Folder Include="Features\Slots\Commands\" />
 	</ItemGroup>
 
 </Project>

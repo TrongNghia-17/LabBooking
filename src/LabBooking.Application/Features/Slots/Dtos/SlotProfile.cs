@@ -1,8 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using LabBooking.Application.Features.Slots.Commands.CreateSlot;
+using LabBooking.Application.Features.Slots.Commands.UpdateSlot;
 
 namespace LabBooking.Application.Features.Slots.Dtos
 {
@@ -10,6 +7,8 @@ namespace LabBooking.Application.Features.Slots.Dtos
     {
         public SlotProfile()
         {
+            CreateMap<CreateSlotCommand, Slot>();
+            CreateMap<UpdateSlotCommand, Slot>();
             CreateMap<Slot, SlotResponse>();
         }
     }

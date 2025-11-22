@@ -1,13 +1,12 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿namespace LabBooking.Domain.Repositories;
 
-namespace LabBooking.Domain.Repositories
+public interface ISlotRepository
 {
-    public interface ISlotRepository
-    {
-        Task<(IEnumerable<Slot>, int)> GetAllSlotAsync(CancellationToken cancellationToken = default);
-    }
+    Task<Slot?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
+    Task<(IEnumerable<Slot>, int)> GetAllSlotAsync(CancellationToken cancellationToken = default);
+    Task<Guid> Create(Slot entity, CancellationToken cancellationToken = default);
+    Task<bool> IsSlotIndexUniqueAsync(int slotIndex, CancellationToken cancellationToken = default);
+    Task DeleteAsync(Slot entity, CancellationToken cancellationToken = default);
+    Task UpdateAsync(Slot entity, CancellationToken cancellationToken = default);
+    Task<bool> IsSlotIndexUniqueAsync(Guid id, int slotIndex, CancellationToken cancellationToken = default);
 }
