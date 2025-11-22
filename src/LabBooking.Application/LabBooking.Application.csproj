@@ -25,7 +25,6 @@
 	  <Folder Include="Features\BookingPriorityDetail\Commands\" />
 	  <Folder Include="Features\BookingPriorityDetail\Queries\" />
 	  <Folder Include="Features\BookingSlots\Commands\" />
-	  <Folder Include="Features\Course\Commands\" />
 	  <Folder Include="Features\ExternalEquipment\Commands\" />
 	  <Folder Include="Features\ExternalEquipment\Queries\" />
 	</ItemGroup>

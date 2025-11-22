@@ -1,6 +1,6 @@
 ﻿using LabBooking.Application.Features.BookingPriorityDetail.Dtos;
 using LabBooking.Application.Features.BookingSlots.Dtos;
-using LabBooking.Application.Features.Course.Dtos;
+using LabBooking.Application.Features.Courses.Dtos;
 using LabBooking.Application.Features.ExternalEquipment.Dtos;
 using LabBooking.Application.Features.LabRooms.Dtos;
 using Medo;

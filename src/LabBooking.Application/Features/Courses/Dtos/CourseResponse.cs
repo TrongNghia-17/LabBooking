@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace LabBooking.Application.Features.Course.Dtos
+namespace LabBooking.Application.Features.Courses.Dtos
 {
     public record CourseResponse
     (

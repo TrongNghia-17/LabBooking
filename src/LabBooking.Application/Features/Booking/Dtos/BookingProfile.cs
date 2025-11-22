@@ -1,8 +1,4 @@
-﻿
-using LabBooking.Application.Features.BookingPriorityDetail.Dtos;
-using LabBooking.Application.Features.BookingSlots.Dtos;
-using LabBooking.Application.Features.Course.Dtos;
-using LabBooking.Application.Features.ExternalEquipment.Dtos;
+﻿using LabBooking.Application.Features.ExternalEquipment.Dtos;
 
 namespace LabBooking.Application.Features.Booking.Dtos
 {

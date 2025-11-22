@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace LabBooking.Infrastructure.Repositories
+﻿namespace LabBooking.Infrastructure.Repositories
 {
     internal class CourseRepository(LabBookingDbContext dbContext) : ICourseRepository
     {
@@ -49,6 +43,51 @@ namespace LabBooking.Infrastructure.Repositories
                 .ToListAsync();
 
             return (courses, totalCount);
+        }
+
+        public async Task<Guid> Create(Course entity, CancellationToken cancellationToken = default)
+        {
+            dbContext.Courses.Add(entity);
+            await dbContext.SaveChangesAsync(cancellationToken);
+            return entity.Id;
+        }
+
+        public async Task<bool> IsCourseCodeUniqueAsync(string courseCode, CancellationToken cancellationToken = default)
+        {
+            if (string.IsNullOrEmpty(courseCode)) return true;
+
+            var codeLower = courseCode.ToLower();
+            return !await dbContext.Courses
+                .AnyAsync(c => c.CourseCode != null && c.CourseCode.ToLower() == codeLower, cancellationToken);
+        }
+
+        public async Task<Course?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
+        {
+            return await dbContext.Courses.FirstOrDefaultAsync(c => c.Id == id, cancellationToken);
+        }
+
+        public async Task UpdateAsync(Course entity, CancellationToken cancellationToken = default)
+        {
+            dbContext.Entry(entity).State = EntityState.Modified;
+            await dbContext.SaveChangesAsync(cancellationToken);
+        }
+
+        public async Task<bool> IsCourseCodeUniqueAsync(Guid id, string courseCode, CancellationToken cancellationToken = default)
+        {
+            if (string.IsNullOrEmpty(courseCode)) return true;
+
+            var codeLower = courseCode.ToLower();
+
+            // Logic: Không được có thằng nào (Khác ID hiện tại) mà lại có cùng Code
+            var isDuplicate = await dbContext.Courses
+                .AnyAsync(c => c.CourseCode != null && c.CourseCode.ToLower() == codeLower && c.Id != id, cancellationToken);
+
+            return !isDuplicate;
+        }
+        public async Task DeleteAsync(Course entity, CancellationToken cancellationToken = default)
+        {
+            dbContext.Courses.Remove(entity);
+            await dbContext.SaveChangesAsync(cancellationToken);
         }
     }
 }
