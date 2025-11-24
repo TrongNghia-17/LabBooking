@@ -12,8 +12,6 @@ namespace LabBooking.Application.Features.BookingPriorityDetail.Dtos
         string Justification,
         string? EvidenceFilePath,
         Guid BookingId,
-        Guid? ApprovedById,
-        DateTime? ApprovedAt,
         string? ManagerNote
     );
 }

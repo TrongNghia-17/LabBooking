@@ -13,6 +13,8 @@ namespace LabBooking.Domain.Entities
         public string? Email { get; set; }
         public string? Organization { get; set; }
         public string? PurposeOfVisit { get; set; }
+
+        public Guid BookingId { get; set; }
         public DateTime VisitDate { get; set; }
         public DateTime CreatedDate { get; set; } = DateTime.UtcNow;
         public DateTime? LastUpdatedDate { get; set; }

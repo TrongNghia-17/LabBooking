@@ -23,6 +23,7 @@ internal class LabBookingDbContext(DbContextOptions<LabBookingDbContext> options
     public DbSet<UsagePolicy> UsagePolicies { get; set; }
     public DbSet<UserDevice> UserDevices { get; set; }
     public DbSet<BookingPriorityDetail> BookingPriorityDetails { get; set; }
+    public DbSet<BookingConsentRequest> BookingConsentRequests { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

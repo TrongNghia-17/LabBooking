@@ -1,4 +1,6 @@
-﻿using System;
+﻿using AutoMapper;
+using LabBooking.Application.Features.BookingChangeRequest.Dtos;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -8,10 +10,11 @@ using System.Threading.Tasks;
 namespace LabBooking.Application.Features.BookingChangeRequest.Commands.CreateBookingChangeRequest
 {
     public class CreateBookingChangeRequestCommandHandler(
-    IBookingChangeRequestRepository changeRequestRepository
-    ) : IRequestHandler<CreateBookingChangeRequestCommand, Guid>
+    IBookingChangeRequestRepository changeRequestRepository,
+    IMapper mapper
+    ) : IRequestHandler<CreateBookingChangeRequestCommand, BookingChangeRequestResponse>
     {
-        public async Task<Guid> Handle(CreateBookingChangeRequestCommand request, CancellationToken token)
+        public async Task<BookingChangeRequestResponse> Handle(CreateBookingChangeRequestCommand request, CancellationToken token)
         {
             // =================================================================
             // BƯỚC 1: CHECK TỒN TẠI & QUYỀN (GỌI REPO)
@@ -94,7 +97,9 @@ namespace LabBooking.Application.Features.BookingChangeRequest.Commands.CreateBo
 
             var createdRequest = await changeRequestRepository.CreateAsync(changeRequest);
 
-            return createdRequest.Id;
+            var createdRequestResponse = mapper.Map<BookingChangeRequestResponse>(createdRequest);
+
+            return createdRequestResponse;
         }
     }
 }

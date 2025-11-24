@@ -114,6 +114,36 @@ public class CreateBookingCommandHandler(
             }).ToList();
         }
 
+        // ==========================================================
+        // 4. [MỚI] Xử lý Khách mời bên ngoài (OutSide Guests)
+        // ==========================================================
+        if (request.OutSideGuests != null && request.OutSideGuests.Any())
+        {
+            // Logic: Lấy ngày slot đầu tiên làm ngày tham quan mặc định
+            // Vì Input OutSideGuest không có ngày, mà Entity bắt buộc có VisitDate
+            var defaultVisitDate = request.Slots.Any()
+                ? request.Slots.Min(s => s.Date).ToDateTime(new TimeOnly(0, 0))
+                : DateTime.UtcNow;
+
+            booking.OutSideGuests = request.OutSideGuests.Select(g => new Domain.Entities.OutSideGuest
+            {
+                Id = Guid.NewGuid(),
+                // Giả sử Entity OutSideGuest của bạn có BookingId để link
+                // Nếu chưa có, bạn cần thêm prop public Guid BookingId { get; set; } vào Entity OutSideGuest
+                // BookingId = booking.Id, // EF Core sẽ tự gán nếu add vào collection của booking
+
+                FullName = g.FullName,
+                Email = g.Email,
+                Organization = g.Organization,
+                PurposeOfVisit = g.purpose,
+                VisitDate = defaultVisitDate, // Gán ngày
+
+                CreatedById = request.CreatedById,
+                CreatedDate = DateTime.UtcNow,
+                IsActive = true
+            }).ToList();
+        }
+
         // 4. Gọi Repository để lưu (bao gồm cả check conflict/override trong Repository)
         var createdBooking = await bookingRepository.CreateBookingAsync(booking);
 

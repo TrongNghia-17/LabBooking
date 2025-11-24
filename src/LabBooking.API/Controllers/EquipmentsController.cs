@@ -53,7 +53,7 @@ public class EquipmentsController(
     /// <param name="id">The Id of the equipment</param>
     /// <returns>The equipment</returns>
     [HttpGet("{id:guid}")]
-    [Authorize(Roles = "Admin")]
+    //[Authorize(Roles = "Admin")]
     [ProducesResponseType(typeof(EquipmentResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
@@ -71,7 +71,7 @@ public class EquipmentsController(
     /// <param name="query">Query parameters for filtering, sorting, and pagination</param>
     /// <returns>A paged list of equipments</returns>
     [HttpGet]
-    [Authorize(Roles = "Admin")]
+    //[Authorize(Roles = "Admin")]
     [ProducesResponseType(typeof(PagedResult<EquipmentResponse>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]

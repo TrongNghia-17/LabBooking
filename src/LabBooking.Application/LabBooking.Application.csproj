@@ -20,8 +20,6 @@
 	</ItemGroup>
 
 	<ItemGroup>
-	  <Folder Include="Features\BookingChangeRequest\Dtos\" />
-	  <Folder Include="Features\BookingChangeRequest\Queries\" />
 	  <Folder Include="Features\BookingPriorityDetail\Commands\" />
 	  <Folder Include="Features\BookingPriorityDetail\Queries\" />
 	  <Folder Include="Features\BookingSlots\Commands\" />
