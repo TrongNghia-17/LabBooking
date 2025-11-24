@@ -1,5 +1,8 @@
-﻿using LabBooking.Application.Services.Users;
+using LabBooking.Application.Services.Notifications;
+using LabBooking.Application.Services.Users;
+using LabBooking.Infrastructure.Services.Notifications;
 using LabBooking.Infrastructure.Services.Users;
+
 
 namespace LabBooking.Infrastructure.Extensions;
 
@@ -21,14 +24,14 @@ public static class ServiceCollectionExtensions
                 options.EnableSensitiveDataLogging();
         });
 
-        services.AddIdentityApiEndpoints<User>(options =>
+        services.AddIdentityCore<User>(options =>
         {
             options.User.AllowedUserNameCharacters =
-                "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-._@+ "; // <-- Đã thêm khoảng trắng ở cuối
+                "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-._@+ ";
         })
         .AddRoles<IdentityRole<Guid>>()
-        //.AddClaimsPrincipalFactory<LabsUserClaimsPrincipalFactory>()
-        .AddEntityFrameworkStores<LabBookingDbContext>();
+        .AddEntityFrameworkStores<LabBookingDbContext>()
+        .AddDefaultTokenProviders();
 
         services.AddStackExchangeRedisCache(options =>
         {
@@ -42,13 +45,29 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<IEquipmentRepository, EquipmentRepository>();
         services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
+        services.AddScoped<IUserDeviceRepository, UserDeviceRepository>();
+        services.AddScoped<INotificationRepository, NotificationRepository>();
+        services.AddScoped<ISlotRepository, SlotRepository>();
+        services.AddScoped<IBookingSlotRepository, BookingSlotRepository>();
+        services.AddScoped<IRoomMaintainScheduleRepository, RoomMaintainScheduleRepository>();
+        services.AddScoped<IBookingRepository, BookingRepository>();
+        services.AddScoped<IProjectRepository, ProjectRepository>();
+        services.AddScoped<ICourseRepository, CourseRepository>();
+        services.AddScoped<IBookingChangeRequestRepository, BookingChangeRequestRepository>();
+
+        services.AddScoped<IUsagePolicyRepository, UsagePolicyRepository>();
+        services.AddScoped<IEquipmentMaintainScheduleRepository, EquipmentMaintainScheduleRepository>();
 
         services.AddScoped<ICachingService, CachingService>();
         services.AddScoped<IJwtService, JwtService>();
         services.AddScoped<IGoogleAuthService, GoogleAuthService>();
+        services.AddScoped<INotificationService, NotificationService>();
+
         services.AddScoped<IUserFactory, UserFactory>();
         services.AddScoped<IRefreshTokenFactory, RefreshTokenFactory>();
         services.AddScoped<IClaimsGenerator, ClaimsGenerator>();
         services.AddScoped<ICurrentUserService, CurrentUserService>();
+
+        services.AddHttpClient();
     }
 }

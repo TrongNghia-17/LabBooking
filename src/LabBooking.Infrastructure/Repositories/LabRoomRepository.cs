@@ -11,7 +11,9 @@ internal class LabRoomRepository(LabBookingDbContext dbContext) : ILabRoomReposi
 
     public async Task<LabRoom?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        var labRoom = await dbContext.LabRooms.FindAsync(id, cancellationToken);
+        var labRoom = await dbContext.LabRooms
+            .Include(x => x.Equipments)
+            .FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
         return labRoom;
     }
 
@@ -27,6 +29,11 @@ internal class LabRoomRepository(LabBookingDbContext dbContext) : ILabRoomReposi
         await dbContext.SaveChangesAsync(cancellationToken);
     }
 
+    public async Task<bool> ExistsAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        return await dbContext.LabRooms.AnyAsync(r => r.Id == id, cancellationToken);
+    }
+
     public async Task<(IEnumerable<LabRoom>, int)> GetAllMatchingAsync(
         string? searchPhrase,
         int pageSize,
@@ -38,6 +45,7 @@ internal class LabRoomRepository(LabBookingDbContext dbContext) : ILabRoomReposi
 
         var baseQuery = dbContext
             .LabRooms
+            .Include(x => x.Equipments)
             .Where(r => searchPhraseLower == null ||
                         (r.LabName != null && r.LabName.ToLower().Contains(searchPhraseLower)) ||
                         (r.Location != null && r.Location.ToLower().Contains(searchPhraseLower)));

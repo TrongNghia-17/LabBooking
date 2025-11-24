@@ -37,6 +37,10 @@ global using LabBooking.Application.Features.Equipments.Commands.CreateEquipment
 global using LabBooking.Application.Features.Equipments.Commands.UpdateEquipment;
 global using LabBooking.Application.Features.Equipments.Dtos;
 global using LabBooking.Application.Features.Equipments.Queries.GetByIdEquipment;
+global using LabBooking.Application.Features.Authentication.Commands.Login;
+global using LabBooking.Application.Features.Authentication.Commands.Logout;
+global using LabBooking.Application.Features.Authentication.Commands.Register;
+global using LabBooking.Application.Features.Authentication.Dtos;
 
 
 

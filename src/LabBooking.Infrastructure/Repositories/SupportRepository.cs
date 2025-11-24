@@ -2,11 +2,11 @@
 
 internal class SupportRepository(LabBookingDbContext dbContext) : ISupportRepository
 {
-    public async Task<Support> Create(Support entity)
+    public async Task<Guid> Create(Support entity, CancellationToken cancellationToken = default)
     {
         dbContext.Supports.Add(entity);
-        await dbContext.SaveChangesAsync();
-        return entity;
+        await dbContext.SaveChangesAsync(cancellationToken);
+        return entity.Id;
     }
 
     public async Task<(IEnumerable<Support>, int)> GetAllMatchingAsync(
@@ -14,7 +14,8 @@ internal class SupportRepository(LabBookingDbContext dbContext) : ISupportReposi
         int pageSize,
         int pageNumber,
         string? sortBy,
-        SortDirection sortDirection)
+        SortDirection sortDirection,
+        CancellationToken cancellationToken = default)
     {
         var searchPhraseLower = searchPhrase?.ToLower();
 
@@ -44,26 +45,26 @@ internal class SupportRepository(LabBookingDbContext dbContext) : ISupportReposi
         var supports = await baseQuery
             .Skip(pageSize * (pageNumber - 1))
             .Take(pageSize)
-            .ToListAsync();
+            .ToListAsync(cancellationToken);
 
         return (supports, totalCount);
     }
 
-    public async Task<Support?> GetByIdAsync(Guid id)
+    public async Task<Support?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        var support = await dbContext.Supports.FindAsync(id);
+        var support = await dbContext.Supports.FindAsync(id, cancellationToken);
         return support;
     }
 
-    public async Task Update(Support entity)
+    public async Task Update(Support entity, CancellationToken cancellationToken = default)
     {
         dbContext.Supports.Update(entity);
-        await dbContext.SaveChangesAsync();
+        await dbContext.SaveChangesAsync(cancellationToken);
     }
 
-    public async Task DeleteAsync(Support entity)
+    public async Task DeleteAsync(Support entity, CancellationToken cancellationToken = default)
     {
         dbContext.Supports.Remove(entity);
-        await dbContext.SaveChangesAsync();
+        await dbContext.SaveChangesAsync(cancellationToken);
     }
 }

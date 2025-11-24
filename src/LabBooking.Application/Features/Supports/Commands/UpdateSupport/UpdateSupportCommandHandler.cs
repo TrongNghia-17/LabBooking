@@ -1,5 +1,8 @@
 ﻿namespace LabBooking.Application.Features.Supports.Commands.UpdateSupport;
 
+/// <summary>
+/// Handles the business logic for the <see cref="UpdateSupportCommand"/>.
+/// </summary>
 public class UpdateSupportCommandHandler(
     ILogger<UpdateSupportCommandHandler> logger,
     IMapper mapper,
@@ -8,19 +11,21 @@ public class UpdateSupportCommandHandler(
 {
     public async Task<Unit> Handle(UpdateSupportCommand request, CancellationToken cancellationToken)
     {
-        logger.LogInformation("Updating support ticket with Id: {Id}", request.Id);
+        logger.LogInformation("Attempting to update support ticket {SupportId}", request.Id);
 
         var supportToUpdate = await supportRepository.GetByIdAsync(request.Id);
 
         if (supportToUpdate == null)
         {
-            logger.LogWarning("Support ticket with Id: {Id} not found.", request.Id);
+            logger.LogWarning("Update failed: Support ticket {SupportId} was not found.", request.Id);
             throw new NotFoundException(nameof(Support), request.Id.ToString());
         }
 
         mapper.Map(request, supportToUpdate);
 
         await supportRepository.Update(supportToUpdate);
+
+        logger.LogInformation("Successfully updated support ticket {SupportId}", request.Id);
 
         return Unit.Value;
     }

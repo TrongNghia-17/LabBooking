@@ -12,6 +12,8 @@ namespace LabBooking.Domain.Entities
         public string? EquipmentName { get; set; } = string.Empty;
         public string? Description { get; set; }
         public int? Quantity { get; set; }
-        public string? Status { get; set; }
+        public Guid BookingId { get; set; }
+        [ForeignKey(nameof(BookingId))]
+        public Booking? Booking { get; set; }
     }
 }

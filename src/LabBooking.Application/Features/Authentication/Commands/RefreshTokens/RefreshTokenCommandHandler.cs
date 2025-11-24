@@ -1,5 +1,12 @@
-﻿namespace LabBooking.Application.Features.Authentication.Commands.RefreshTokens;
+﻿using LabBooking.Application.Features.Authentication.Dtos;
+using System.Security.Authentication;
 
+namespace LabBooking.Application.Features.Authentication.Commands.RefreshTokens;
+
+/// <summary>
+/// Handles the RefreshTokenCommand to issue new tokens.
+/// Implements token rotation and replay attack detection.
+/// </summary>
 public class RefreshTokenCommandHandler(
     IRefreshTokenRepository refreshTokenRepository,
     IJwtService jwtService,
@@ -7,69 +14,71 @@ public class RefreshTokenCommandHandler(
     ILogger<RefreshTokenCommandHandler> logger,
     IRefreshTokenFactory refreshTokenFactory,
     IClaimsGenerator claimsGenerator
-    ) : IRequestHandler<RefreshTokenCommand, RefreshTokenResponse>
+    ) : IRequestHandler<RefreshTokenCommand, AuthResponse>
 {
-    public async Task<RefreshTokenResponse> Handle(RefreshTokenCommand request, CancellationToken cancellationToken)
+    public async Task<AuthResponse> Handle(RefreshTokenCommand request, CancellationToken cancellationToken)
     {
-        // === 1. Xác thực Token cũ ===
+        // === 1. Validate Old Token ===
 
         var oldRefreshTokenString = request.ExpiredRefreshToken;
         if (string.IsNullOrEmpty(oldRefreshTokenString))
-            throw new UnauthorizedAccessException("Invalid refresh token.");
+            throw new AuthenticationException("Invalid refresh token.");
 
         var oldRefreshToken = await refreshTokenRepository.GetByTokenAsync(request.ExpiredRefreshToken, cancellationToken)
-            ?? throw new UnauthorizedAccessException("Invalid or expired refresh token.");
+            ?? throw new AuthenticationException("Invalid or expired refresh token.");
 
-        // PHÁT HIỆN TẤN CÔNG (REPLAY ATTACK):
-        // Nếu token đã BỊ THU HỒI (Revoked != null) mà vẫn bị đem ra sử dụng
-        // -> Đây là dấu hiệu token đã bị đánh cắp và đang được dùng lại.
+        // REPLAY ATTACK DETECTION:
+        // If a token is already revoked but is used again,
+        // it's a sign of a stolen token being re-used.
         if (oldRefreshToken.IsRevoked)
         {
             logger.LogWarning(
-                "Phát hiện tấn công Replay Attack: Refresh Token đã bị thu hồi đang được sử dụng. UserId: {UserId}, Token: {Token}",
+                "Replay Attack Detected: Revoked refresh token was used. UserId: {UserId}, Token: {Token}",
                 oldRefreshToken.UserId, oldRefreshToken.Token);
 
-            // => HỦY HÀNG LOẠT: Thu hồi TẤT CẢ token còn hạn khác của user này
+            // => Revoke ALL other valid tokens of this user
             await refreshTokenRepository.RevokeAllTokensByUserIdAsync(oldRefreshToken.UserId, cancellationToken);
 
-            // Ném lỗi để buộc tất cả phiên (cả user thật và kẻ tấn công) phải đăng nhập lại
-            throw new UnauthorizedAccessException("Token replay detected. All sessions have been logged out for security reasons.");
+            throw new AuthenticationException("All sessions have been logged out for security reasons.");
         }
 
-        // Kiểm tra xem token có bị hết hạn không
+        // Check if the token is expired
         if (oldRefreshToken.IsExpired)
-            throw new UnauthorizedAccessException("Invalid or expired refresh token.");
+            throw new AuthenticationException("Invalid or expired refresh token.");
 
-        // === 2. Lấy thông tin User ===
+        // === 2. Get User Information ===
 
         var user = await userManager.FindByIdAsync(oldRefreshToken.UserId.ToString())
-            ?? throw new UnauthorizedAccessException("Invalid or expired refresh token.");
+            ?? throw new AuthenticationException("User not found for the provided token.");
 
-        // === 3. Tạo Access Token MỚI ===
+        // === 3. Generate NEW Access Token ===
 
-        // Lấy thông tin claims MỚI NHẤT (ví dụ user vừa được cập nhật role)
+        // Get the LATEST claims (e.g., if user roles were updated)
         var claims = await claimsGenerator.GenerateClaimsAsync(user);
         var newAccessToken = jwtService.GenerateAccessToken(claims);
 
-        // === 4. Tạo Refresh Token MỚI (Bảo mật xoay vòng) ===
+        // === 4. Generate NEW Refresh Token (Token Rotation) ===
 
         var newRefreshToken = refreshTokenFactory.Create(user.Id);
 
-        // === 5. Thu hồi Token cũ, Lưu Token mới ===
+        // === 5. Revoke Old Token, Save New Token ===
 
-        oldRefreshToken.Revoked = DateTime.UtcNow; // Thu hồi token CŨ
-        refreshTokenRepository.Update(oldRefreshToken); // Cập nhật token CŨ
+        oldRefreshToken.Revoked = DateTime.UtcNow;
+        refreshTokenRepository.Update(oldRefreshToken);
+
         await refreshTokenRepository.AddAsync(newRefreshToken, cancellationToken);
 
-        // Lưu cả 2 thay đổi (update + add) vào DB
+        // Save both changes (update + add) to the DB
         await refreshTokenRepository.SaveChangesAsync(cancellationToken);
 
-        // === 6. Trả về Response ===
+        // === 6. Return Response ===
 
-        return new RefreshTokenResponse(
+        var authResponse = new AuthResponse(
             newAccessToken,
             newRefreshToken.Token,
             newRefreshToken.Expires
         );
+
+        return authResponse;
     }
 }

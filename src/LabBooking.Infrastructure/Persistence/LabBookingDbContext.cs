@@ -5,7 +5,6 @@ internal class LabBookingDbContext(DbContextOptions<LabBookingDbContext> options
 {
     public DbSet<Booking> Bookings { get; set; }
     public DbSet<BookingChangeRequest> BookingChangeRequests { get; set; }
-    public DbSet<BookingParticipant> BookingParticipants { get; set; }
     public DbSet<BookingSlot> BookingSlots { get; set; }
     public DbSet<Course> Courses { get; set; }
     public DbSet<DoorOpeningRequest> DoorOpeningRequests { get; set; }
@@ -23,6 +22,8 @@ internal class LabBookingDbContext(DbContextOptions<LabBookingDbContext> options
     public DbSet<Support> Supports { get; set; }
     public DbSet<UsagePolicy> UsagePolicies { get; set; }
     public DbSet<UserDevice> UserDevices { get; set; }
+    public DbSet<BookingPriorityDetail> BookingPriorityDetails { get; set; }
+    public DbSet<BookingConsentRequest> BookingConsentRequests { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

@@ -23,7 +23,7 @@ public class Incident
     [ForeignKey(nameof(ReportedById))]
     public User? ReportedBy { get; set; }
 
-    public Guid SlotId { get; set; }
+    public Guid? SlotId { get; set; }
     [ForeignKey(nameof(SlotId))]
     public Slot? Slot { get; set; }
 
@@ -31,4 +31,12 @@ public class Incident
     public string Description { get; set; } = string.Empty;
     public bool IsResolved { get; set; } = false;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public LevelOfImportance ImportanceLevel { get; set; } = LevelOfImportance.Low;
+}
+
+public enum LevelOfImportance
+{
+    Low,
+    Medium,
+    High
 }

@@ -2,17 +2,18 @@
 
 public interface ISupportRepository
 {
-    Task<Support> Create(Support entity);
+    Task<Guid> Create(Support entity, CancellationToken cancellationToken = default);
 
     Task<(IEnumerable<Support>, int)> GetAllMatchingAsync(
         string? searchPhrase,
         int pageSize,
         int pageNumber,
         string? sortBy,
-        SortDirection sortDirection);
+        SortDirection sortDirection,
+        CancellationToken cancellationToken = default);
 
-    Task<Support?> GetByIdAsync(Guid id);
-    Task Update(Support entity);
+    Task<Support?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
+    Task Update(Support entity, CancellationToken cancellationToken = default);
 
-    Task DeleteAsync(Support entity);
+    Task DeleteAsync(Support entity, CancellationToken cancellationToken = default);
 }

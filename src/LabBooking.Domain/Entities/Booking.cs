@@ -2,26 +2,24 @@
 
 public enum BookingStatus
 {
-    Pending,
-    Approved,
-    Rejected,
-    Cancelled
+    Pending, //0
+    Approved, //1
+    Rejected, //2
+    Cancelled //3
 }
 
 public enum BookingType
 {
-    Teaching,   // Lịch dạy học
-    Project     // Lịch dự án
+    Teaching,  //0 // Lịch dạy học
+    Project,    //1 // Lịch dự án
+    UniversityEvent //2 // Lịch sự kiện trường
 }
 
 public enum BookingPriority
 {
+    Maintenance = 0,
     UniversityEvent = 1,
-    LecturerTeaching = 2,
-    LecturerResearch = 3,
-    StudentGraduationProject = 4,
-    StudentClubEvent = 5,
-    StudentNormal = 6
+    Standard = 2
 }
 
 public class Booking
@@ -38,9 +36,14 @@ public class Booking
     public BookingStatus? Status { get; set; } = BookingStatus.Pending;
     public bool? IsPublic { get; set; }
     public bool? IsMajorOnly { get; set; }
+
+    public Guid? ApprovedById { get; set; }
+
+    public DateTime? ApprovedAt { get; set; }
+    public DateTime? CreatedAt { get; set; }
     public BookingType? Type { get; set; }
 
-    public BookingPriority? Priority { get; set; } = BookingPriority.StudentNormal;
+    public BookingPriority? Priority { get; set; } = BookingPriority.Standard;
 
 
     // Nếu là lịch dạy học → lưu tên môn học
@@ -53,7 +56,14 @@ public class Booking
     public Guid? ProjectId { get; set; }
     [ForeignKey(nameof(ProjectId))]
     public Project? Project { get; set; }
+
+    // Nếu là lịch ưu tiên -> liên kết tới lý do
+    public Guid? BookingPriorityDetailId { get; set; }
+    [ForeignKey(nameof(BookingPriorityDetailId))]
+    public BookingPriorityDetail? BookingPriorityDetail { get; set; }
     public int? NumberOfParticipants { get; set; }
     public ICollection<BookingSlot>? Slots { get; set; }
-    public ICollection<BookingParticipant>? Participants { get; set; }
+    public ICollection<ExternalEquipment>? ExternalEquipments { get; set; }
+    public ICollection<OutSideGuest>? OutSideGuests { get; set; }
+    public string? PendingSlotsJson { get; set; }
 }

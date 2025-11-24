@@ -18,32 +18,30 @@ public class CreateEquipmentCommandValidator : AbstractValidator<CreateEquipment
             .NotEmpty()
             .WithMessage("Lab Room ID is required.");
 
-        RuleFor(c => c.IsAvailable)
-            .NotNull()
-            .WithMessage("IsAvailable status is required.");
-
-        RuleFor(c => c.Status)
-            .NotEmpty()
-            .WithMessage("'Status' is required.")
-            .Must(BeValidEquipmentStatus)
-            .When(c => !string.IsNullOrEmpty(c.Status))
-            .WithMessage($"'status' không hợp lệ. Phải là một trong các giá trị: {GetValidStatuses()}");
+        //RuleFor(c => c.Status)
+        //    .NotEmpty()
+        //    .WithMessage("'Status' is required.")
+        //    .Must(BeValidEquipmentStatus)
+        //    .When(c => !string.IsNullOrEmpty(c.Status))
+        //    .WithMessage($"'Status' is not valid. Must be one of: {GetValidStatuses()}");
     }
 
     /// <summary>
-    /// Kiểm tra xem chuỗi có thể được parse thành EquipmentStatus hay không
-    /// (true = phân biệt chữ hoa/thường)
+    /// Validates if the provided status string can be parsed into the EquipmentStatus enum.
     /// </summary>
+    /// <param name="status">The status string to validate.</param>
+    /// <returns>True if the string is a valid EquipmentStatus, false otherwise.</returns>
+    /// <remarks>
+    /// The check is case-insensitive (e.g., "available" or "Available" are both valid).
+    /// </remarks>
     private bool BeValidEquipmentStatus(string? status)
     {
         return Enum.TryParse<EquipmentStatus>(status, true, out _);
     }
 
     /// <summary>
-    /// Lấy danh sách tên Enum hợp lệ để hiển thị trong thông báo lỗi
+    /// Gets a comma-separated list of valid EquipmentStatus names for the error message.
     /// </summary>
-    private string GetValidStatuses()
-    {
-        return string.Join(", ", Enum.GetNames(typeof(EquipmentStatus)));
-    }
+    /// <returns>A string of valid status names.</returns>
+    private string GetValidStatuses() => string.Join(", ", Enum.GetNames(typeof(EquipmentStatus)));
 }

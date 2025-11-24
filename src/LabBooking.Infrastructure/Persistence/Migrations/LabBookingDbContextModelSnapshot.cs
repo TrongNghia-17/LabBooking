@@ -28,8 +28,20 @@ namespace LabBooking.Application.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<DateTime?>("ApprovedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("ApprovedById")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("BookingPriorityDetailId")
+                        .HasColumnType("uuid");
+
                     b.Property<Guid?>("CourseId")
                         .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<Guid>("CreatedById")
                         .HasColumnType("uuid");
@@ -49,6 +61,9 @@ namespace LabBooking.Application.Migrations
                     b.Property<int?>("NumberOfParticipants")
                         .HasColumnType("integer");
 
+                    b.Property<string>("PendingSlotsJson")
+                        .HasColumnType("text");
+
                     b.Property<int?>("Priority")
                         .HasColumnType("integer");
 
@@ -65,6 +80,8 @@ namespace LabBooking.Application.Migrations
                         .HasColumnType("integer");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("BookingPriorityDetailId");
 
                     b.HasIndex("CourseId");
 
@@ -83,46 +100,84 @@ namespace LabBooking.Application.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
-                    b.Property<Guid>("ApprovedById")
-                        .HasColumnType("uuid");
-
                     b.Property<Guid>("BookingId")
                         .HasColumnType("uuid");
 
-                    b.Property<Guid>("CreatedById")
-                        .HasColumnType("uuid");
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
 
-                    b.Property<Guid>("NewBookingSlotId")
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid>("OldBookingSlotId")
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("Reason")
+                    b.Property<string>("ManagerReason")
                         .HasColumnType("text");
 
-                    b.Property<int?>("Status")
+                    b.Property<Guid?>("NewCourseId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("NewDescription")
+                        .HasColumnType("text");
+
+                    b.Property<string>("NewExternalEquipmentsJson")
+                        .HasColumnType("text");
+
+                    b.Property<int?>("NewNumberOfParticipants")
                         .HasColumnType("integer");
 
-                    b.Property<string>("Type")
+                    b.Property<string>("NewPriorityDetailJson")
                         .HasColumnType("text");
+
+                    b.Property<string>("NewProjectJson")
+                        .HasColumnType("text");
+
+                    b.Property<string>("NewTitle")
+                        .HasColumnType("text");
+
+                    b.Property<string>("OriginalOverriddenSlotsJson")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime?>("ProcessedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("ProcessedById")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("RequestType")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("RequestedById")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("ApprovedById");
-
                     b.HasIndex("BookingId");
-
-                    b.HasIndex("CreatedById");
-
-                    b.HasIndex("NewBookingSlotId");
-
-                    b.HasIndex("OldBookingSlotId");
 
                     b.ToTable("BookingChangeRequests");
                 });
 
-            modelBuilder.Entity("LabBooking.Domain.Entities.BookingParticipant", b =>
+            modelBuilder.Entity("LabBooking.Domain.Entities.BookingChangeRequestSlot", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("BookingChangeRequestId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateOnly>("Date")
+                        .HasColumnType("date");
+
+                    b.Property<Guid>("SlotId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BookingChangeRequestId");
+
+                    b.ToTable("BookingChangeRequestSlot");
+                });
+
+            modelBuilder.Entity("LabBooking.Domain.Entities.BookingConsentRequest", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -131,23 +186,49 @@ namespace LabBooking.Application.Migrations
                     b.Property<Guid>("BookingId")
                         .HasColumnType("uuid");
 
-                    b.Property<string>("Email")
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("CreatedById")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("OverriddenSlotIdsJson")
                         .IsRequired()
                         .HasColumnType("text");
 
-                    b.Property<bool>("IsApproved")
-                        .HasColumnType("boolean");
-
-                    b.Property<Guid>("UserId")
+                    b.Property<Guid>("PriorityBookingId")
                         .HasColumnType("uuid");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("BookingId");
+                    b.ToTable("BookingConsentRequests");
+                });
 
-                    b.HasIndex("UserId");
+            modelBuilder.Entity("LabBooking.Domain.Entities.BookingPriorityDetail", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
 
-                    b.ToTable("BookingParticipants");
+                    b.Property<Guid>("BookingId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("EvidenceFilePath")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Justification")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("ManagerNote")
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("BookingPriorityDetails");
                 });
 
             modelBuilder.Entity("LabBooking.Domain.Entities.BookingSlot", b =>
@@ -159,13 +240,22 @@ namespace LabBooking.Application.Migrations
                     b.Property<Guid>("BookingId")
                         .HasColumnType("uuid");
 
-                    b.Property<DateTime>("Date")
-                        .HasColumnType("timestamp with time zone");
+                    b.Property<DateOnly>("Date")
+                        .HasColumnType("date");
+
+                    b.Property<Guid?>("OverriddenByBookingId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Priority")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("Reason")
+                        .HasColumnType("integer");
 
                     b.Property<Guid>("SlotId")
                         .HasColumnType("uuid");
 
-                    b.Property<int>("SlotIndex")
+                    b.Property<int>("Status")
                         .HasColumnType("integer");
 
                     b.HasKey("Id");
@@ -281,7 +371,7 @@ namespace LabBooking.Application.Migrations
                     b.Property<string>("Description")
                         .HasColumnType("text");
 
-                    b.Property<DateTime?>("EndTime")
+                    b.Property<DateTime>("EndTime")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<int?>("EquimentpMaintainStatus")
@@ -290,19 +380,7 @@ namespace LabBooking.Application.Migrations
                     b.Property<Guid>("EquipmentId")
                         .HasColumnType("uuid");
 
-                    b.Property<bool?>("IsAllDay")
-                        .HasColumnType("boolean");
-
-                    b.Property<bool>("IsManyDay")
-                        .HasColumnType("boolean");
-
-                    b.Property<int?>("NumberOf")
-                        .HasColumnType("integer");
-
-                    b.Property<int?>("NumberOfSlot")
-                        .HasColumnType("integer");
-
-                    b.Property<DateTime?>("StartTime")
+                    b.Property<DateTime>("StartTime")
                         .HasColumnType("timestamp with time zone");
 
                     b.HasKey("Id");
@@ -318,6 +396,9 @@ namespace LabBooking.Application.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<Guid>("BookingId")
+                        .HasColumnType("uuid");
+
                     b.Property<string>("Description")
                         .HasColumnType("text");
 
@@ -327,10 +408,9 @@ namespace LabBooking.Application.Migrations
                     b.Property<int?>("Quantity")
                         .HasColumnType("integer");
 
-                    b.Property<string>("Status")
-                        .HasColumnType("text");
-
                     b.HasKey("Id");
+
+                    b.HasIndex("BookingId");
 
                     b.ToTable("ExternalEquipments");
                 });
@@ -341,15 +421,15 @@ namespace LabBooking.Application.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
-                    b.Property<Guid>("BookingId")
-                        .HasColumnType("uuid");
-
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("Description")
                         .IsRequired()
                         .HasColumnType("text");
+
+                    b.Property<int>("ImportanceLevel")
+                        .HasColumnType("integer");
 
                     b.Property<bool>("IsResolved")
                         .HasColumnType("boolean");
@@ -360,16 +440,19 @@ namespace LabBooking.Application.Migrations
                     b.Property<Guid>("ReportedById")
                         .HasColumnType("uuid");
 
+                    b.Property<Guid>("SlotId")
+                        .HasColumnType("uuid");
+
                     b.Property<int>("Type")
                         .HasColumnType("integer");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("BookingId");
-
                     b.HasIndex("LabRoomId");
 
                     b.HasIndex("ReportedById");
+
+                    b.HasIndex("SlotId");
 
                     b.ToTable("Incidents");
                 });
@@ -423,6 +506,9 @@ namespace LabBooking.Application.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<string>("DataPayload")
+                        .HasColumnType("text");
+
                     b.Property<bool>("IsRead")
                         .HasColumnType("boolean");
 
@@ -448,6 +534,9 @@ namespace LabBooking.Application.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("BookingId")
                         .HasColumnType("uuid");
 
                     b.Property<Guid?>("CreatedById")
@@ -550,25 +639,16 @@ namespace LabBooking.Application.Migrations
                     b.Property<string>("Description")
                         .HasColumnType("text");
 
-                    b.Property<DateTime?>("EndTime")
+                    b.Property<DateTime>("EndTime")
                         .HasColumnType("timestamp with time zone");
-
-                    b.Property<bool?>("IsAllDay")
-                        .HasColumnType("boolean");
-
-                    b.Property<bool>("IsManyDay")
-                        .HasColumnType("boolean");
 
                     b.Property<Guid>("LabRoomId")
                         .HasColumnType("uuid");
 
-                    b.Property<int?>("NumberOfSlot")
-                        .HasColumnType("integer");
-
                     b.Property<int?>("RoomMaintainStatus")
                         .HasColumnType("integer");
 
-                    b.Property<DateTime?>("StartTime")
+                    b.Property<DateTime>("StartTime")
                         .HasColumnType("timestamp with time zone");
 
                     b.HasKey("Id");
@@ -584,14 +664,18 @@ namespace LabBooking.Application.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
-                    b.Property<DateTime>("EndTime")
-                        .HasColumnType("timestamp with time zone");
+                    b.Property<TimeOnly>("EndTime")
+                        .HasColumnType("time without time zone");
+
+                    b.Property<string>("Label")
+                        .IsRequired()
+                        .HasColumnType("text");
 
                     b.Property<int>("SlotIndex")
                         .HasColumnType("integer");
 
-                    b.Property<DateTime>("StartTime")
-                        .HasColumnType("timestamp with time zone");
+                    b.Property<TimeOnly>("StartTime")
+                        .HasColumnType("time without time zone");
 
                     b.HasKey("Id");
 
@@ -895,6 +979,10 @@ namespace LabBooking.Application.Migrations
 
             modelBuilder.Entity("LabBooking.Domain.Entities.Booking", b =>
                 {
+                    b.HasOne("LabBooking.Domain.Entities.BookingPriorityDetail", "BookingPriorityDetail")
+                        .WithMany()
+                        .HasForeignKey("BookingPriorityDetailId");
+
                     b.HasOne("LabBooking.Domain.Entities.Course", "Course")
                         .WithMany()
                         .HasForeignKey("CourseId");
@@ -915,6 +1003,8 @@ namespace LabBooking.Application.Migrations
                         .WithMany()
                         .HasForeignKey("ProjectId");
 
+                    b.Navigation("BookingPriorityDetail");
+
                     b.Navigation("Course");
 
                     b.Navigation("CreatedBy");
@@ -926,64 +1016,22 @@ namespace LabBooking.Application.Migrations
 
             modelBuilder.Entity("LabBooking.Domain.Entities.BookingChangeRequest", b =>
                 {
-                    b.HasOne("LabBooking.Domain.Entities.User", "ApprovedBy")
-                        .WithMany()
-                        .HasForeignKey("ApprovedById")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
                     b.HasOne("LabBooking.Domain.Entities.Booking", "Booking")
                         .WithMany()
                         .HasForeignKey("BookingId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("LabBooking.Domain.Entities.User", "CreatedBy")
-                        .WithMany()
-                        .HasForeignKey("CreatedById")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("LabBooking.Domain.Entities.BookingSlot", "NewBookingSlot")
-                        .WithMany()
-                        .HasForeignKey("NewBookingSlotId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("LabBooking.Domain.Entities.BookingSlot", "OldBookingSlot")
-                        .WithMany()
-                        .HasForeignKey("OldBookingSlotId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("ApprovedBy");
-
                     b.Navigation("Booking");
-
-                    b.Navigation("CreatedBy");
-
-                    b.Navigation("NewBookingSlot");
-
-                    b.Navigation("OldBookingSlot");
                 });
 
-            modelBuilder.Entity("LabBooking.Domain.Entities.BookingParticipant", b =>
+            modelBuilder.Entity("LabBooking.Domain.Entities.BookingChangeRequestSlot", b =>
                 {
-                    b.HasOne("LabBooking.Domain.Entities.Booking", "Booking")
-                        .WithMany("Participants")
-                        .HasForeignKey("BookingId")
+                    b.HasOne("LabBooking.Domain.Entities.BookingChangeRequest", null)
+                        .WithMany("NewSlots")
+                        .HasForeignKey("BookingChangeRequestId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
-
-                    b.HasOne("LabBooking.Domain.Entities.User", "User")
-                        .WithMany()
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Booking");
-
-                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("LabBooking.Domain.Entities.BookingSlot", b =>
@@ -1058,14 +1106,19 @@ namespace LabBooking.Application.Migrations
                     b.Navigation("Equipment");
                 });
 
-            modelBuilder.Entity("LabBooking.Domain.Entities.Incident", b =>
+            modelBuilder.Entity("LabBooking.Domain.Entities.ExternalEquipment", b =>
                 {
                     b.HasOne("LabBooking.Domain.Entities.Booking", "Booking")
-                        .WithMany()
+                        .WithMany("ExternalEquipments")
                         .HasForeignKey("BookingId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.Navigation("Booking");
+                });
+
+            modelBuilder.Entity("LabBooking.Domain.Entities.Incident", b =>
+                {
                     b.HasOne("LabBooking.Domain.Entities.LabRoom", "LabRoom")
                         .WithMany("Incidents")
                         .HasForeignKey("LabRoomId")
@@ -1078,11 +1131,17 @@ namespace LabBooking.Application.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.Navigation("Booking");
+                    b.HasOne("LabBooking.Domain.Entities.Slot", "Slot")
+                        .WithMany()
+                        .HasForeignKey("SlotId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
                     b.Navigation("LabRoom");
 
                     b.Navigation("ReportedBy");
+
+                    b.Navigation("Slot");
                 });
 
             modelBuilder.Entity("LabBooking.Domain.Entities.LabRoom", b =>
@@ -1226,9 +1285,14 @@ namespace LabBooking.Application.Migrations
 
             modelBuilder.Entity("LabBooking.Domain.Entities.Booking", b =>
                 {
-                    b.Navigation("Participants");
+                    b.Navigation("ExternalEquipments");
 
                     b.Navigation("Slots");
+                });
+
+            modelBuilder.Entity("LabBooking.Domain.Entities.BookingChangeRequest", b =>
+                {
+                    b.Navigation("NewSlots");
                 });
 
             modelBuilder.Entity("LabBooking.Domain.Entities.LabRoom", b =>

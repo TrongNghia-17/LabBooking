@@ -22,6 +22,7 @@ public class CreateLabRoomCommandHandler(
         logger.LogInformation("Người dùng {CreatorId} đang tạo phòng lab mới", creatorId.Value);
 
         var labRoom = mapper.Map<LabRoom>(request);
+        labRoom.CreatedById = creatorId.Value;
 
         var labRoomId = await labRoomRepository.Create(labRoom, cancellationToken);
 
