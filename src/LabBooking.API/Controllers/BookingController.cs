@@ -1,6 +1,9 @@
-﻿using LabBooking.Application.Features.Booking.Dtos;
+﻿using LabBooking.Application.Features.ApproveBooking.Commands;
+using LabBooking.Application.Features.ApproveBooking.Dtos;
+using LabBooking.Application.Features.Booking.Dtos;
 using LabBooking.Application.Features.Booking.Queries.GetBookingById;
 using LabBooking.Application.Features.Booking.Queries.GetChangeableBooking;
+using LabBooking.Application.Features.Booking.Queries.GetPendingBooking;
 using LabBooking.Application.Features.Bookings.Commands.CreateBooking;
 using LabBooking.Application.Features.Equipments.Queries.GetAllEquipments;
 using LabBooking.Application.Features.Slots.Dtos;
@@ -74,5 +77,31 @@ public class BookingsController(
         var result = await mediator.Send(query);
 
         return Ok(result);
+    }
+
+    /// <summary>
+    /// Lấy danh sách các Booking đang chờ duyệt (Pending).
+    /// Dành cho Manager/Admin.
+    /// </summary>
+    [HttpGet("pending")]
+    [ProducesResponseType(typeof(List<BookingResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public async Task<ActionResult<List<BookingResponse>>> GetPending([FromQuery] Guid? labId)
+    {
+        var query = new GetPendingBookingsQuery(labId);
+        var result = await mediator.Send(query);
+        return Ok(result);
+    }
+
+
+    [HttpPut("approve")]
+    [ProducesResponseType(typeof(ApproveBookingResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> ApproveBooking([FromBody] ApproveBookingCommand command)
+    {
+        // Command chứa { BookingId, ManagerId }
+        await mediator.Send(command);
+        return Ok(new { message = "Duyệt đơn thành công." });
     }
 }

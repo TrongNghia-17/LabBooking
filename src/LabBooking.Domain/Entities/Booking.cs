@@ -64,5 +64,6 @@ public class Booking
     public int? NumberOfParticipants { get; set; }
     public ICollection<BookingSlot>? Slots { get; set; }
     public ICollection<ExternalEquipment>? ExternalEquipments { get; set; }
+    public ICollection<OutSideGuest>? OutSideGuests { get; set; }
     public string? PendingSlotsJson { get; set; }
 }

@@ -10,5 +10,6 @@ namespace LabBooking.Domain.Repositories
     {
         Task<BookingChangeRequest> CreateAsync(BookingChangeRequest request);
         Task<bool> IsBookingOwnerAndApprovedAsync(Guid bookingId, Guid userId);
+        Task<List<BookingChangeRequest>> GetPendingRequestsAsync(Guid? labId);
     }
 }

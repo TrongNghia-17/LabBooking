@@ -46,6 +46,12 @@ namespace LabBooking.Domain.Entities
         public DateTime? ProcessedAt { get; set; }
         public Guid? ProcessedById { get; set; }
         public string? ManagerReason { get; set; }
+
+        // Để phân biệt đâu là đơn user xin, đâu là đơn hệ thống đền bù
+        public RequestType RequestType { get; set; } = RequestType.UserRequest;
+
+        // Lưu vết các slot bị mất (để FE hiển thị: "Bạn bị mất slot ngày X do sự kiện Y")
+        public string? OriginalOverriddenSlotsJson { get; set; }
     }
 
     // Bảng con lưu slot
@@ -62,5 +68,11 @@ namespace LabBooking.Domain.Entities
         Pending,
         Approved,
         Rejected
+    }
+
+    public enum RequestType
+    {
+        UserRequest,        // User tự tạo (Xin đổi lịch)
+        SystemOverride      // [MỚI] Hệ thống tạo do bị Priority đè
     }
 }

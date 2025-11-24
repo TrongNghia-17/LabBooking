@@ -23,9 +23,9 @@ public class Incident
     [ForeignKey(nameof(ReportedById))]
     public User? ReportedBy { get; set; }
 
-    public Guid BookingId { get; set; }
-    [ForeignKey(nameof(BookingId))]
-    public Booking? Booking { get; set; }
+    public Guid SlotId { get; set; }
+    [ForeignKey(nameof(SlotId))]
+    public Slot? Slot { get; set; }
 
     public IncidentType Type { get; set; }
     public string Description { get; set; } = string.Empty;

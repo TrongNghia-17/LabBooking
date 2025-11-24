@@ -3,6 +3,7 @@ using System;
 using LabBooking.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace LabBooking.Application.Migrations
 {
     [DbContext(typeof(LabBookingDbContext))]
-    partial class LabBookingDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251123220334_add_BookingConsentRequest_entity")]
+    partial class add_BookingConsentRequest_entity
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -183,26 +186,29 @@ namespace LabBooking.Application.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
-                    b.Property<Guid>("BookingId")
+                    b.Property<Guid>("ConflictingSlotId")
                         .HasColumnType("uuid");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<Guid>("CreatedById")
+                    b.Property<Guid>("NewBookingId")
                         .HasColumnType("uuid");
 
-                    b.Property<string>("OverriddenSlotIdsJson")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<Guid>("PriorityBookingId")
+                    b.Property<Guid>("OriginalOwnerId")
                         .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("ResponseDate")
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<int>("Status")
                         .HasColumnType("integer");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("ConflictingSlotId");
+
+                    b.HasIndex("NewBookingId");
 
                     b.ToTable("BookingConsentRequests");
                 });
@@ -242,9 +248,6 @@ namespace LabBooking.Application.Migrations
 
                     b.Property<DateOnly>("Date")
                         .HasColumnType("date");
-
-                    b.Property<Guid?>("OverriddenByBookingId")
-                        .HasColumnType("uuid");
 
                     b.Property<int>("Priority")
                         .HasColumnType("integer");
@@ -534,9 +537,6 @@ namespace LabBooking.Application.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid>("BookingId")
                         .HasColumnType("uuid");
 
                     b.Property<Guid?>("CreatedById")
@@ -1032,6 +1032,25 @@ namespace LabBooking.Application.Migrations
                         .HasForeignKey("BookingChangeRequestId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("LabBooking.Domain.Entities.BookingConsentRequest", b =>
+                {
+                    b.HasOne("LabBooking.Domain.Entities.BookingSlot", "ConflictingSlot")
+                        .WithMany()
+                        .HasForeignKey("ConflictingSlotId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("LabBooking.Domain.Entities.Booking", "NewBooking")
+                        .WithMany()
+                        .HasForeignKey("NewBookingId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("ConflictingSlot");
+
+                    b.Navigation("NewBooking");
                 });
 
             modelBuilder.Entity("LabBooking.Domain.Entities.BookingSlot", b =>

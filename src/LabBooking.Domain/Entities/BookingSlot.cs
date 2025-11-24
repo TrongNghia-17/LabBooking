@@ -20,10 +20,20 @@ public class BookingSlot
     // 0 -> Maintenance
     // 1 -> UniversityEvent
     // 2 -> Standard
+
+    public BookingSlotStatus Status { get; set; } = BookingSlotStatus.Active;
+    public Guid? OverriddenByBookingId { get; set; }
 }
 
 public enum UnavailableReason
 {
     Booked , //0
     Maintenance //1
+}
+
+public enum BookingSlotStatus
+{
+    Active,
+    Overridden, // [MỚI] Bị ghi đè, chờ xử lý
+    Cancelled
 }

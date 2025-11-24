@@ -16,6 +16,7 @@ namespace LabBooking.Application.Features.BookingSlots.Dtos
         DateOnly Date,
         Guid SlotId,
         UnavailableReason Reason,
-        int Priority
+        int Priority,
+        BookingSlotStatus Status
     );
 }

@@ -30,13 +30,14 @@ namespace LabBooking.Infrastructure.Repositories
                 .Include(bs => bs.Slot)
                 .Where(bs =>
                     bs.Booking.LabRoomId == labRoomId &&
-
+                    bs.Status == BookingSlotStatus.Active &&
                     // So sánh DateOnly (từ DB) với DateOnly (từ tham số)
                     bs.Date >= startDate &&
                     bs.Date <= endDate &&   // <-- Giờ đã là so sánh ngày, nên dùng <=
 
                     bs.Booking.Status.HasValue &&
-                    busyStatuses.Contains(bs.Booking.Status.Value)
+                    
+                    busyStatuses.Contains(bs.Booking.Status.Value) 
                 )
                 .ToListAsync(cancellationToken);
 

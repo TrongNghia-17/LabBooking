@@ -29,6 +29,13 @@ public record ExternalEquipmentInput(
     int Quantity
 );
 
+public record OutSideGuestInput(
+    string FullName,
+    string Email,
+    string? Organization,
+    string? purpose
+);
+
 // 4. COMMAND CHÍNH
 public record CreateBookingCommand(
     Guid LabRoomId,
@@ -58,6 +65,8 @@ public record CreateBookingCommand(
     // Dành cho UniversityEvent (Priority)
     CreatePriorityDetailInput? PriorityDetail,
 
-    List<ExternalEquipmentInput>? ExternalEquipments
+    List<ExternalEquipmentInput>? ExternalEquipments,
+
+    List<OutSideGuestInput> OutSideGuests
 
 ) : IRequest<BookingResponse>; // Giả sử bạn đã có BookingResponse

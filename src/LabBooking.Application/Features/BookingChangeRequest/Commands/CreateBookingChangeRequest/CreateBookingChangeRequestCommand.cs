@@ -1,4 +1,5 @@
-﻿using System;
+﻿using LabBooking.Application.Features.BookingChangeRequest.Dtos;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -20,7 +21,7 @@ namespace LabBooking.Application.Features.BookingChangeRequest.Commands.CreateBo
         List<ChangeEquipmentInput>? NewExternalEquipments,
         // Danh sách slot mong muốn
         List<ChangeSlotInput> DesiredSlots
-    ) : IRequest<Guid>;
+    ) : IRequest<BookingChangeRequestResponse>; 
 
     public record ChangeProjectInput(string ProjectName, string Description, ProjectType ProjectType);
     public record ChangePriorityInput(string Justification, string EvidenceFilePath);

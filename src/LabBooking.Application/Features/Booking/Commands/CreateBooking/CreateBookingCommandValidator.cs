@@ -59,5 +59,19 @@ public class CreateBookingCommandValidator : AbstractValidator<CreateBookingComm
             });
         });
 
+        // [MỚI] Validate OutSide Guests
+        // ==========================================================
+        When(x => x.OutSideGuests != null && x.OutSideGuests.Any(), () => {
+            RuleForEach(x => x.OutSideGuests).ChildRules(guest => {
+                guest.RuleFor(g => g.FullName)
+                    .NotEmpty().WithMessage("Tên khách mời không được để trống.")
+                    .MaximumLength(100);
+
+                guest.RuleFor(g => g.Email)
+                    .NotEmpty().WithMessage("Email khách mời là bắt buộc.")
+                    .EmailAddress().WithMessage("Email không hợp lệ.");
+            });
+        });
+
     }
 }
