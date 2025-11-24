@@ -1,4 +1,6 @@
-﻿namespace LabBooking.Application.Features.LabRooms.Dtos;
+using LabBooking.Application.Features.Equipments.Dtos;
+
+namespace LabBooking.Application.Features.LabRooms.Dtos;
 
 public record LabRoomResponse(
     Guid Id,
@@ -8,5 +10,7 @@ public record LabRoomResponse(
     Guid? MainManagerId,
     Guid? CreatedById,
     DateTime CreatedDate,
-    bool IsActive
+    bool IsActive,
+    ICollection<EquipmentResponse>? Equipments,
+    string Status = "Available"
 );

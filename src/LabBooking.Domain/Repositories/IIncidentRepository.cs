@@ -8,5 +8,5 @@ public interface IIncidentRepository
        int pageNumber,
        string? sortBy,
        SortDirection sortDirection);
-    Task<Incident> Create(Incident entity);
+    Task<Guid> Create(Incident entity, CancellationToken cancellationToken = default);
 }

@@ -5,6 +5,7 @@ namespace LabBooking.Application.Features.LabRooms.Queries.GetAllLabRooms;
 public class GetAllLabRoomsQueryHandler(
     ILogger<GetAllLabRoomsQueryHandler> logger,
     ILabRoomRepository labRoomRepository,
+    IBookingRepository bookingRepository,
     IMapper mapper) : IRequestHandler<GetAllLabRoomsQuery, PagedResult<LabRoomResponse>>
 {
     public async Task<PagedResult<LabRoomResponse>> Handle(GetAllLabRoomsQuery request, CancellationToken cancellationToken)

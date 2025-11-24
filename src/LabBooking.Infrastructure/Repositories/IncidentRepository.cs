@@ -2,11 +2,11 @@
 
 internal class IncidentRepository(LabBookingDbContext dbContext) : IIncidentRepository
 {
-    public async Task<Incident> Create(Incident entity)
+    public async Task<Guid> Create(Incident entity, CancellationToken cancellationToken = default)
     {
         dbContext.Incidents.Add(entity);
-        await dbContext.SaveChangesAsync();
-        return entity;
+        await dbContext.SaveChangesAsync(cancellationToken);
+        return entity.Id;
     }
 
     public async Task<(IEnumerable<Incident>, int)> GetAllMatchingAsync(

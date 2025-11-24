@@ -2,26 +2,43 @@
 
 public class CreateIncidentCommandValidator : AbstractValidator<CreateIncidentCommand>
 {
-    public CreateIncidentCommandValidator()
+    private readonly ILabRoomRepository _labRoomRepository;
+    private readonly ISlotRepository _slotRepository; // Giả sử bạn đã có repo này từ task trước
+
+    public CreateIncidentCommandValidator(
+        ILabRoomRepository labRoomRepository,
+        ISlotRepository slotRepository)
     {
+        _labRoomRepository = labRoomRepository;
+        _slotRepository = slotRepository;
+
         RuleFor(c => c.LabRoomId)
-            .NotEmpty()
-            .WithMessage("Lab Room ID cannot be empty.");
+            .NotEmpty().WithMessage("Vui lòng chọn phòng Lab.")
+            .MustAsync(LabRoomMustExist).WithMessage("Phòng Lab không tồn tại.");
 
-        RuleFor(c => c.ReportedById)
-            .NotEmpty()
-            .WithMessage("Reported By ID cannot be empty.");
+        RuleFor(c => c.SlotId)
+            .NotEmpty().WithMessage("Vui lòng chọn Slot (Ca).")
+            .MustAsync(SlotMustExist).WithMessage("Slot không tồn tại.");
 
-        var validNames = string.Join(", ", Enum.GetNames(typeof(IncidentType)));
         RuleFor(c => c.Type)
-            .NotEmpty().WithMessage("Incident type is required.")
-            .Must(v => Enum.TryParse<IncidentType>(v, true, out _))
-            .WithMessage($"Incident type is invalid. Valid values are: {validNames}. You may send either the name (e.g., \"Fire\") or the numeric value (e.g., 0).");
+            .IsInEnum().WithMessage("Loại sự cố không hợp lệ.");
+
+        RuleFor(c => c.ImportanceLevel)
+            .IsInEnum().WithMessage("Mức độ nghiêm trọng không hợp lệ.");
 
         RuleFor(c => c.Description)
-            .NotEmpty()
-            .WithMessage("Description is required.")
-            .MaximumLength(500)
-            .WithMessage("Description cannot be longer than 500 characters.");
+            .NotEmpty().WithMessage("Mô tả sự cố không được để trống.")
+            .MaximumLength(1000).WithMessage("Mô tả không được quá 1000 ký tự.");
+    }
+
+    private async Task<bool> LabRoomMustExist(Guid labRoomId, CancellationToken token)
+    {
+        return await _labRoomRepository.ExistsAsync(labRoomId, token);
+    }
+
+    private async Task<bool> SlotMustExist(Guid slotId, CancellationToken token)
+    {
+        // Giả sử ISlotRepository có hàm ExistsAsync, nếu chưa có bạn dùng GetById != null
+        return await _slotRepository.GetByIdAsync(slotId, token) != null;
     }
 }

@@ -7,5 +7,7 @@ public record GetAllLabRoomsQuery(
     int PageNumber,
     int PageSize,
     string? SortBy,
-    SortDirection SortDirection
+    SortDirection SortDirection,
+    DateOnly? FilterDate,
+    Guid? FilterSlotId
 ) : IRequest<PagedResult<LabRoomResponse>>;
