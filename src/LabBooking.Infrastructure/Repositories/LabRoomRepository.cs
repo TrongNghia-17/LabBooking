@@ -46,6 +46,7 @@ internal class LabRoomRepository(LabBookingDbContext dbContext) : ILabRoomReposi
         var baseQuery = dbContext
             .LabRooms
             .Include(x => x.Equipments)
+            .Include(r => r.MainManager)
             .Where(r => searchPhraseLower == null ||
                         (r.LabName != null && r.LabName.ToLower().Contains(searchPhraseLower)) ||
                         (r.Location != null && r.Location.ToLower().Contains(searchPhraseLower)));

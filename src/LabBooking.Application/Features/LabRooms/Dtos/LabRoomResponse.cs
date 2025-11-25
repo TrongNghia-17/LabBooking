@@ -21,6 +21,7 @@ public class LabRoomResponse
     public string? Location { get; set; }
     public int? MaximumLimit { get; set; }
     public Guid? MainManagerId { get; set; }
+    public string? MainManagerName { get; set; }
     public Guid? CreatedById { get; set; }
     public DateTime CreatedDate { get; set; }
     public bool IsActive { get; set; }

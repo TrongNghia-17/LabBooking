@@ -10,7 +10,9 @@ public class LabRoomProfile : Profile
     {
         // Mapping cho Create
         CreateMap<CreateLabRoomCommand, LabRoom>();
-        CreateMap<LabRoom, LabRoomResponse>();
+        CreateMap<LabRoom, LabRoomResponse>()
+            .ForMember(dest => dest.MainManagerName,
+                opt => opt.MapFrom(src => src.MainManager != null ? src.MainManager.UserName : "Chưa phân công"));
 
         // Mapping cho Update
         CreateMap<UpdateLabRoomCommand, LabRoom>();
