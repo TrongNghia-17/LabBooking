@@ -1,18 +1,18 @@
-﻿namespace LabBooking.Application.Features.Authentication.Commands.Register;
+﻿namespace LabBooking.Application.Features.SecurityGuards.Commands.Register;
 
 /// <summary>
-/// Command handler responsible for processing the <see cref="RegisterUserCommand"/>.
+/// Command handler responsible for processing the <see cref="CreateSecurityGuardCommand"/>.
 /// </summary>
-public class RegisterUserCommandHandler(
-    ILogger<RegisterUserCommandHandler> logger,
+public class CreateSecurityGuardCommandHandler(
+    ILogger<CreateSecurityGuardCommandHandler> logger,
     UserManager<User> userManager,
     RoleManager<IdentityRole<Guid>> roleManager,
     IMapper mapper
-) : IRequestHandler<RegisterUserCommand, Unit>
+) : IRequestHandler<CreateSecurityGuardCommand, Unit>
 {
     private const string DefaultRole = "SecurityGuard";
 
-    public async Task<Unit> Handle(RegisterUserCommand request, CancellationToken cancellationToken)
+    public async Task<Unit> Handle(CreateSecurityGuardCommand request, CancellationToken cancellationToken)
     {
         logger.LogInformation("Processing registration for email: {Email}", request.Email);
 

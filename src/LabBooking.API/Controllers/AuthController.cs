@@ -51,23 +51,6 @@ public class AuthController(IMediator mediator) : ControllerBase
     }
 
     /// <summary>
-    /// Registers a new user account.
-    /// </summary>
-    /// <remarks>
-    /// Creates a new user and automatically assigns the "User" role.
-    /// </remarks>
-    /// <param name="command">Registration details (Email, Password, FullName...).</param>
-    /// <returns>Successful account creation.</returns>
-    [HttpPost("register")]
-    [ProducesResponseType(StatusCodes.Status201Created)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    public async Task<IActionResult> Register([FromBody] RegisterUserCommand command)
-    {
-        await mediator.Send(command);
-        return CreatedAtAction(nameof(GetProfile), null, new { message = "Registration successful." });
-    }
-
-    /// <summary>
     /// Refreshes the Access Token using a Refresh Token.
     /// </summary>
     /// <param name="requestBody">Contains the Refresh Token.</param>

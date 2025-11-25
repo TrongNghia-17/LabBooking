@@ -1,4 +1,4 @@
-﻿using LabBooking.Application.Features.Authentication.Commands.Register;
+﻿using LabBooking.Application.Features.SecurityGuards.Commands.Register;
 
 namespace LabBooking.Application.Features.Authentication.Dtos;
 
@@ -12,7 +12,7 @@ public class AuthProfile : Profile
         CreateMap<User, UserProfileResponse>()
             .ForMember(dest => dest.Roles, opt => opt.MapFrom(src => new List<string>()));
 
-        CreateMap<RegisterUserCommand, User>()
+        CreateMap<CreateSecurityGuardCommand, User>()
             .ForMember(dest => dest.UserName, opt => opt.MapFrom(src => src.Email))
             .ForMember(dest => dest.EmailConfirmed, opt => opt.MapFrom(src => true));
     }
