@@ -1,4 +1,5 @@
 ﻿using LabBooking.Application.Features.LabRooms.Commands.DeleteLabRoom;
+using LabBooking.Application.Features.LabRooms.Queries.GetUnmaintainedLabRooms;
 
 namespace LabBooking.API.Controllers;
 
@@ -85,6 +86,22 @@ public class LabRoomsController(
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<ActionResult<PagedResult<LabRoomResponse>>> GetAll([FromQuery] GetAllLabRoomsQuery query)
     {
+        var labRooms = await mediator.Send(query);
+        return Ok(labRooms);
+    }
+
+    /// <summary>
+    /// Get all lab rooms that have a pending maintenance schedule (NotYet).
+    /// </summary>
+    /// <returns>A list of lab rooms with pending maintenance.</returns>
+    [HttpGet("unmaintained")]
+    [Authorize(Roles = "Admin, Manager")] // Chỉ dành cho người quản lý/Admin xem
+    [ProducesResponseType(typeof(IEnumerable<LabRoomResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    public async Task<ActionResult<IEnumerable<LabRoomResponse>>> GetUnmaintained()
+    {
+        var query = new GetUnmaintainedLabRoomsQuery();
         var labRooms = await mediator.Send(query);
         return Ok(labRooms);
     }

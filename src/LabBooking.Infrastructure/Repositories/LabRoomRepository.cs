@@ -76,6 +76,23 @@ internal class LabRoomRepository(LabBookingDbContext dbContext) : ILabRoomReposi
         return (labRooms, totalCount);
     }
 
+    public async Task<IEnumerable<LabRoom>> GetUnmaintainedLabRoomsAsync(CancellationToken cancellationToken = default)
+    {
+        // Lấy danh sách LabRoomIds có lịch bảo trì với trạng thái là NotYet
+        var labRoomIdsWithPendingMaintenance = dbContext.RoomMaintainSchedules
+            .Where(s => s.RoomMaintainStatus == RoomMaintainStatus.NotYet)
+            .Select(s => s.LabRoomId)
+            .Distinct(); // Đảm bảo chỉ lấy ID duy nhất (vì một phòng có thể có nhiều lịch)
+
+        // Lấy các LabRoom tương ứng
+        var unmaintainedLabRooms = await dbContext.LabRooms
+            .Where(r => !labRoomIdsWithPendingMaintenance.Contains(r.Id))
+            .Include(lab => lab.Equipments)
+            .ToListAsync(cancellationToken);
+
+        return unmaintainedLabRooms;
+    }
+
     public async Task<bool> IsLabNameUniqueAsync(string labName, CancellationToken cancellationToken = default)
     {
         var labNameLower = labName.ToLower();
