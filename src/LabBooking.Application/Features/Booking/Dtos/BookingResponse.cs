@@ -52,6 +52,7 @@ namespace LabBooking.Application.Features.Booking.Dtos
 
         public ICollection<ExternalEquipmentResponse>? ExternalEquipments { get; set; }
         public string? PendingSlotsJson { get; set; }
+        public bool? HasPendingChangeRequest { get; set; }
     }
 
     public record ProjectResponse
