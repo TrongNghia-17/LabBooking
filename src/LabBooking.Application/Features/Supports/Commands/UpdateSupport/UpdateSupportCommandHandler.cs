@@ -21,6 +21,8 @@ public class UpdateSupportCommandHandler(
             throw new NotFoundException(nameof(Support), request.Id.ToString());
         }
 
+        mapper.Map(request, supportToUpdate);
+
         supportToUpdate.Status = request.Status;
 
         if (request.Status == SupportStatus.Responded || request.Status == SupportStatus.Ignored)
@@ -39,8 +41,6 @@ public class UpdateSupportCommandHandler(
         {
             supportToUpdate.Answer = null;
         }
-
-        mapper.Map(request, supportToUpdate);
 
         await supportRepository.Update(supportToUpdate);
 

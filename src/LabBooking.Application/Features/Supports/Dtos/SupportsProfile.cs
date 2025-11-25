@@ -27,6 +27,8 @@ public class SupportsProfile : Profile
 
         CreateMap<UpdateSupportCommand, Support>()
             .ForMember(dest => dest.Id, opt => opt.Ignore())
-            .ForMember(dest => dest.CreatedById, opt => opt.Ignore());
+            .ForMember(dest => dest.CreatedById, opt => opt.Ignore())
+            .ForMember(dest => dest.Answer, opt => opt.Ignore())
+            .ForMember(dest => dest.Status, opt => opt.Ignore());
     }
 }
