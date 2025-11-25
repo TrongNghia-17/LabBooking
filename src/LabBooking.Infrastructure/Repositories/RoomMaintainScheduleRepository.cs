@@ -1,11 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-internal class RoomMaintainScheduleRepository(LabBookingDbContext dbContext) : IRoomMaintainScheduleRepository
+﻿internal class RoomMaintainScheduleRepository(LabBookingDbContext dbContext) : IRoomMaintainScheduleRepository
 {
     public async Task<IEnumerable<RoomMaintainSchedule>> GetOverlappingSchedulesAsync(
         Guid labRoomId,
@@ -125,5 +118,29 @@ internal class RoomMaintainScheduleRepository(LabBookingDbContext dbContext) : I
             .ToListAsync(cancellationToken);
 
         return (schedules, totalCount);
+    }
+
+    public async Task<IEnumerable<RoomMaintainSchedule>> GetExpiredNotYetSchedulesAsync(CancellationToken cancellationToken = default)
+    {
+        // So sánh EndTime với thời gian hiện tại UTC
+        var expiredSchedules = await dbContext.RoomMaintainSchedules
+            .Where(s => s.EndTime < DateTime.UtcNow && s.RoomMaintainStatus == RoomMaintainStatus.NotYet)
+            .ToListAsync(cancellationToken);
+
+        return expiredSchedules;
+    }
+
+    public async Task UpdateRange(IEnumerable<RoomMaintainSchedule> schedules, CancellationToken cancellationToken = default)
+    {
+        foreach (var schedule in schedules)
+        {
+            // Set trạng thái sang Done
+            schedule.RoomMaintainStatus = RoomMaintainStatus.Done;
+            // Tùy chọn: Cập nhật thêm trường thời gian hoàn thành nếu có
+        }
+
+        // Đánh dấu Entity là cần cập nhật (EF Core sẽ nhận biết)
+        dbContext.RoomMaintainSchedules.UpdateRange(schedules);
+        await dbContext.SaveChangesAsync(cancellationToken);
     }
 }
