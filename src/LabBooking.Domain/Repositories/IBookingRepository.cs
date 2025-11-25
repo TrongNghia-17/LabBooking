@@ -3,7 +3,7 @@
     public interface IBookingRepository
     {
         Task<Booking> CreateBookingAsync(Booking newBooking);
-        Task<List<(Booking Booking, bool HasPendingRequest)>> GetBookingsWithChangeStatusAsync(Guid userId)
+        Task<List<(Booking Booking, bool HasPendingRequest)>> GetBookingsWithChangeStatusAsync(Guid userId);
         Task<Booking?> GetBookingDetailsAsync(Guid id);
         Task<List<Booking>> GetPendingBookingsAsync(Guid? labId);
 

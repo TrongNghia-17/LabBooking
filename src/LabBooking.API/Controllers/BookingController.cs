@@ -56,8 +56,14 @@ public class BookingsController(
     /// <param name="userId">ID của User (Frontend truyền lên hoặc lấy từ Token)</param>
     [HttpGet("changeable")] // Route sẽ là: GET /api/Bookings/changeable?userId=...
     [ProducesResponseType(typeof(List<BookingResponse>), StatusCodes.Status200OK)]
-    public async Task<ActionResult<List<BookingResponse>>> GetChangeableBookings([FromQuery] GetChangeableBookingsQuery query)
+    public async Task<ActionResult<List<BookingResponse>>> GetChangeableBookings()
     {
+        var userIdString = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        if (!Guid.TryParse(userIdString, out var userId))
+        {
+            return Unauthorized();
+        }
+        var query = new GetChangeableBookingsQuery(userId);
         // 2. Gửi đi
         var bookings = await mediator.Send(query);
 
