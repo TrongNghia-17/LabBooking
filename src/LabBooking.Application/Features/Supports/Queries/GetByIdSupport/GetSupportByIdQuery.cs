@@ -3,11 +3,8 @@
 namespace LabBooking.Application.Features.Supports.Queries.GetByIdSupport;
 
 /// <summary>
-/// Represents a query to retrieve a single support ticket by its unique identifier.
+/// Represents a query to retrieve ALL support tickets created by the current authenticated user.
 /// </summary>
-/// <param name="Id">The unique identifier of the support ticket to retrieve.</param>
-/// <remarks>
-/// This query returns a <see cref="SupportsResponse"/> object.
-/// </remarks>
-public record GetSupportByIdQuery(Guid Id) : IRequest<SupportsResponse>;
+// Không cần tham số đầu vào (như Id)
+public record GetMySupportsQuery() : IRequest<IEnumerable<SupportsResponse>>;
 

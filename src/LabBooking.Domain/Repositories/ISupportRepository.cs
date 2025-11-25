@@ -13,6 +13,7 @@ public interface ISupportRepository
         CancellationToken cancellationToken = default);
 
     Task<Support?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
+    Task<IEnumerable<Support>> GetByCreatedByIdAsync(Guid createdById, CancellationToken cancellationToken = default);
     Task Update(Support entity, CancellationToken cancellationToken = default);
 
     Task DeleteAsync(Support entity, CancellationToken cancellationToken = default);

@@ -56,6 +56,20 @@ internal class SupportRepository(LabBookingDbContext dbContext) : ISupportReposi
         return support;
     }
 
+    /// <summary>
+    /// Lấy tất cả yêu cầu hỗ trợ được tạo bởi một người dùng cụ thể.
+    /// </summary>
+    /// <param name="createdById">ID của người dùng đã tạo yêu cầu.</param>
+    /// <returns>Danh sách các yêu cầu hỗ trợ.</returns>
+    public async Task<IEnumerable<Support>> GetByCreatedByIdAsync(Guid createdById, CancellationToken cancellationToken = default)
+    {
+        // Lọc theo CreatedById và sắp xếp giảm dần theo CreatedAt để yêu cầu mới nhất nằm trên cùng
+        return await dbContext.Supports
+            .Where(s => s.CreatedById == createdById)
+            .OrderByDescending(s => s.CreatedAt)
+            .ToListAsync(cancellationToken);
+    }
+
     public async Task Update(Support entity, CancellationToken cancellationToken = default)
     {
         dbContext.Supports.Update(entity);

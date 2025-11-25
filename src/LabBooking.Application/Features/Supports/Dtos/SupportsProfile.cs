@@ -19,7 +19,8 @@ public class SupportsProfile : Profile
     /// </summary>
     public SupportsProfile()
     {
-        CreateMap<Support, SupportsResponse>().ReverseMap();
+        CreateMap<Support, SupportsResponse>()
+            .ForMember(dest => dest.Status, opt => opt.MapFrom(src => src.Status.ToString()));
 
         CreateMap<CreateSupportCommand, Support>()
             .ForMember(dest => dest.Answer, opt => opt.MapFrom(src => string.Empty));

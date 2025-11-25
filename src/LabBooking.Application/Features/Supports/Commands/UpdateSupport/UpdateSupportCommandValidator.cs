@@ -7,20 +7,16 @@ public class UpdateSupportCommandValidator : AbstractValidator<UpdateSupportComm
 {
     public UpdateSupportCommandValidator()
     {
-        RuleFor(c => c.Title)
-            .NotEmpty()
-            .WithMessage("A title is required for the support ticket.")
-            .MaximumLength(100)
-            .WithMessage("The title must not exceed 100 characters.");
-
-        RuleFor(c => c.Content)
-            .NotEmpty()
-            .WithMessage("Content is required for the support ticket.")
-            .MaximumLength(1000)
-            .WithMessage("The content must not exceed 1000 characters.");
-
         RuleFor(c => c.Answer)
-            .MaximumLength(2000)
-            .WithMessage("The answer must not exceed 2000 characters.");
+            .NotEmpty()
+            .WithMessage("Phải nhập câu trả lời khi trạng thái là Đã phản hồi.")
+            .When(c => c.Status == SupportStatus.Responded);
+
+        RuleFor(c => c.Status)
+            .IsInEnum().WithMessage("Trạng thái không hợp lệ.")
+
+            // Bắt buộc trạng thái mới KHÔNG ĐƯỢC là Pending
+            .NotEqual(SupportStatus.Pending)
+            .WithMessage("Đã xử lý thì không được để trạng thái là 'Chờ xử lý' (Pending). Vui lòng chọn 'Đã phản hồi' hoặc 'Bỏ qua'.");
     }
 }

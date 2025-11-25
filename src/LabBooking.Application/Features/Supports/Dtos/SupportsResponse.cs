@@ -12,6 +12,9 @@ public record SupportsResponse(
     Guid Id,
     string Title,
     string Content,
-    string Answer,
-    Guid CreatedById
+    string? Answer,
+    Guid CreatedById,
+    string Status,
+    DateTime CreatedAt,
+    DateTime? RespondedAt
 );

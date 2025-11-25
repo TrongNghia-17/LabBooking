@@ -1,41 +1,43 @@
 ﻿using LabBooking.Application.Features.Supports.Dtos;
+using LabBooking.Application.Features.Supports.Queries.GetByIdSupport;
+using LabBooking.Application.Services.Users; // Cần thêm dòng này
 
-namespace LabBooking.Application.Features.Supports.Queries.GetByIdSupport;
+namespace LabBooking.Application.Features.Supports.Queries.GetMySupports;
 
-/// <summary>
-/// Handles the execution of the <see cref="GetSupportByIdQuery"/>.
-/// </summary>
-/// <remarks>
-/// This handler retrieves a specific support ticket from the repository by its ID,
-/// maps it to a <see cref="SupportsResponse"/> DTO, and returns it.
-/// </remarks>
-public class GetSupportByIdQueryHandler(
-    ILogger<GetSupportByIdQueryHandler> logger,
+// Đổi tên từ GetSupportByIdQueryHandler sang GetMySupportsQueryHandler
+public class GetMySupportsQueryHandler(
+    ILogger<GetMySupportsQueryHandler> logger,
     ISupportRepository supportRepository,
-    IMapper mapper) : IRequestHandler<GetSupportByIdQuery, SupportsResponse>
+    ICurrentUserService currentUserService, // Thêm service lấy User ID
+    IMapper mapper) : IRequestHandler<GetMySupportsQuery, IEnumerable<SupportsResponse>>
 {
-    /// <summary>
-    /// Handles the <see cref="GetSupportByIdQuery"/>.
-    /// </summary>
-    /// <param name="request">The query request containing the ID of the support ticket.</param>
-    /// <param name="cancellationToken">A token to observe while waiting for the task to complete.</param>
-    /// <returns>A <see cref="SupportsResponse"/> DTO representing the found support ticket.</returns>
-    /// <exception cref="NotFoundException">Thrown if no support ticket is found with the specified ID.</exception>
-    public async Task<SupportsResponse> Handle(GetSupportByIdQuery request, CancellationToken cancellationToken)
+    public async Task<IEnumerable<SupportsResponse>> Handle(GetMySupportsQuery request, CancellationToken cancellationToken)
     {
-        logger.LogInformation("Processing GetSupportByIdQuery for SupportId: {SupportId}", request.Id);
+        // 1. Lấy ID của người dùng đang đăng nhập
+        var currentUserId = currentUserService.UserId;
 
-        var support = await supportRepository.GetByIdAsync(request.Id);
-        if (support == null)
+        if (currentUserId == null)
         {
-            logger.LogWarning("Support ticket with Id: {SupportId} was not found.", request.Id);
-            throw new NotFoundException(nameof(Support), request.Id.ToString());
+            logger.LogWarning("Authenticated user ID not found. Cannot retrieve support tickets.");
+            throw new UnauthorizedAccessException("User must be authenticated to retrieve their support tickets.");
         }
 
-        var supportResponse = mapper.Map<SupportsResponse>(support);
+        logger.LogInformation("Processing GetMySupportsQuery for UserId: {UserId}", currentUserId.Value);
 
-        logger.LogInformation("Successfully retrieved support ticket with Id: {SupportId}", request.Id);
+        // 2. Gọi Repository để lấy tất cả ticket dựa trên CreatedById
+        // Bạn cần phải tạo phương thức này trong ISupportRepository và SupportRepository.cs
+        var supports = await supportRepository.GetByCreatedByIdAsync(currentUserId.Value, cancellationToken);
 
-        return supportResponse;
+        if (supports == null) // Xử lý nếu repository trả về null (mặc dù nên trả về list rỗng)
+        {
+            return Enumerable.Empty<SupportsResponse>();
+        }
+
+        // 3. Map sang DTO và trả về
+        var supportResponses = mapper.Map<IEnumerable<SupportsResponse>>(supports);
+
+        logger.LogInformation("Successfully retrieved {Count} support tickets for user {UserId}", supportResponses.Count(), currentUserId.Value);
+
+        return supportResponses;
     }
 }
