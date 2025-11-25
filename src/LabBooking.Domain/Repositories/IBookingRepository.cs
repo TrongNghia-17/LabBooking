@@ -3,7 +3,7 @@
     public interface IBookingRepository
     {
         Task<Booking> CreateBookingAsync(Booking newBooking);
-        Task<IEnumerable<Booking>> GetChangeableBookingsAsync(Guid userId);
+        Task<List<(Booking Booking, bool HasPendingRequest)>> GetBookingsWithChangeStatusAsync(Guid userId)
         Task<Booking?> GetBookingDetailsAsync(Guid id);
         Task<List<Booking>> GetPendingBookingsAsync(Guid? labId);
 
@@ -14,6 +14,7 @@
         // Hàm "Thần thánh": Xử lý toàn bộ logic Duyệt + Đè + Tạo Consent
         Task ApproveBookingWithOverrideLogicAsync(Booking booking);
         Task<List<Guid>> GetBookedLabIdsAsync(DateOnly date, Guid slotId, CancellationToken ct);
+        Task<List<Booking>> GetHistoryByUserIdAsync(Guid userId);
     }
 
     public enum BookingApprovalResult

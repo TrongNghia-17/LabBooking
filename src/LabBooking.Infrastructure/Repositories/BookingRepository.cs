@@ -116,26 +116,27 @@
             }
         }
 
-        public async Task<IEnumerable<Booking>> GetChangeableBookingsAsync(Guid userId)
+        public async Task<List<(Booking Booking, bool HasPendingRequest)>> GetBookingsWithChangeStatusAsync(Guid userId)
         {
-            var today = DateOnly.FromDateTime(DateTime.Now);
+            var today = DateOnly.FromDateTime(DateTime.UtcNow);
 
-            return await dbContext.Bookings
-                .Include(b => b.LabRoom) // Include để lấy tên phòng
-                .Include(b => b.Slots)   // Include để check ngày
+            var query = dbContext.Bookings
+                .Include(b => b.LabRoom)
+                .Include(b => b.Slots)
                 .Where(b =>
-                    b.CreatedById == userId &&               // 1. Của mình
-                    b.Status == BookingStatus.Approved &&    // 2. Đã duyệt
-                    b.Slots.Any(s => s.Date >= today) &&     // 3. Còn slot tương lai
-
-                    // 4. (Optional) Không có yêu cầu đổi nào đang chờ duyệt
-                    !dbContext.BookingChangeRequests.Any(cr =>
-                        cr.BookingId == b.Id &&
-                        cr.Status == BookingChangeRequestStatus.Pending
-                    )
+                    b.CreatedById == userId &&
+                    b.Status == BookingStatus.Approved &&
+                    b.Slots.Any(s => s.Date >= today)
                 )
-                .OrderByDescending(b => b.CreatedAt)
-                .ToListAsync();
+                .Select(b => new
+                {
+                    Booking = b,
+                    HasPending = dbContext.BookingChangeRequests.Any(cr => cr.BookingId == b.Id && cr.Status == BookingChangeRequestStatus.Pending)
+                })
+                .OrderByDescending(x => x.Booking.CreatedAt);
+
+            var result = await query.ToListAsync();
+            return result.Select(x => (x.Booking, x.HasPending)).ToList();
         }
 
         public async Task<Booking?> GetBookingDetailsAsync(Guid id)
@@ -405,6 +406,20 @@
                 .Select(bs => bs.Booking.LabRoomId)
                 .Distinct()
                 .ToListAsync(ct);
+        }
+
+        public async Task<List<Booking>> GetHistoryByUserIdAsync(Guid userId)
+        {
+            return await dbContext.Bookings
+                .Include(b => b.LabRoom)
+                .Include(b => b.Slots)
+                    .ThenInclude(s => s.Slot) // Để lấy tên ca (Ca 1, Ca 2...)
+                .Include(b => b.BookingPriorityDetail)
+                .Include(b => b.Project)
+                .Include(b => b.Course)
+                .Where(b => b.CreatedById == userId) // Chỉ lấy của chính mình
+                .OrderByDescending(b => b.CreatedAt) // Mới nhất lên đầu
+                .ToListAsync();
         }
     }
 }

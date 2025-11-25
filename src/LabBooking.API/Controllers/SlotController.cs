@@ -15,7 +15,7 @@ namespace LabBooking.API.Controllers
             /// </summary>
             /// <returns>List of slots</returns>
         [HttpGet]
-        [Authorize(Roles = "Admin, Manager, User")]
+        //[Authorize(Roles = "Admin, Manager, User")]
         [ProducesResponseType(typeof(IEnumerable<SlotResponse>), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]

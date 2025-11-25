@@ -6,6 +6,7 @@ using LabBooking.Application.Features.Booking.Queries.GetChangeableBooking;
 using LabBooking.Application.Features.Booking.Queries.GetPendingBooking;
 using LabBooking.Application.Features.Bookings.Commands.CreateBooking;
 using LabBooking.Application.Features.Equipments.Queries.GetAllEquipments;
+using LabBooking.Application.Features.HistoryBooking.Queries.GetMyBookingHistory;
 using LabBooking.Application.Features.Slots.Dtos;
 using LabBooking.Application.Features.Slots.Queries.GetAllSlots;
 
@@ -103,5 +104,22 @@ public class BookingsController(
         // Command chứa { BookingId, ManagerId }
         await mediator.Send(command);
         return Ok(new { message = "Duyệt đơn thành công." });
+    }
+
+    [HttpGet("my-history-booking")]
+    //[Authorize]
+    [ProducesResponseType(typeof(BookingResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<List<BookingResponse>>> GetMyHistory()
+    {
+        var userIdString = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        if (!Guid.TryParse(userIdString, out var userId))
+        {
+            return Unauthorized();
+        }
+        var query = new GetMyBookingHistoryQuery(userId);
+        var result = await mediator.Send(query);
+
+        return Ok(result);
     }
 }

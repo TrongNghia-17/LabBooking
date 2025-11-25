@@ -73,7 +73,7 @@ namespace LabBooking.API.Controllers
         }
 
         [HttpGet]
-        [Authorize(Roles = "Admin, Manager, User")]
+        //[Authorize(Roles = "Admin, Manager, User")]
         [ProducesResponseType(typeof(PagedResult<CourseResponse>), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
