@@ -25,6 +25,8 @@
 	  <Folder Include="Features\BookingSlots\Commands\" />
 	  <Folder Include="Features\ExternalEquipment\Commands\" />
 	  <Folder Include="Features\ExternalEquipment\Queries\" />
+	  <Folder Include="Features\HistoryBooking\Commands\" />
+	  <Folder Include="Features\HistoryBooking\Dtos\" />
 	</ItemGroup>
 
 </Project>
