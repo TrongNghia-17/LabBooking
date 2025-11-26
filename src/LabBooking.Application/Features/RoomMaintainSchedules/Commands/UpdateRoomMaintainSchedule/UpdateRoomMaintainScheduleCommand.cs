@@ -15,12 +15,8 @@ public record UpdateRoomMaintainScheduleCommand() : IRequest<Unit>
 
     // Các trường có thể cập nhật, lấy từ entity
     public Guid LabRoomId { get; set; }
-    public bool IsManyDay { get; set; }
-    public bool? IsAllDay { get; set; }
     public DateTime? StartTime { get; set; }
     public DateTime? EndTime { get; set; }
-    public int? NumberOfSlot { get; set; }
-
     /// <summary>
     /// Cho phép cập nhật trạng thái, ví dụ: từ "NotYet" sang "Done"
     /// </summary>
