@@ -11,6 +11,8 @@ public class Support
     public SupportStatus Status { get; set; } = SupportStatus.Pending;
 
     public Guid CreatedById { get; set; }
+    [ForeignKey(nameof(CreatedById))]
+    public User? CreatedBy { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime? RespondedAt { get; set; }
 }

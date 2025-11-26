@@ -21,6 +21,7 @@ internal class SupportRepository(LabBookingDbContext dbContext) : ISupportReposi
 
         var baseQuery = dbContext
             .Supports
+            .Include(s => s.CreatedBy)
             .Where(r => searchPhraseLower == null ||
                         r.Title.ToLower().Contains(searchPhraseLower) ||
                         r.Content.ToLower().Contains(searchPhraseLower));
@@ -52,8 +53,9 @@ internal class SupportRepository(LabBookingDbContext dbContext) : ISupportReposi
 
     public async Task<Support?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        var support = await dbContext.Supports.FindAsync(id, cancellationToken);
-        return support;
+        return await dbContext.Supports
+            .Include(s => s.CreatedBy)
+            .FirstOrDefaultAsync(s => s.Id == id, cancellationToken);
     }
 
     /// <summary>
@@ -65,6 +67,7 @@ internal class SupportRepository(LabBookingDbContext dbContext) : ISupportReposi
     {
         // Lọc theo CreatedById và sắp xếp giảm dần theo CreatedAt để yêu cầu mới nhất nằm trên cùng
         return await dbContext.Supports
+            .Include(s => s.CreatedBy)
             .Where(s => s.CreatedById == createdById)
             .OrderByDescending(s => s.CreatedAt)
             .ToListAsync(cancellationToken);
