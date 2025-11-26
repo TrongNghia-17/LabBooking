@@ -1,14 +1,14 @@
 ﻿using LabBooking.Application.Resources;
 using Microsoft.Extensions.Localization;
 
-namespace LabBooking.Application.Features.Authentication.Commands.Register;
+namespace LabBooking.Application.Features.SecurityGuards.Commands.Register;
 
 /// <summary>
-/// Validator for the <see cref="RegisterUserCommand"/>.
+/// Validator for the <see cref="CreateSecurityGuardCommand"/>.
 /// </summary>
-public class RegisterUserCommandValidator : AbstractValidator<RegisterUserCommand>
+public class CreateSecurityGuardCommandValidator : AbstractValidator<CreateSecurityGuardCommand>
 {
-    public RegisterUserCommandValidator(
+    public CreateSecurityGuardCommandValidator(
         UserManager<User> userManager,
         IStringLocalizer<AuthMessages> localizer)
     {

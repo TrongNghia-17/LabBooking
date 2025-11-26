@@ -46,6 +46,7 @@ internal class LabRoomRepository(LabBookingDbContext dbContext) : ILabRoomReposi
         var baseQuery = dbContext
             .LabRooms
             .Include(x => x.Equipments)
+            .Include(r => r.MainManager)
             .Where(r => searchPhraseLower == null ||
                         (r.LabName != null && r.LabName.ToLower().Contains(searchPhraseLower)) ||
                         (r.Location != null && r.Location.ToLower().Contains(searchPhraseLower)));
@@ -106,5 +107,13 @@ internal class LabRoomRepository(LabBookingDbContext dbContext) : ILabRoomReposi
             .AnyAsync(room => room.LabName == labName && room.Id != id, cancellationToken);
 
         return !isDuplicate;
+    }
+
+    public async Task<IEnumerable<LabRoom>> GetByManagerIdAsync(Guid managerId, CancellationToken cancellationToken = default)
+    {
+        return await dbContext.LabRooms
+            .Where(r => r.MainManagerId == managerId && r.IsActive) // Chỉ lấy phòng đang hoạt động
+            .OrderBy(r => r.LabName)
+            .ToListAsync(cancellationToken);
     }
 }

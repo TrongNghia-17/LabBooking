@@ -19,4 +19,5 @@ public interface ILabRoomRepository
     /// Lấy danh sách các phòng Lab có lịch bảo trì nhưng chưa hoàn thành (NotYet).
     /// </summary>
     Task<IEnumerable<LabRoom>> GetUnmaintainedLabRoomsAsync(CancellationToken cancellationToken = default);
+    Task<IEnumerable<LabRoom>> GetByManagerIdAsync(Guid managerId, CancellationToken cancellationToken = default);
 }

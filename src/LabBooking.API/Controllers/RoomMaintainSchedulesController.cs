@@ -15,7 +15,7 @@ public class RoomMaintainSchedulesController(IMediator mediator) : ControllerBas
     /// Create a new room maintain schedule
     /// </summary>
     [HttpPost]
-    [Authorize(Roles = "Admin")] // Giả định chỉ Admin được tạo
+    [Authorize(Roles = "Manager")] // Giả định chỉ Admin được tạo
     [ProducesResponseType(StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
@@ -36,7 +36,7 @@ public class RoomMaintainSchedulesController(IMediator mediator) : ControllerBas
     /// <param name="query">Query parameters for filtering schedules</param>
     /// <returns>List of schedules</returns>
     [HttpGet]
-    [Authorize(Roles = "Admin")] // Giống LabRoomsController
+    [Authorize(Roles = "Admin, Manager")] // Giống LabRoomsController
     [ProducesResponseType(typeof(PagedResult<RoomMaintainScheduleResponse>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
@@ -54,7 +54,7 @@ public class RoomMaintainSchedulesController(IMediator mediator) : ControllerBas
     /// <param name="id">The Id of the schedule to delete</param>
     /// <returns>No content</returns>
     [HttpDelete("{id:guid}")]
-    [Authorize(Roles = "Admin")] // Giả định Admin
+    [Authorize(Roles = "Admin, Manager")] // Giả định Admin
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
@@ -75,7 +75,7 @@ public class RoomMaintainSchedulesController(IMediator mediator) : ControllerBas
     /// <param name="command">The new data for the schedule</param>
     /// <returns>No content</returns>
     [HttpPut("{id:guid}")]
-    [Authorize(Roles = "Admin")] // Giả định Admin
+    [Authorize(Roles = "Admin, Manager")] // Giả định Admin
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
@@ -99,7 +99,7 @@ public class RoomMaintainSchedulesController(IMediator mediator) : ControllerBas
     /// <param name="id">The Id of the schedule</param>
     /// <returns>The room maintain schedule</returns>
     [HttpGet("{id:guid}")]
-    [Authorize(Roles = "Admin")] // Giả định Admin mới được xem
+    [Authorize(Roles = "Admin, Manager")] // Giả định Admin mới được xem
     [ProducesResponseType(typeof(RoomMaintainScheduleResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
