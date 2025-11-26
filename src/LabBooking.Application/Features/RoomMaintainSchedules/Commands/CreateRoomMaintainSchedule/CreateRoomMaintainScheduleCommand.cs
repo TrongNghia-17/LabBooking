@@ -5,10 +5,7 @@
 /// </summary>
 public record CreateRoomMaintainScheduleCommand(
     Guid LabRoomId,
-    bool IsManyDay,
-    bool? IsAllDay,
     DateTime? StartTime,
     DateTime? EndTime,
-    int? NumberOfSlot,
     string? Description
 ) : IRequest<Guid>;

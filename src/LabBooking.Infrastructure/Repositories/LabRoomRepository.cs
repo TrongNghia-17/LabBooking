@@ -108,4 +108,12 @@ internal class LabRoomRepository(LabBookingDbContext dbContext) : ILabRoomReposi
 
         return !isDuplicate;
     }
+
+    public async Task<IEnumerable<LabRoom>> GetByManagerIdAsync(Guid managerId, CancellationToken cancellationToken = default)
+    {
+        return await dbContext.LabRooms
+            .Where(r => r.MainManagerId == managerId && r.IsActive) // Chỉ lấy phòng đang hoạt động
+            .OrderBy(r => r.LabName)
+            .ToListAsync(cancellationToken);
+    }
 }
