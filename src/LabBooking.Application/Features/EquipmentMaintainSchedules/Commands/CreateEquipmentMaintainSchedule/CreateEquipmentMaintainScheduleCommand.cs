@@ -5,10 +5,7 @@
 /// </summary>
 public record CreateEquipmentMaintainScheduleCommand(
     Guid EquipmentId,
-    bool IsManyDay,
-    bool? IsAllDay,
-    DateTime? StartTime,
-    DateTime? EndTime,
-    int? NumberOfSlot,
-    string? Description
+    DateTime StartTime,
+    DateTime EndTime,
+    string Description
 ) : IRequest<Guid>;

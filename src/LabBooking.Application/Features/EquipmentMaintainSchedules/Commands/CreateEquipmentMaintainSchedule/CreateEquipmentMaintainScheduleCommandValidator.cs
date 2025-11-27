@@ -18,14 +18,7 @@ public class CreateEquipmentMaintainScheduleCommandValidator : AbstractValidator
         // --- Date Logic (Tương tự RoomMaintainSchedule) ---
         RuleFor(c => c.EndTime)
             .GreaterThan(c => c.StartTime)
-            .WithMessage("End Time must be after Start Time.")
-            .When(c => c.StartTime.HasValue && c.EndTime.HasValue);
-
-        // --- NumberOfSlot Logic ---
-        RuleFor(c => c.NumberOfSlot)
-            .GreaterThan(0)
-            .When(c => c.NumberOfSlot.HasValue)
-            .WithMessage("Number of Slots must be greater than 0.");
+            .WithMessage("End Time must be after Start Time.");
 
         // --- Description Logic ---
         RuleFor(c => c.Description)
