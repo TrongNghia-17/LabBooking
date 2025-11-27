@@ -1,5 +1,6 @@
 ﻿using LabBooking.Application.Features.ApproveBooking.Commands;
 using LabBooking.Application.Features.ApproveBooking.Dtos;
+using LabBooking.Application.Features.Booking.Commands.RejectBooking;
 using LabBooking.Application.Features.Booking.Dtos;
 using LabBooking.Application.Features.Booking.Queries.GetBookingById;
 using LabBooking.Application.Features.Booking.Queries.GetChangeableBooking;
@@ -91,25 +92,80 @@ public class BookingsController(
     /// Dành cho Manager/Admin.
     /// </summary>
     [HttpGet("pending")]
+    //[Authorize(Roles = "Manager")]
     [ProducesResponseType(typeof(List<BookingResponse>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-    public async Task<ActionResult<List<BookingResponse>>> GetPending([FromQuery] Guid? labId)
+    public async Task<ActionResult<List<BookingResponse>>> GetPending()
     {
-        var query = new GetPendingBookingsQuery(labId);
+        var userIdString = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        if (!Guid.TryParse(userIdString, out var userId))
+        {
+            return Unauthorized();
+        }
+
+        var query = new GetPendingBookingsQuery(userId);
         var result = await mediator.Send(query);
         return Ok(result);
     }
 
 
     [HttpPut("approve")]
+    [Authorize(Roles = "Manager")]
     [ProducesResponseType(typeof(ApproveBookingResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> ApproveBooking([FromBody] ApproveBookingCommand command)
     {
-        // Command chứa { BookingId, ManagerId }
-        await mediator.Send(command);
-        return Ok(new { message = "Duyệt đơn thành công." });
+        try
+        {
+            // Command chứa { BookingId, ManagerId }
+            var userIdString = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            if (!Guid.TryParse(userIdString, out var userId))
+            {
+                return Unauthorized();
+            }
+            var approveBookingCommand = new ApproveBookingCommand(command.BookingId, userId);
+            await mediator.Send(approveBookingCommand);
+            return Ok(new { message = "Duyệt đơn thành công." });
+        }
+        catch (InvalidOperationException ex) // Bắt đúng loại lỗi bạn ném
+        {
+            // Biến lỗi 500 thành 400 và lấy message ra trả về
+            return BadRequest(new { message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            // Các lỗi khác không ngờ tới thì mới để 500
+            return StatusCode(500, new { message = "Lỗi hệ thống không xác định." });
+        }
+        
+    }
+
+    [HttpPut("reject")]
+    [Authorize(Roles = "Manager")]
+    public async Task<IActionResult> RejectBooking([FromBody] RejectBookingCommand command)
+    {
+        try
+        {
+            // Tự lấy ManagerId từ Token
+            var userIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? User.FindFirst("sub")?.Value;
+            if (Guid.TryParse(userIdString, out var managerId))
+            {
+                command = command with { ManagerId = managerId };
+            }
+            await mediator.Send(command);
+            return Ok(new { message = "Đã từ chối đơn đặt." });
+        }
+        catch (InvalidOperationException ex) // Bắt đúng loại lỗi bạn ném
+        {
+            // Biến lỗi 500 thành 400 và lấy message ra trả về
+            return BadRequest(new { message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            // Các lỗi khác không ngờ tới thì mới để 500
+            return StatusCode(500, new { message = "Lỗi hệ thống không xác định." });
+        }
     }
 
     [HttpGet("my-history-booking")]

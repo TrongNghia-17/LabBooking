@@ -46,6 +46,7 @@ namespace LabBooking.Application.Features.Booking.Dtos
 
             //// Map ExternalEquipment -> ExternalEquipmentResponse
             CreateMap<Domain.Entities.ExternalEquipment, ExternalEquipmentResponse>();
+            CreateMap<Domain.Entities.OutSideGuest, OutSideGuestResponse>();
         }
     }
 }

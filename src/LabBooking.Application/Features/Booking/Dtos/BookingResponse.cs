@@ -53,6 +53,8 @@ namespace LabBooking.Application.Features.Booking.Dtos
         public ICollection<ExternalEquipmentResponse>? ExternalEquipments { get; set; }
         public string? PendingSlotsJson { get; set; }
         public bool? HasPendingChangeRequest { get; set; }
+
+        public ICollection<OutSideGuestResponse>? OutSideGuests { get; set; }
     }
 
     public record ProjectResponse
@@ -62,5 +64,13 @@ namespace LabBooking.Application.Features.Booking.Dtos
         string? Description,
         Guid OwnerId,
         ProjectType ProjectType
+    );
+
+    public record OutSideGuestResponse
+    (
+        string? FullName,
+        string? Email,
+        string? Organization,
+        string? PurposeOfVisit
     );
 }
