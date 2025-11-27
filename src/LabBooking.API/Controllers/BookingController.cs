@@ -116,56 +116,29 @@ public class BookingsController(
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> ApproveBooking([FromBody] ApproveBookingCommand command)
     {
-        try
+        // Command chứa { BookingId, ManagerId }
+        var userIdString = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        if (!Guid.TryParse(userIdString, out var userId))
         {
-            // Command chứa { BookingId, ManagerId }
-            var userIdString = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
-            if (!Guid.TryParse(userIdString, out var userId))
-            {
-                return Unauthorized();
-            }
-            var approveBookingCommand = new ApproveBookingCommand(command.BookingId, userId);
-            await mediator.Send(approveBookingCommand);
-            return Ok(new { message = "Duyệt đơn thành công." });
+            return Unauthorized();
         }
-        catch (InvalidOperationException ex) // Bắt đúng loại lỗi bạn ném
-        {
-            // Biến lỗi 500 thành 400 và lấy message ra trả về
-            return BadRequest(new { message = ex.Message });
-        }
-        catch (Exception ex)
-        {
-            // Các lỗi khác không ngờ tới thì mới để 500
-            return StatusCode(500, new { message = "Lỗi hệ thống không xác định." });
-        }
-        
+        var approveBookingCommand = new ApproveBookingCommand(command.BookingId, userId);
+        await mediator.Send(approveBookingCommand);
+        return Ok(new { message = "Duyệt đơn thành công." });
     }
 
     [HttpPut("reject")]
     [Authorize(Roles = "Manager")]
     public async Task<IActionResult> RejectBooking([FromBody] RejectBookingCommand command)
     {
-        try
+        // Tự lấy ManagerId từ Token
+        var userIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? User.FindFirst("sub")?.Value;
+        if (Guid.TryParse(userIdString, out var managerId))
         {
-            // Tự lấy ManagerId từ Token
-            var userIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? User.FindFirst("sub")?.Value;
-            if (Guid.TryParse(userIdString, out var managerId))
-            {
-                command = command with { ManagerId = managerId };
-            }
-            await mediator.Send(command);
-            return Ok(new { message = "Đã từ chối đơn đặt." });
+            command = command with { ManagerId = managerId };
         }
-        catch (InvalidOperationException ex) // Bắt đúng loại lỗi bạn ném
-        {
-            // Biến lỗi 500 thành 400 và lấy message ra trả về
-            return BadRequest(new { message = ex.Message });
-        }
-        catch (Exception ex)
-        {
-            // Các lỗi khác không ngờ tới thì mới để 500
-            return StatusCode(500, new { message = "Lỗi hệ thống không xác định." });
-        }
+        await mediator.Send(command);
+        return Ok(new { message = "Đã từ chối đơn đặt." });
     }
 
     [HttpGet("my-history-booking")]

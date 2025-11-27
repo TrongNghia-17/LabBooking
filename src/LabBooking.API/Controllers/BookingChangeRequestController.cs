@@ -54,63 +54,36 @@ namespace LabBooking.API.Controllers
         [Authorize(Roles = "Manager")]
         public async Task<IActionResult> RejectChangeRequest([FromBody] RejectBookingChangeRequestCommand command)
         {
-            try
+            // Tự lấy ManagerId từ Token
+            var userIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? User.FindFirst("sub")?.Value;
+            if (Guid.TryParse(userIdString, out var managerId))
             {
-                // Tự lấy ManagerId từ Token
-                var userIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? User.FindFirst("sub")?.Value;
-                if (Guid.TryParse(userIdString, out var managerId))
-                {
-                    command = command with { ManagerId = managerId };
-                }
+                command = command with { ManagerId = managerId };
+            }
 
-                await mediator.Send(command);
-                return Ok(new { message = "Đã từ chối yêu cầu thay đổi." });
-            }
-            catch (InvalidOperationException ex) // Bắt đúng loại lỗi bạn ném
-            {
-                // Biến lỗi 500 thành 400 và lấy message ra trả về
-                return BadRequest(new { message = ex.Message });
-            }
-            catch (Exception ex)
-            {
-                // Các lỗi khác không ngờ tới thì mới để 500
-                return StatusCode(500, new { message = "Lỗi hệ thống không xác định." });
-            }
-            
+            await mediator.Send(command);
+            return Ok(new { message = "Đã từ chối yêu cầu thay đổi." });
         }
 
         [HttpPut("approve")]
         [Authorize(Roles = "Manager")]
         public async Task<IActionResult> ApproveChangeRequest([FromBody] ApproveBookingChangeRequestCommand command)
         {
-            try
+            // Lấy ID Manager từ Token
+            var userIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? User.FindFirst("sub")?.Value;
+            if (Guid.TryParse(userIdString, out var managerId))
             {
-                // Lấy ID Manager từ Token
-                var userIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? User.FindFirst("sub")?.Value;
-                if (Guid.TryParse(userIdString, out var managerId))
-                {
-                    // Override ManagerId từ Token để bảo mật (tránh FE gửi bậy)
-                    command = command with { ManagerId = managerId };
-                }
-
-                // Gửi lệnh
-                // Lưu ý: Frontend gửi body { "bookingId": "..." } nhưng thực chất đó là ID của Request
-                // Bạn nên chắc chắn DTO map đúng, hoặc đổi tên DTO FE gửi lên cho khớp
-
-                await mediator.Send(command);
-
-                return Ok(new { message = "Đã duyệt yêu cầu thay đổi." });
+                // Override ManagerId từ Token để bảo mật (tránh FE gửi bậy)
+                command = command with { ManagerId = managerId };
             }
-            catch (InvalidOperationException ex) // Bắt đúng loại lỗi bạn ném
-            {
-                // Biến lỗi 500 thành 400 và lấy message ra trả về
-                return BadRequest(new { message = ex.Message });
-            }
-            catch (Exception ex)
-            {
-                // Các lỗi khác không ngờ tới thì mới để 500
-                return StatusCode(500, new { message = "Lỗi hệ thống không xác định." });
-            }
+
+            // Gửi lệnh
+            // Lưu ý: Frontend gửi body { "bookingId": "..." } nhưng thực chất đó là ID của Request
+            // Bạn nên chắc chắn DTO map đúng, hoặc đổi tên DTO FE gửi lên cho khớp
+
+            await mediator.Send(command);
+
+            return Ok(new { message = "Đã duyệt yêu cầu thay đổi." });
         }
     }
 }
