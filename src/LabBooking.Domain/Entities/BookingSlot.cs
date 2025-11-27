@@ -28,7 +28,9 @@ public class BookingSlot
 public enum UnavailableReason
 {
     Booked , //0
-    Maintenance //1
+    Maintenance, //1
+    PastTime,
+    Locked
 }
 
 public enum BookingSlotStatus

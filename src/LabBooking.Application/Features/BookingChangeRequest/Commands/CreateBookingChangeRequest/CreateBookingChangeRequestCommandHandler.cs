@@ -19,7 +19,6 @@ namespace LabBooking.Application.Features.BookingChangeRequest.Commands.CreateBo
             // =================================================================
             // BƯỚC 1: CHECK TỒN TẠI & QUYỀN (GỌI REPO)
             // =================================================================
-
             var isValid = await changeRequestRepository.IsBookingOwnerAndApprovedAsync(
                 request.BookingId,
                 request.RequestedById
@@ -67,6 +66,11 @@ namespace LabBooking.Application.Features.BookingChangeRequest.Commands.CreateBo
                 // Lưu danh sách thiết bị (List -> JSON Array)
                 NewExternalEquipmentsJson = request.NewExternalEquipments != null
                     ? JsonSerializer.Serialize(request.NewExternalEquipments)
+                    : null,
+
+                // Lưu danh sách khách ngoài (List -> JSON Array)
+                NewOutSideGuestsJson = request.NewOutSideGuests != null
+                    ? JsonSerializer.Serialize(request.NewOutSideGuests)
                     : null,
 
                 // --- 2.3 Set trạng thái khởi tạo ---

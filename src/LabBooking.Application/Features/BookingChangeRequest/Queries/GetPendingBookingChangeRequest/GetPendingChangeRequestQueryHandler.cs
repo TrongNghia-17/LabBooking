@@ -15,7 +15,7 @@ namespace LabBooking.Application.Features.BookingChangeRequest.Queries.GetPendin
         public async Task<List<BookingChangeRequestResponse>> Handle(GetPendingChangeRequestQuery request, CancellationToken cancellationToken)
         {
             // 1. Gọi Repo lấy data
-            var requests = await requestRepository.GetPendingRequestsAsync(request.LabId);
+            var requests = await requestRepository.GetPendingRequestsAsync(request.UserId);
 
             // 2. Map sang DTO (BookingChangeRequestResponse đã cấu hình ở bước trước)
             var bookingChangeRequestResponses = mapper.Map<List<BookingChangeRequestResponse>>(requests);

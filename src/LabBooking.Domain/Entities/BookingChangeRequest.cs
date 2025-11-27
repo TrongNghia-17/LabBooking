@@ -36,6 +36,8 @@ namespace LabBooking.Domain.Entities
         // Chứa List: [{ "Name": "...", "Quantity": 2, "Description": "..." }]
         public string? NewExternalEquipmentsJson { get; set; }
 
+        public string? NewOutSideGuestsJson { get; set; }
+
         // --- NHÓM 3: DANH SÁCH SLOT MONG MUỐN (Bảng con) ---
         // Lưu toàn bộ slot user muốn giữ (cũ + mới)
         public ICollection<BookingChangeRequestSlot> NewSlots { get; set; }

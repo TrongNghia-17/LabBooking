@@ -19,12 +19,14 @@ namespace LabBooking.Application.Features.BookingChangeRequest.Commands.CreateBo
         ChangeProjectInput? NewProject,
         ChangePriorityInput? NewPriorityDetail,
         List<ChangeEquipmentInput>? NewExternalEquipments,
+        List<ChangeOutSideGuestInput>? NewOutSideGuests,
         // Danh sách slot mong muốn
         List<ChangeSlotInput> DesiredSlots
     ) : IRequest<BookingChangeRequestResponse>; 
 
-    public record ChangeProjectInput(string ProjectName, string Description, ProjectType ProjectType);
-    public record ChangePriorityInput(string Justification, string EvidenceFilePath);
-    public record ChangeEquipmentInput(string Name, string Description, int Quantity);
+    public record ChangeProjectInput(string ProjectName, string? Description, ProjectType ProjectType);
+    public record ChangePriorityInput(string? Justification, string? EvidenceFilePath);
+    public record ChangeEquipmentInput(string Name, string? Description, int Quantity);
     public record ChangeSlotInput(DateOnly Date, Guid SlotId);
+    public record ChangeOutSideGuestInput(string FullName, string Email, string? Organization, string? PurposeOfVisit);
 }

@@ -148,10 +148,11 @@
                 .Include(b => b.Project)             // Lấy dự án (nếu Project)
                 .Include(b => b.BookingPriorityDetail) // Lấy lý do ưu tiên
                 .Include(b => b.ExternalEquipments)  // Lấy thiết bị
+                .Include(b => b.OutSideGuests)
                 .FirstOrDefaultAsync(b => b.Id == id);
         }
 
-        public async Task<List<Booking>> GetPendingBookingsAsync(Guid? labId)
+        public async Task<List<Booking>> GetPendingBookingsAsync(Guid? userId)
         {
             var query = dbContext.Bookings
                 .Include(b => b.LabRoom)             // Lấy tên phòng
@@ -160,13 +161,14 @@
                 .Include(b => b.BookingPriorityDetail) // Lấy lý do ưu tiên (quan trọng để duyệt)
                 .Include(b => b.Project)             // Lấy tên dự án
                 .Include(b => b.Course)              // Lấy tên môn học
-                                                     //.Include(b => b.CreatedBy)         // (Optional) Nếu bạn có relationship với bảng User để hiện tên người đặt
+                .Include(b => b.ExternalEquipments)
+                .Include(b => b.OutSideGuests)       //.Include(b => b.CreatedBy)         // (Optional) Nếu bạn có relationship với bảng User để hiện tên người đặt
                 .Where(b => b.Status == BookingStatus.Pending);
 
             // Nếu có truyền LabId thì lọc, không thì lấy hết
-            if (labId.HasValue)
+            if (userId.HasValue)
             {
-                query = query.Where(b => b.LabRoomId == labId);
+                query = query.Where(b => b.LabRoom.MainManagerId == userId);
             }
 
             // Sắp xếp: Đơn ưu tiên (VIP) lên đầu, hoặc đơn mới nhất lên đầu
@@ -231,7 +233,7 @@
                             Date = reqSlot.Date,
                             SlotId = reqSlot.SlotId,
                             // Bạn nên thêm 1 giá trị enum mới như 'PastTime' hoặc dùng tạm 'Locked'
-                            Reason = UnavailableReason.Booked // Hoặc tạo UnavailableReason.PastTime
+                            Reason = UnavailableReason.PastTime // Hoặc tạo UnavailableReason.PastTime
                         });
                     }
                 }
@@ -318,6 +320,27 @@
             // 1. Tìm slot bị trùng
             var requestedSlots = booking.Slots.ToList();
             var conflicts = await GetConflictingSlotsAsync(booking.LabRoomId, requestedSlots, booking.Id);
+
+
+            if (conflicts.Any(c => c.Reason == UnavailableReason.PastTime))
+            {
+                // 1. Cập nhật trạng thái đơn thành Rejected
+                if (dbContext.Entry(booking).State == EntityState.Detached)
+                {
+                    dbContext.Bookings.Attach(booking);
+                }
+
+                booking.Status = BookingStatus.Rejected;
+
+                // (Optional) Ghi chú lý do reject vào booking nếu có trường Note/Feedback
+                 //booking.AdminNote = "Hệ thống tự động từ chối do có slot trong quá khứ.";
+
+                // 2. Lưu vào DB ngay lập tức
+                //await dbContext.SaveChangesAsync();
+
+                // 3. Trả về thông báo cụ thể
+                throw new InvalidOperationException("Đơn đặt lịch đã bị TỪ CHỐI TỰ ĐỘNG vì chứa khung giờ trong quá khứ.");
+            }
 
             // Loại bỏ chính nó (đề phòng)
             conflicts = conflicts.Where(c => c.BookingId != booking.Id).ToList();
@@ -420,6 +443,39 @@
                 .Where(b => b.CreatedById == userId) // Chỉ lấy của chính mình
                 .OrderByDescending(b => b.CreatedAt) // Mới nhất lên đầu
                 .ToListAsync();
+        }
+
+        public Task<bool> CheckBookingIsBelongToThisManager(Guid bookingId, Guid managerId)
+        {
+            return dbContext.Bookings
+                .AnyAsync(b => b.Id == bookingId && b.LabRoom.MainManagerId == managerId);
+        }
+
+        public async Task RejectBookingAsync(Guid bookingId, Guid managerId)
+        {
+            // 1. Tìm Booking + Include Slots
+            var booking = await dbContext.Bookings
+                .Include(b => b.Slots)
+                .FirstOrDefaultAsync(b => b.Id == bookingId);
+
+            if (booking == null)
+                throw new InvalidOperationException("Không tìm thấy đơn đặt.");
+
+            if (booking.Status != BookingStatus.Pending)
+                throw new InvalidOperationException("Chỉ có thể từ chối đơn đang ở trạng thái chờ.");
+
+            // 2. Update trạng thái Booking
+            booking.Status = BookingStatus.Rejected;
+            // booking.RejectedById = managerId; // (Optional) Nếu có trường này để lưu vết
+
+            // 3. Hủy các Slot đang giữ chỗ (Để nhả phòng ra cho người khác)
+            foreach (var slot in booking.Slots)
+            {
+                slot.Status = BookingSlotStatus.Cancelled;
+            }
+
+            // 4. Save
+            //await dbContext.SaveChangesAsync();
         }
     }
 }
