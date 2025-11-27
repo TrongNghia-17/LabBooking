@@ -17,8 +17,8 @@ public class CreateRoomMaintainScheduleCommandValidator : AbstractValidator<Crea
         // --- Date Logic (Tương tự UsagePolicy) ---
         RuleFor(c => c.EndTime)
             .GreaterThan(c => c.StartTime)
-            .WithMessage("End Time must be after Start Time.")
-            .When(c => c.StartTime.HasValue && c.EndTime.HasValue);
+            .WithMessage("End Time must be after Start Time.");
+        //.When(c => c.StartTime.HasValue && c.EndTime.HasValue);
 
         // --- Description Logic ---
         RuleFor(c => c.Description)
