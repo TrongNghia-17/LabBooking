@@ -1,24 +1,22 @@
-﻿using AutoMapper;
-
-namespace LabBooking.Application.Features.Authentication.Commands.Register;
+﻿namespace LabBooking.Application.Features.SecurityGuards.Commands.Register;
 
 /// <summary>
-/// Command handler responsible for processing the <see cref="RegisterUserCommand"/>.
+/// Command handler responsible for processing the <see cref="CreateSecurityGuardCommand"/>.
 /// </summary>
-public class RegisterUserCommandHandler(
-    ILogger<RegisterUserCommandHandler> logger,
+public class CreateSecurityGuardCommandHandler(
+    ILogger<CreateSecurityGuardCommandHandler> logger,
     UserManager<User> userManager,
     RoleManager<IdentityRole<Guid>> roleManager,
     IMapper mapper
-) : IRequestHandler<RegisterUserCommand, Unit>
+) : IRequestHandler<CreateSecurityGuardCommand, Unit>
 {
-    private const string DefaultRole = "User";
+    private const string DefaultRole = "SecurityGuard";
 
-    public async Task<Unit> Handle(RegisterUserCommand request, CancellationToken cancellationToken)
+    public async Task<Unit> Handle(CreateSecurityGuardCommand request, CancellationToken cancellationToken)
     {
         logger.LogInformation("Processing registration for email: {Email}", request.Email);
 
-        // 1. Check if the "User" role exists BEFORE creating the user (Safety Check)
+        // 1. Check if the "SecurityGuard" role exists BEFORE creating the user (Safety Check)
         var roleExists = await roleManager.RoleExistsAsync(DefaultRole);
         if (!roleExists)
         {

@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Identity;
+﻿using LabBooking.API.Filters;
+using Microsoft.AspNetCore.Identity;
 using System.Text.Json.Serialization;
 
 namespace LabBooking.API.Extensions;
@@ -71,7 +72,10 @@ public static class WebApplicationBuilderExtensions
             });
         });
 
-        builder.Services.AddControllers()
+        builder.Services.AddControllers(options =>
+            {
+                options.Filters.Add<UnifiedResponseFilter>();
+            })
             .AddJsonOptions(options =>
             {
                 options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());

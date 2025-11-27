@@ -7,12 +7,8 @@ public record RoomMaintainScheduleResponse
 {
     public Guid Id { get; init; }
     public Guid LabRoomId { get; init; }
-    public bool IsManyDay { get; init; }
-    public bool? IsAllDay { get; init; }
     public DateTime? StartTime { get; init; }
     public DateTime? EndTime { get; init; }
-    public int? NumberOfSlot { get; init; }
-
     /// <summary>
     /// Trạng thái bảo trì (VD: "Done", "NotYet")
     /// </summary>

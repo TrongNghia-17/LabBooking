@@ -20,12 +20,6 @@ public class UpdateRoomMaintainScheduleCommandValidator : AbstractValidator<Upda
             .WithMessage("End Time must be after Start Time.")
             .When(c => c.StartTime.HasValue && c.EndTime.HasValue);
 
-        // --- NumberOfSlot Logic (Giống Create) ---
-        RuleFor(c => c.NumberOfSlot)
-            .GreaterThan(0)
-            .When(c => c.NumberOfSlot.HasValue)
-            .WithMessage("Number of Slots must be greater than 0.");
-
         // --- Description Logic (Giống Create) ---
         RuleFor(c => c.Description)
             .MaximumLength(1000).WithMessage("Description must not exceed 1000 characters.");

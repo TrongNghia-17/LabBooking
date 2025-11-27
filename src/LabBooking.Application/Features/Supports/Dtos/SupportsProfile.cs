@@ -19,13 +19,18 @@ public class SupportsProfile : Profile
     /// </summary>
     public SupportsProfile()
     {
-        CreateMap<Support, SupportsResponse>().ReverseMap();
+        CreateMap<Support, SupportsResponse>()
+            .ForMember(dest => dest.Status, opt => opt.MapFrom(src => src.Status.ToString()))
+            .ForMember(dest => dest.CreatedByName,
+                opt => opt.MapFrom(src => src.CreatedBy.UserName != null ? src.CreatedBy.UserName : "Unknown User"));
 
         CreateMap<CreateSupportCommand, Support>()
             .ForMember(dest => dest.Answer, opt => opt.MapFrom(src => string.Empty));
 
         CreateMap<UpdateSupportCommand, Support>()
             .ForMember(dest => dest.Id, opt => opt.Ignore())
-            .ForMember(dest => dest.CreatedById, opt => opt.Ignore());
+            .ForMember(dest => dest.CreatedById, opt => opt.Ignore())
+            .ForMember(dest => dest.Answer, opt => opt.Ignore())
+            .ForMember(dest => dest.Status, opt => opt.Ignore());
     }
 }

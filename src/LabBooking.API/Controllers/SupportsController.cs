@@ -12,7 +12,7 @@ public class SupportsController(IMediator mediator) : ControllerBase
     /// <param name="command">The data for the new support ticket</param>
     /// <returns>The newly created support ticket</returns>
     [HttpPost]
-    [Authorize(Roles = "Admin")]
+    [Authorize(Roles = "Manager, Lecturer, Student, SecurityGuard")]
     [ProducesResponseType(typeof(SupportsResponse), StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
@@ -20,7 +20,7 @@ public class SupportsController(IMediator mediator) : ControllerBase
     {
         var supportId = await mediator.Send(command);
 
-        return CreatedAtAction(nameof(GetById), new { id = supportId }, null);
+        return CreatedAtAction(nameof(GetMySupports), new { id = supportId }, null);
     }
 
     /// <summary>
@@ -80,20 +80,19 @@ public class SupportsController(IMediator mediator) : ControllerBase
     }
 
     /// <summary>
-    /// Get a specific support ticket by Id
+    /// Get all support tickets created by the current authenticated user.
     /// </summary>
-    /// <param name="id">The Id of the support ticket</param>
-    /// <returns>The support ticket</returns>
-    [HttpGet("{id:guid}")]
-    [Authorize(Roles = "Admin")]
-    [ProducesResponseType(typeof(SupportsResponse), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [HttpGet("my")] // Đổi thành route "my" hoặc "user" để chỉ rõ API này là của người dùng
+    [Authorize(Roles = "Manager, Lecturer, Student, SecurityGuard")]
+    [ProducesResponseType(typeof(IEnumerable<SupportsResponse>), StatusCodes.Status200OK)] // Kiểu trả về là List/IEnumerable
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-    public async Task<ActionResult<SupportsResponse>> GetById([FromRoute] Guid id)
+    public async Task<ActionResult<IEnumerable<SupportsResponse>>> GetMySupports()
     {
-        var query = new GetSupportByIdQuery(id);
-        var support = await mediator.Send(query);
+        // Gửi Query rỗng (không cần ID)
+        var query = new GetMySupportsQuery();
+        var supports = await mediator.Send(query);
 
-        return Ok(support);
+        return Ok(supports);
     }
 }

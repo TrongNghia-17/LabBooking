@@ -9,9 +9,8 @@ public record UpdateSupportCommand() : IRequest<Unit>
 {
     [JsonIgnore]
     public Guid Id { get; set; }
-    public string Title { get; set; } = default!;
-    public string Content { get; set; } = default!;
-    public string Answer { get; set; } = default!;
+    public string? Answer { get; set; } = default!;
+    public SupportStatus Status { get; set; }
 }
 
 

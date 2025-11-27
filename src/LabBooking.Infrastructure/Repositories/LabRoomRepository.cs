@@ -46,6 +46,7 @@ internal class LabRoomRepository(LabBookingDbContext dbContext) : ILabRoomReposi
         var baseQuery = dbContext
             .LabRooms
             .Include(x => x.Equipments)
+            .Include(r => r.MainManager)
             .Where(r => searchPhraseLower == null ||
                         (r.LabName != null && r.LabName.ToLower().Contains(searchPhraseLower)) ||
                         (r.Location != null && r.Location.ToLower().Contains(searchPhraseLower)));
@@ -76,6 +77,23 @@ internal class LabRoomRepository(LabBookingDbContext dbContext) : ILabRoomReposi
         return (labRooms, totalCount);
     }
 
+    public async Task<IEnumerable<LabRoom>> GetUnmaintainedLabRoomsAsync(CancellationToken cancellationToken = default)
+    {
+        // Lấy danh sách LabRoomIds có lịch bảo trì với trạng thái là NotYet
+        var labRoomIdsWithPendingMaintenance = dbContext.RoomMaintainSchedules
+            .Where(s => s.RoomMaintainStatus == RoomMaintainStatus.NotYet)
+            .Select(s => s.LabRoomId)
+            .Distinct(); // Đảm bảo chỉ lấy ID duy nhất (vì một phòng có thể có nhiều lịch)
+
+        // Lấy các LabRoom tương ứng
+        var unmaintainedLabRooms = await dbContext.LabRooms
+            .Where(r => !labRoomIdsWithPendingMaintenance.Contains(r.Id))
+            .Include(lab => lab.Equipments)
+            .ToListAsync(cancellationToken);
+
+        return unmaintainedLabRooms;
+    }
+
     public async Task<bool> IsLabNameUniqueAsync(string labName, CancellationToken cancellationToken = default)
     {
         var labNameLower = labName.ToLower();
@@ -89,5 +107,13 @@ internal class LabRoomRepository(LabBookingDbContext dbContext) : ILabRoomReposi
             .AnyAsync(room => room.LabName == labName && room.Id != id, cancellationToken);
 
         return !isDuplicate;
+    }
+
+    public async Task<IEnumerable<LabRoom>> GetByManagerIdAsync(Guid managerId, CancellationToken cancellationToken = default)
+    {
+        return await dbContext.LabRooms
+            .Where(r => r.MainManagerId == managerId && r.IsActive) // Chỉ lấy phòng đang hoạt động
+            .OrderBy(r => r.LabName)
+            .ToListAsync(cancellationToken);
     }
 }

@@ -694,15 +694,23 @@ namespace LabBooking.Application.Migrations
                         .HasColumnType("uuid");
 
                     b.Property<string>("Answer")
-                        .IsRequired()
                         .HasColumnType("text");
 
                     b.Property<string>("Content")
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<Guid>("CreatedById")
                         .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("RespondedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
 
                     b.Property<string>("Title")
                         .IsRequired()
