@@ -1,26 +1,43 @@
-﻿
+﻿using LabBooking.Application.Features.EquipmentMaintainSchedules.Dtos;
+using LabBooking.Application.Services.Users;
+
 namespace LabBooking.Application.Features.EquipmentMaintainSchedules.Commands.CreateEquipmentMaintainSchedule;
 
 public class CreateEquipmentMaintainScheduleCommandHandler(
     ILogger<CreateEquipmentMaintainScheduleCommandHandler> logger,
     IMapper mapper,
-    IEquipmentMaintainScheduleRepository equipmentMaintainScheduleRepository // Repository mới
-    ) : IRequestHandler<CreateEquipmentMaintainScheduleCommand, Guid>
+    IEquipmentMaintainScheduleRepository equipmentMaintainScheduleRepository,
+    IEquipmentRepository equipmentRepository,
+    ILabRoomRepository labRoomRepository,
+    ICurrentUserService currentUserService
+    ) : IRequestHandler<CreateEquipmentMaintainScheduleCommand, EquipmentMaintainScheduleResponse>
 {
-    public async Task<Guid> Handle(CreateEquipmentMaintainScheduleCommand request, CancellationToken cancellationToken)
+    public async Task<EquipmentMaintainScheduleResponse> Handle(CreateEquipmentMaintainScheduleCommand request, CancellationToken cancellationToken)
     {
-        logger.LogInformation("Đang tạo một EquipmentMaintainSchedule mới cho Equipment {EquipmentId}", request.EquipmentId);
+        var currentUserId = currentUserService.UserId
+            ?? throw new UnauthorizedAccessException("Bạn cần đăng nhập để thực hiện chức năng này.");
 
-        // 1. Map từ Command sang Entity
+        var equipment = await equipmentRepository.GetByIdAsync(request.EquipmentId)
+            ?? throw new NotFoundException(nameof(Equipment), request.EquipmentId.ToString());
+
+        var labRoom = await labRoomRepository.GetByIdAsync(equipment.LabRoomId, cancellationToken)
+            ?? throw new NotFoundException(nameof(LabRoom), equipment.LabRoomId.ToString());
+
+        if (labRoom.MainManagerId != currentUserId)
+        {
+            logger.LogWarning("User {UserId} cố gắng bảo trì thiết bị {EqId} thuộc Lab {LabId} nhưng không phải quản lý.", currentUserId, request.EquipmentId, labRoom.Id);
+            throw new ForbidException("Bạn không có quyền bảo trì thiết bị này vì nó thuộc phòng Lab bạn không quản lý.");
+        }
+
+        logger.LogInformation("Đang tạo lịch bảo trì cho thiết bị {EqId} trong Lab {LabId}", request.EquipmentId, labRoom.Id);
+
         var schedule = mapper.Map<EquipmentMaintainSchedule>(request);
-
-        // 2. Gán các giá trị mặc định
         schedule.Id = Guid.NewGuid();
-        schedule.EquimentpMaintainStatus = EquimentpMaintainStatus.NotYet; // Gán trạng thái mặc định
+        schedule.EquimentpMaintainStatus = EquimentpMaintainStatus.NotYet;
 
-        // 3. Lưu vào database
-        var scheduleId = await equipmentMaintainScheduleRepository.Create(schedule, cancellationToken);
+        await equipmentMaintainScheduleRepository.Create(schedule, cancellationToken);
 
-        return scheduleId;
+        var response = mapper.Map<EquipmentMaintainScheduleResponse>(schedule);
+        return response;
     }
 }

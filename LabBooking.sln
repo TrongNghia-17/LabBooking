@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 17
-VisualStudioVersion = 17.14.36202.13
+# Visual Studio Version 18
+VisualStudioVersion = 18.0.11222.15 d18.0
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{02EA681E-C7D8-13C7-8484-4AC65E1B71E8}"
 EndProject
@@ -12,6 +12,10 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LabBooking.Domain", "src\LabBooking.Domain\LabBooking.Domain.csproj", "{78355823-704B-DE81-E579-734B9A0DAE13}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LabBooking.Infrastructure", "src\LabBooking.Infrastructure\LabBooking.Infrastructure.csproj", "{67858F12-8B79-F6D5-959E-8C370ECBA8A2}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{3B65042B-8236-4D48-BEDD-E612523DCCBE}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LabBooking.Application.UnitTests", "tests\LabBooking.Application.UnitTests\LabBooking.Application.UnitTests.csproj", "{3ED3A09A-B4AB-4479-A99F-BBB4D886A7A9}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -35,6 +39,10 @@ Global
 		{67858F12-8B79-F6D5-959E-8C370ECBA8A2}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{67858F12-8B79-F6D5-959E-8C370ECBA8A2}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{67858F12-8B79-F6D5-959E-8C370ECBA8A2}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3ED3A09A-B4AB-4479-A99F-BBB4D886A7A9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3ED3A09A-B4AB-4479-A99F-BBB4D886A7A9}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3ED3A09A-B4AB-4479-A99F-BBB4D886A7A9}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3ED3A09A-B4AB-4479-A99F-BBB4D886A7A9}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -44,6 +52,7 @@ Global
 		{F2AC1272-0DC0-8EB3-C0A3-05DF0427C189} = {02EA681E-C7D8-13C7-8484-4AC65E1B71E8}
 		{78355823-704B-DE81-E579-734B9A0DAE13} = {02EA681E-C7D8-13C7-8484-4AC65E1B71E8}
 		{67858F12-8B79-F6D5-959E-8C370ECBA8A2} = {02EA681E-C7D8-13C7-8484-4AC65E1B71E8}
+		{3ED3A09A-B4AB-4479-A99F-BBB4D886A7A9} = {3B65042B-8236-4D48-BEDD-E612523DCCBE}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {C13D0927-CACC-4484-9023-F0C61F3D44C8}

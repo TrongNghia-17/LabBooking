@@ -2,35 +2,21 @@
 
 public class CreateEquipmentMaintainScheduleCommandValidator : AbstractValidator<CreateEquipmentMaintainScheduleCommand>
 {
-    // Giả định bạn có một repository cho Equipment
-    private readonly IEquipmentRepository _equipmentRepository;
-
-    public CreateEquipmentMaintainScheduleCommandValidator(IEquipmentRepository equipmentRepository)
+    public CreateEquipmentMaintainScheduleCommandValidator()
     {
-        _equipmentRepository = equipmentRepository;
-
-        // --- EquipmentId Rules ---
         RuleFor(c => c.EquipmentId)
-            .NotEmpty().WithMessage("EquipmentId is required.")
-            .MustAsync(EquipmentMustExist) // Giả định IEquipmentRepository có ExistsAsync
-            .WithMessage("The specified Equipment was not found.");
+            .NotEmpty().WithMessage("Vui lòng chọn thiết bị.");
 
-        // --- Date Logic (Tương tự RoomMaintainSchedule) ---
+        RuleFor(c => c.StartTime)
+            .GreaterThan(DateTime.UtcNow)
+            .WithMessage("Thời gian bắt đầu bảo trì phải lớn hơn thời gian hiện tại.");
+
         RuleFor(c => c.EndTime)
             .GreaterThan(c => c.StartTime)
-            .WithMessage("End Time must be after Start Time.");
+            .WithMessage("Thời gian kết thúc phải sau thời gian bắt đầu.");
 
-        // --- Description Logic ---
         RuleFor(c => c.Description)
-            .MaximumLength(1000).WithMessage("Description must not exceed 1000 characters.");
-    }
-
-    /// <summary>
-    /// Kiểm tra Equipment có tồn tại hay không
-    /// </summary>
-    private async Task<bool> EquipmentMustExist(Guid id, CancellationToken token)
-    {
-        // Giả định IEquipmentRepository có phương thức ExistsAsync
-        return await _equipmentRepository.ExistsAsync(id, token);
+            .NotEmpty().WithMessage("Vui lòng nhập mô tả bảo trì.")
+            .MaximumLength(1000).WithMessage("Mô tả không được vượt quá 1000 ký tự.");
     }
 }

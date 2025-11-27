@@ -4,7 +4,6 @@ using LabBooking.Application.Features.EquipmentMaintainSchedules.Commands.Update
 using LabBooking.Application.Features.EquipmentMaintainSchedules.Dtos;
 using LabBooking.Application.Features.EquipmentMaintainSchedules.Queries.GetAllEquipmentMaintainSchedules;
 using LabBooking.Application.Features.EquipmentMaintainSchedules.Queries.GetEquipmentMaintainScheduleById;
-using MediatR;
 
 namespace LabBooking.API.Controllers;
 
@@ -16,19 +15,18 @@ public class EquipmentMaintainSchedulesController(IMediator mediator) : Controll
     /// Create a new equipment maintain schedule
     /// </summary>
     [HttpPost]
-    [Authorize(Roles = "Admin")] // Giả định chỉ Admin được tạo
-    [ProducesResponseType(StatusCodes.Status201Created)]
+    [Authorize(Roles = "Manager")]
+    [ProducesResponseType(typeof(EquipmentMaintainScheduleResponse), StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-    public async Task<IActionResult> Create([FromBody] CreateEquipmentMaintainScheduleCommand command)
+    public async Task<ActionResult<EquipmentMaintainScheduleResponse>> Create([FromBody] CreateEquipmentMaintainScheduleCommand command)
     {
-        var id = await mediator.Send(command);
+        var result = await mediator.Send(command);
 
-        // Trả về 201 Created (Giả định bạn sẽ tạo endpoint 'GetById' sau)
-        //return CreatedAtAction(nameof(GetById), new { id }, null);
-        return Ok(id);
+        return CreatedAtAction(nameof(GetById), new { id = result.Id }, result);
     }
 
     /// <summary>

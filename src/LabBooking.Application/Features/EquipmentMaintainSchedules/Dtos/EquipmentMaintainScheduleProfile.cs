@@ -7,12 +7,10 @@ public class EquipmentMaintainScheduleProfile : Profile
 {
     public EquipmentMaintainScheduleProfile()
     {
-        // Mapping cho Create
         CreateMap<CreateEquipmentMaintainScheduleCommand, EquipmentMaintainSchedule>();
         CreateMap<UpdateEquipmentMaintainScheduleCommand, EquipmentMaintainSchedule>();
         CreateMap<EquipmentMaintainSchedule, EquipmentMaintainScheduleResponse>()
-            // Chuyển Enum sang string cho DTO
-            .ForMember(dest => dest.EquimentpMaintainStatus, // Giữ nguyên lỗi chính tả
+            .ForMember(dest => dest.EquimentpMaintainStatus,
                        opt => opt.MapFrom(src => src.EquimentpMaintainStatus.ToString()));
     }
 }
