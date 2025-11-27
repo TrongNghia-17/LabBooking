@@ -9,7 +9,6 @@ public class CreateEquipmentMaintainScheduleCommandValidatorTests
 
     public CreateEquipmentMaintainScheduleCommandValidatorTests()
     {
-        // Lưu ý: Validator của bạn không có Dependencies phức tạp nên khởi tạo trực tiếp
         _validator = new CreateEquipmentMaintainScheduleCommandValidator();
     }
 
@@ -19,7 +18,7 @@ public class CreateEquipmentMaintainScheduleCommandValidatorTests
         // ARRANGE
         var command = new CreateEquipmentMaintainScheduleCommand(
             EquipmentId: Guid.NewGuid(),
-            StartTime: DateTime.UtcNow.AddHours(-1), // Quá khứ
+            StartTime: DateTime.UtcNow.AddHours(-1),
             EndTime: DateTime.UtcNow.AddHours(1),
             Description: "Test"
         );
@@ -40,7 +39,7 @@ public class CreateEquipmentMaintainScheduleCommandValidatorTests
         var command = new CreateEquipmentMaintainScheduleCommand(
             EquipmentId: Guid.NewGuid(),
             StartTime: now,
-            EndTime: now.AddHours(-1), // Kết thúc trước khi bắt đầu
+            EndTime: now.AddHours(-1),
             Description: "Test"
         );
 
@@ -58,8 +57,8 @@ public class CreateEquipmentMaintainScheduleCommandValidatorTests
         // ARRANGE
         var command = new CreateEquipmentMaintainScheduleCommand(
             EquipmentId: Guid.NewGuid(),
-            StartTime: DateTime.UtcNow.AddHours(1), // Tương lai
-            EndTime: DateTime.UtcNow.AddHours(3),   // Sau StartTime
+            StartTime: DateTime.UtcNow.AddHours(1),
+            EndTime: DateTime.UtcNow.AddHours(3),
             Description: "Mô tả hợp lệ"
         );
 
