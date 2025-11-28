@@ -37,7 +37,18 @@ public class CreateEquipmentMaintainScheduleCommandHandler(
 
         await equipmentMaintainScheduleRepository.Create(schedule, cancellationToken);
 
-        var response = mapper.Map<EquipmentMaintainScheduleResponse>(schedule);
-        return response;
+        if (request.StartTime <= DateTime.UtcNow.AddMinutes(5))
+        {
+            if (equipment.Status != EquipmentStatus.Maintain)
+            {
+                equipment.Status = EquipmentStatus.Maintain;
+                equipment.IsAvailable = false;
+
+                await equipmentRepository.Update(equipment);
+                logger.LogInformation("Đã tự động cập nhật trạng thái thiết bị {EqId} sang 'Maintain' vì lịch bảo trì bắt đầu ngay.", equipment.Id);
+            }
+        }
+
+        return mapper.Map<EquipmentMaintainScheduleResponse>(schedule);
     }
 }

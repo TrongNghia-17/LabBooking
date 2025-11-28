@@ -14,6 +14,60 @@ internal class EquipmentMaintainScheduleRepository(LabBookingDbContext dbContext
         dbContext.Entry(entity).State = EntityState.Modified;
         await dbContext.SaveChangesAsync(cancellationToken);
     }
+
+    public async Task<string> ProcessAutoStatusUpdatesAsync(CancellationToken cancellationToken = default)
+    {
+        var now = DateTime.UtcNow;
+        int startedCount = 0;
+        int endedCount = 0;
+
+        var schedulesToStart = await dbContext.EquipmentMaintainSchedules
+            .Include(s => s.Equipment)
+            .Where(s => s.StartTime <= now
+                     && s.EndTime > now
+                     && s.Equipment != null
+                     && s.Equipment.Status != EquipmentStatus.Maintain)
+            .ToListAsync(cancellationToken);
+
+        foreach (var schedule in schedulesToStart)
+        {
+            if (schedule.Equipment != null)
+            {
+                schedule.Equipment.Status = EquipmentStatus.Maintain;
+                schedule.Equipment.IsAvailable = false;
+                startedCount++;
+            }
+        }
+
+        var schedulesToEnd = await dbContext.EquipmentMaintainSchedules
+            .Include(s => s.Equipment)
+            .Where(s => s.EndTime <= now
+                     && s.EquimentpMaintainStatus != EquimentpMaintainStatus.Done)
+            .ToListAsync(cancellationToken);
+
+        foreach (var schedule in schedulesToEnd)
+        {
+            schedule.EquimentpMaintainStatus = EquimentpMaintainStatus.Done;
+
+            if (schedule.Equipment != null)
+            {
+                if (schedule.Equipment.Status == EquipmentStatus.Maintain)
+                {
+                    schedule.Equipment.Status = EquipmentStatus.Available;
+                    schedule.Equipment.IsAvailable = true;
+                }
+            }
+            endedCount++;
+        }
+
+        if (startedCount > 0 || endedCount > 0)
+        {
+            await dbContext.SaveChangesAsync(cancellationToken);
+        }
+
+        return $"Job Report: Đã chuyển {startedCount} thiết bị sang 'Bảo trì' | Đã hoàn tất {endedCount} lịch bảo trì.";
+    }
+
     public async Task DeleteAsync(EquipmentMaintainSchedule entity, CancellationToken cancellationToken = default)
     {
         dbContext.EquipmentMaintainSchedules.Remove(entity);
@@ -28,7 +82,7 @@ internal class EquipmentMaintainScheduleRepository(LabBookingDbContext dbContext
 
     public async Task<(IEnumerable<EquipmentMaintainSchedule>, int)> GetAllMatchingAsync(
         string? searchPhrase,
-        EquimentpMaintainStatus? status, // Tham số lọc mới
+        EquimentpMaintainStatus? status,
         int pageSize,
         int pageNumber,
         string? sortBy,

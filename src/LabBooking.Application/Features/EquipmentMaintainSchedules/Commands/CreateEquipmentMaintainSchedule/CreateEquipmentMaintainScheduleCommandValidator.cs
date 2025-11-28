@@ -8,8 +8,8 @@ public class CreateEquipmentMaintainScheduleCommandValidator : AbstractValidator
             .NotEmpty().WithMessage("Vui lòng chọn thiết bị.");
 
         RuleFor(c => c.StartTime)
-            .GreaterThan(DateTime.UtcNow)
-            .WithMessage("Thời gian bắt đầu bảo trì phải lớn hơn thời gian hiện tại.");
+            .GreaterThan(DateTime.UtcNow.AddMinutes(-5))
+            .WithMessage("Thời gian bắt đầu bảo trì không được ở quá khứ.");
 
         RuleFor(c => c.EndTime)
             .GreaterThan(c => c.StartTime)

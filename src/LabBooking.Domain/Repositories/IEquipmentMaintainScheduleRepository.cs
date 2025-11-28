@@ -4,11 +4,12 @@ public interface IEquipmentMaintainScheduleRepository
 {
     Task<Guid> Create(EquipmentMaintainSchedule entity, CancellationToken cancellationToken = default);
     Task Update(EquipmentMaintainSchedule entity, CancellationToken cancellationToken = default);
+    Task<string> ProcessAutoStatusUpdatesAsync(CancellationToken cancellationToken = default);
     Task DeleteAsync(EquipmentMaintainSchedule entity, CancellationToken cancellationToken = default);
     Task<EquipmentMaintainSchedule?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
     Task<(IEnumerable<EquipmentMaintainSchedule>, int)> GetAllMatchingAsync(
         string? searchPhrase,
-        EquimentpMaintainStatus? status, // Tham số lọc mới
+        EquimentpMaintainStatus? status,
         int pageSize,
         int pageNumber,
         string? sortBy,
