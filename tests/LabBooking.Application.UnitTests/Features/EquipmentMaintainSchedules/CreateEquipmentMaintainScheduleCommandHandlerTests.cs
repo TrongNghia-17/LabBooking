@@ -113,6 +113,27 @@ public class CreateEquipmentMaintainScheduleCommandHandlerTests
     }
 
     [Fact]
+    public async Task Handle_Should_ThrowNotFound_When_LabRoomDoesNotExist()
+    {
+        // ARRANGE
+        var userId = Guid.NewGuid();
+        var equipmentId = Guid.NewGuid();
+
+        _mockCurrentUserService.Setup(x => x.UserId).Returns(userId);
+
+        _mockEquipmentRepo.Setup(x => x.GetByIdAsync(equipmentId))
+            .ReturnsAsync(new Equipment { Id = equipmentId, LabRoomId = Guid.NewGuid() });
+
+        _mockLabRoomRepo.Setup(x => x.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((LabRoom?)null);
+
+        var command = new CreateEquipmentMaintainScheduleCommand(equipmentId, DateTime.Now, DateTime.Now, "Test");
+
+        // ACT & ASSERT
+        await Assert.ThrowsAsync<NotFoundException>(() => _handler.Handle(command, CancellationToken.None));
+    }
+
+    [Fact]
     public async Task Handle_Should_ThrowForbid_When_UserIsNotManager()
     {
         // ARRANGE
@@ -137,5 +158,87 @@ public class CreateEquipmentMaintainScheduleCommandHandlerTests
         // ASSERT
         await act.Should().ThrowAsync<ForbidException>()
             .WithMessage("Bạn không có quyền*");
+    }
+
+    [Fact]
+    public async Task Handle_Should_CreateSchedule_AND_UpdateEquipmentStatus_When_StartTimeIsNow()
+    {
+        // ARRANGE
+        var userId = Guid.NewGuid();
+        var equipmentId = Guid.NewGuid();
+        var labRoomId = Guid.NewGuid();
+
+        var command = new CreateEquipmentMaintainScheduleCommand(
+            equipmentId,
+            DateTime.UtcNow,
+            DateTime.UtcNow.AddHours(2),
+            "Bảo trì gấp"
+        );
+
+        _mockCurrentUserService.Setup(x => x.UserId).Returns(userId);
+
+        var equipmentEntity = new Equipment
+        {
+            Id = equipmentId,
+            LabRoomId = labRoomId,
+            Status = EquipmentStatus.Available,
+            IsAvailable = true
+        };
+        _mockEquipmentRepo.Setup(x => x.GetByIdAsync(equipmentId))
+            .ReturnsAsync(equipmentEntity);
+
+        _mockLabRoomRepo.Setup(x => x.GetByIdAsync(labRoomId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new LabRoom { Id = labRoomId, MainManagerId = userId });
+
+        _mockMapper.Setup(m => m.Map<EquipmentMaintainSchedule>(command))
+            .Returns(new EquipmentMaintainSchedule());
+        _mockMapper.Setup(m => m.Map<EquipmentMaintainScheduleResponse>(It.IsAny<EquipmentMaintainSchedule>()))
+            .Returns(new EquipmentMaintainScheduleResponse());
+
+        // ACT
+        await _handler.Handle(command, CancellationToken.None);
+
+        // ASSERT
+        _mockScheduleRepo.Verify(x => x.Create(It.IsAny<EquipmentMaintainSchedule>(), It.IsAny<CancellationToken>()), Times.Once);
+
+        _mockEquipmentRepo.Verify(x => x.Update(It.Is<Equipment>(e =>
+            e.Status == EquipmentStatus.Maintain && e.IsAvailable == false
+        )), Times.Once);
+    }
+
+    [Fact]
+    public async Task Handle_Should_CreateSchedule_BUT_NOT_UpdateEquipment_When_StartTimeIsFuture()
+    {
+        // ARRANGE
+        var userId = Guid.NewGuid();
+        var equipmentId = Guid.NewGuid();
+        var labRoomId = Guid.NewGuid();
+
+        var command = new CreateEquipmentMaintainScheduleCommand(
+            equipmentId,
+            DateTime.UtcNow.AddDays(1),
+            DateTime.UtcNow.AddDays(1).AddHours(2),
+            "Bảo trì định kỳ"
+        );
+
+        _mockCurrentUserService.Setup(x => x.UserId).Returns(userId);
+
+        var equipmentEntity = new Equipment { Id = equipmentId, LabRoomId = labRoomId, Status = EquipmentStatus.Available };
+        _mockEquipmentRepo.Setup(x => x.GetByIdAsync(equipmentId)).ReturnsAsync(equipmentEntity);
+
+        _mockLabRoomRepo.Setup(x => x.GetByIdAsync(labRoomId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new LabRoom { Id = labRoomId, MainManagerId = userId });
+
+        _mockMapper.Setup(m => m.Map<EquipmentMaintainSchedule>(command)).Returns(new EquipmentMaintainSchedule());
+        _mockMapper.Setup(m => m.Map<EquipmentMaintainScheduleResponse>(It.IsAny<EquipmentMaintainSchedule>()))
+            .Returns(new EquipmentMaintainScheduleResponse());
+
+        // ACT
+        await _handler.Handle(command, CancellationToken.None);
+
+        // ASSERT
+        _mockScheduleRepo.Verify(x => x.Create(It.IsAny<EquipmentMaintainSchedule>(), It.IsAny<CancellationToken>()), Times.Once);
+
+        _mockEquipmentRepo.Verify(x => x.Update(It.IsAny<Equipment>()), Times.Never);
     }
 }
