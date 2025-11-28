@@ -10,7 +10,7 @@ public class ManagerProfile : Profile
         CreateMap<LabRoom, ManagerLabRoomDto>()
             .ForMember(dest => dest.LabName, opt => opt.MapFrom(src => src.LabName ?? "Chưa đặt tên"))
             .ForMember(dest => dest.Status, opt => opt.MapFrom(src => src.IsActive ? "Đang hoạt động" : "Ngừng hoạt động"))
-            .ForMember(dest => dest.Equipments, opt => opt.MapFrom(src => src.Equipments));
+            .ForMember(dest => dest.EquipmentGroups, opt => opt.Ignore());
     }
 
     private static string GetEquipmentStatusVN(EquipmentStatus status)

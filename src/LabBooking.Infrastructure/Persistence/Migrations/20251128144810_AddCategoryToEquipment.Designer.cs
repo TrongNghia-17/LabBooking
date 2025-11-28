@@ -3,6 +3,7 @@ using System;
 using LabBooking.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace LabBooking.Application.Migrations
 {
     [DbContext(typeof(LabBookingDbContext))]
-    partial class LabBookingDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251128144810_AddCategoryToEquipment")]
+    partial class AddCategoryToEquipment
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -342,11 +345,12 @@ namespace LabBooking.Application.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
-                    b.Property<string>("Description")
+                    b.Property<string>("Category")
+                        .IsRequired()
                         .HasColumnType("text");
 
-                    b.Property<Guid>("EquipmentCategoryId")
-                        .HasColumnType("uuid");
+                    b.Property<string>("Description")
+                        .HasColumnType("text");
 
                     b.Property<string>("EquipmentName")
                         .IsRequired()
@@ -363,29 +367,9 @@ namespace LabBooking.Application.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("EquipmentCategoryId");
-
                     b.HasIndex("LabRoomId");
 
                     b.ToTable("Equipments");
-                });
-
-            modelBuilder.Entity("LabBooking.Domain.Entities.EquipmentCategory", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("Description")
-                        .HasColumnType("text");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("EquipmentCategories");
                 });
 
             modelBuilder.Entity("LabBooking.Domain.Entities.EquipmentMaintainSchedule", b =>
@@ -1124,19 +1108,11 @@ namespace LabBooking.Application.Migrations
 
             modelBuilder.Entity("LabBooking.Domain.Entities.Equipment", b =>
                 {
-                    b.HasOne("LabBooking.Domain.Entities.EquipmentCategory", "EquipmentCategory")
-                        .WithMany("Equipments")
-                        .HasForeignKey("EquipmentCategoryId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
                     b.HasOne("LabBooking.Domain.Entities.LabRoom", "LabRoom")
                         .WithMany("Equipments")
                         .HasForeignKey("LabRoomId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
-
-                    b.Navigation("EquipmentCategory");
 
                     b.Navigation("LabRoom");
                 });
@@ -1356,11 +1332,6 @@ namespace LabBooking.Application.Migrations
             modelBuilder.Entity("LabBooking.Domain.Entities.BookingChangeRequest", b =>
                 {
                     b.Navigation("NewSlots");
-                });
-
-            modelBuilder.Entity("LabBooking.Domain.Entities.EquipmentCategory", b =>
-                {
-                    b.Navigation("Equipments");
                 });
 
             modelBuilder.Entity("LabBooking.Domain.Entities.LabRoom", b =>

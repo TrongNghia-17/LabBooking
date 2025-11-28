@@ -113,7 +113,8 @@ internal class LabRoomRepository(LabBookingDbContext dbContext) : ILabRoomReposi
     {
         return await dbContext.LabRooms
             .Where(r => r.MainManagerId == managerId && r.IsActive)
-            .Include(r => r.Equipments!.Where(e => e.Status != EquipmentStatus.Maintain))
+            .Include(r => r.Equipments)
+                .ThenInclude(e => e.EquipmentCategory)
             .OrderBy(r => r.LabName)
             .ToListAsync(cancellationToken);
     }
