@@ -2,7 +2,7 @@
 
 public class CreateEquipmentMaintainScheduleCommandValidator : AbstractValidator<CreateEquipmentMaintainScheduleCommand>
 {
-    public CreateEquipmentMaintainScheduleCommandValidator()
+    public CreateEquipmentMaintainScheduleCommandValidator(IEquipmentMaintainScheduleRepository scheduleRepository)
     {
         RuleFor(c => c.EquipmentId)
             .NotEmpty().WithMessage("Vui lòng chọn thiết bị.");
@@ -18,5 +18,12 @@ public class CreateEquipmentMaintainScheduleCommandValidator : AbstractValidator
         RuleFor(c => c.Description)
             .NotEmpty().WithMessage("Vui lòng nhập mô tả bảo trì.")
             .MaximumLength(1000).WithMessage("Mô tả không được vượt quá 1000 ký tự.");
+
+        RuleFor(c => c)
+            .MustAsync(async (cmd, token) =>
+            {
+                return !await scheduleRepository.IsOverlapAsync(cmd.EquipmentId, cmd.StartTime, cmd.EndTime, token);
+            })
+            .WithMessage("Thời gian bảo trì bị trùng với một lịch bảo trì khác của thiết bị này.");
     }
 }

@@ -1,15 +1,4 @@
-﻿using AutoMapper;
-using FluentAssertions;
-using LabBooking.Application.Features.EquipmentMaintainSchedules.Commands.CreateEquipmentMaintainSchedule;
-using LabBooking.Application.Features.EquipmentMaintainSchedules.Dtos;
-using LabBooking.Application.Services.Users;
-using LabBooking.Domain.Entities;
-using LabBooking.Domain.Exceptions;
-using LabBooking.Domain.Repositories;
-using Microsoft.Extensions.Logging;
-using Moq;
-
-namespace LabBooking.Application.UnitTests.Features.EquipmentMaintainSchedules;
+﻿namespace LabBooking.Application.UnitTests.Features.EquipmentMaintainSchedules.Create;
 
 public class CreateEquipmentMaintainScheduleCommandHandlerTests
 {
@@ -240,5 +229,81 @@ public class CreateEquipmentMaintainScheduleCommandHandlerTests
         _mockScheduleRepo.Verify(x => x.Create(It.IsAny<EquipmentMaintainSchedule>(), It.IsAny<CancellationToken>()), Times.Once);
 
         _mockEquipmentRepo.Verify(x => x.Update(It.IsAny<Equipment>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task Handle_ShouldThrowForbidException_WhenUserIsNotLabManager()
+    {
+        // ARRANGE
+        var currentUserId = Guid.NewGuid();
+        var otherManagerId = Guid.NewGuid();
+        var equipmentId = Guid.NewGuid();
+        var labRoomId = Guid.NewGuid();
+
+        var command = new CreateEquipmentMaintainScheduleCommand(
+            equipmentId,
+            DateTime.UtcNow.AddDays(1),
+            DateTime.UtcNow.AddDays(1).AddHours(2),
+            "Cố gắng bảo trì trái phép"
+        );
+
+        _mockCurrentUserService.Setup(x => x.UserId).Returns(currentUserId);
+
+        var equipmentEntity = new Equipment { Id = equipmentId, LabRoomId = labRoomId };
+        _mockEquipmentRepo.Setup(x => x.GetByIdAsync(equipmentId))
+            .ReturnsAsync(equipmentEntity);
+
+        var labRoomEntity = new LabRoom { Id = labRoomId, MainManagerId = otherManagerId };
+
+        _mockLabRoomRepo.Setup(x => x.GetByIdAsync(labRoomId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(labRoomEntity);
+
+        // ACT
+        Func<Task> act = async () => await _handler.Handle(command, CancellationToken.None);
+
+        // ASSERT
+        await act.Should().ThrowAsync<ForbidException>()
+            .WithMessage("Bạn không có quyền bảo trì thiết bị này vì nó thuộc phòng Lab bạn không quản lý.");
+
+        _mockScheduleRepo.Verify(x => x.Create(It.IsAny<EquipmentMaintainSchedule>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task Handle_ShouldThrowForbidException_WhenLabRoomHasNoManager()
+    {
+        // ARRANGE
+        var currentUserId = Guid.NewGuid();
+        var equipmentId = Guid.NewGuid();
+        var labRoomId = Guid.NewGuid();
+
+        var command = new CreateEquipmentMaintainScheduleCommand(
+            equipmentId,
+            DateTime.UtcNow.AddDays(1),
+            DateTime.UtcNow.AddDays(1).AddHours(2),
+            "Bảo trì khi Lab chưa có quản lý"
+        );
+
+        _mockCurrentUserService.Setup(x => x.UserId).Returns(currentUserId);
+
+        var equipmentEntity = new Equipment { Id = equipmentId, LabRoomId = labRoomId };
+        _mockEquipmentRepo.Setup(x => x.GetByIdAsync(equipmentId))
+            .ReturnsAsync(equipmentEntity);
+
+        var labRoomEntity = new LabRoom
+        {
+            Id = labRoomId,
+            MainManagerId = null
+        };
+
+        _mockLabRoomRepo.Setup(x => x.GetByIdAsync(labRoomId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(labRoomEntity);
+
+        // ACT
+        Func<Task> act = async () => await _handler.Handle(command, CancellationToken.None);
+
+        // ASSERT
+        await act.Should().ThrowAsync<ForbidException>();
+
+        _mockScheduleRepo.Verify(x => x.Create(It.IsAny<EquipmentMaintainSchedule>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 }

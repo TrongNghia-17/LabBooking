@@ -1,0 +1,10 @@
+﻿global using AutoMapper;
+global using FluentAssertions;
+global using LabBooking.Application.Features.EquipmentMaintainSchedules.Commands.CreateEquipmentMaintainSchedule;
+global using LabBooking.Application.Features.EquipmentMaintainSchedules.Dtos;
+global using LabBooking.Application.Services.Users;
+global using LabBooking.Domain.Entities;
+global using LabBooking.Domain.Exceptions;
+global using LabBooking.Domain.Repositories;
+global using Microsoft.Extensions.Logging;
+global using Moq;

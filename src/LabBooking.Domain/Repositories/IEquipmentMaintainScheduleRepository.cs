@@ -15,4 +15,6 @@ public interface IEquipmentMaintainScheduleRepository
         string? sortBy,
         SortDirection sortDirection,
         CancellationToken cancellationToken = default);
+    Task<bool> IsOverlapAsync(Guid equipmentId, DateTime start, DateTime end, CancellationToken token = default);
+    Task<bool> IsOverlapAsync(Guid equipmentId, DateTime start, DateTime end, Guid? excludeScheduleId = null, CancellationToken token = default);
 }

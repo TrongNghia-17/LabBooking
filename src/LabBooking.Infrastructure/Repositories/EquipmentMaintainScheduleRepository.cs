@@ -136,4 +136,30 @@ internal class EquipmentMaintainScheduleRepository(LabBookingDbContext dbContext
 
         return (schedules, totalCount);
     }
+
+    public async Task<bool> IsOverlapAsync(Guid equipmentId, DateTime start, DateTime end, CancellationToken token = default)
+    {
+        return await dbContext.EquipmentMaintainSchedules
+            .AnyAsync(s =>
+                s.EquipmentId == equipmentId &&
+                s.EquimentpMaintainStatus != EquimentpMaintainStatus.Done &&
+                s.StartTime < end && start < s.EndTime,
+                token);
+    }
+
+    public async Task<bool> IsOverlapAsync(Guid equipmentId, DateTime start, DateTime end, Guid? excludeScheduleId = null, CancellationToken token = default)
+    {
+        var query = dbContext.EquipmentMaintainSchedules
+            .Where(s =>
+                s.EquipmentId == equipmentId &&
+                s.EquimentpMaintainStatus != EquimentpMaintainStatus.Done &&
+                s.StartTime < end && start < s.EndTime);
+
+        if (excludeScheduleId.HasValue)
+        {
+            query = query.Where(s => s.Id != excludeScheduleId.Value);
+        }
+
+        return await query.AnyAsync(token);
+    }
 }

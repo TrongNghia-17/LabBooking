@@ -30,48 +30,48 @@ public class EquipmentMaintainSchedulesController(IMediator mediator) : Controll
     }
 
     /// <summary>
-    /// Update an existing equipment maintain schedule
+    /// Update an existing equipment maintain schedule (Time, Description).
     /// </summary>
     /// <param name="id">The Id of the schedule to update</param>
-    /// <param name="command">The new data for the schedule</param>
-    /// <returns>No content</returns>
+    /// <param name="command">The update data</param>
     [HttpPut("{id:guid}")]
-    [Authorize(Roles = "Admin")] // Giả định Admin
+    [Authorize(Roles = "Manager")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-    public async Task<ActionResult> Update(
+    public async Task<IActionResult> Update(
         [FromRoute] Guid id,
         [FromBody] UpdateEquipmentMaintainScheduleCommand command)
     {
-        // Gán Id từ route vào command (giống LabRoomsController)
         command.Id = id;
         await mediator.Send(command);
 
-        return NoContent(); // Trả về 204 No Content
+        return NoContent();
     }
 
     /// <summary>
-    /// Delete an existing equipment maintain schedule
+    /// Delete an equipment maintain schedule.
     /// </summary>
     /// <param name="id">The Id of the schedule to delete</param>
-    /// <returns>No content</returns>
+    /// <returns>No Content</returns>
     [HttpDelete("{id:guid}")]
-    [Authorize(Roles = "Admin")] // Giả định Admin
+    [Authorize(Roles = "Manager")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-    public async Task<ActionResult> Delete([FromRoute] Guid id)
+    public async Task<IActionResult> Delete([FromRoute] Guid id)
     {
         var command = new DeleteEquipmentMaintainScheduleCommand(id);
+
         await mediator.Send(command);
 
-        return NoContent(); // Trả về 204 No Content
+        return NoContent();
     }
 
     /// <summary>
