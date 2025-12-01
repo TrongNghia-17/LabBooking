@@ -22,5 +22,16 @@ public class EquipmentMaintainScheduleProfile : Profile
             .ForMember(dest => dest.MaintenanceId, opt => opt.MapFrom(src => src.Id))
             .ForMember(dest => dest.EquipmentName, opt => opt.MapFrom(src => src.Equipment != null ? src.Equipment.EquipmentName : "Unknown"))
             .ForMember(dest => dest.Status, opt => opt.MapFrom(src => src.Status.ToString()));
+
+        CreateMap<EquipmentMaintainSchedule, EquipmentMaintainScheduleResponse>()
+                // Convert Enum Status sang String
+                .ForMember(dest => dest.Status, opt => opt.MapFrom(src => src.Status.ToString()))
+
+                // Đếm số lượng thiết bị
+                .ForMember(dest => dest.EquipmentCount, opt => opt.MapFrom(src => src.Details.Count))
+
+                // Lấy danh sách tên các thiết bị để hiển thị nhanh (VD: "Máy hàn, Máy cắt...")
+                .ForMember(dest => dest.EquipmentNames, opt => opt.MapFrom(src =>
+                    src.Details.Select(d => d.Equipment.EquipmentName).ToList()));
     }
 }

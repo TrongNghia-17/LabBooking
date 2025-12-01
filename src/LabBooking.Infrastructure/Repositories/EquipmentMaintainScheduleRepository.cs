@@ -158,5 +158,62 @@ internal class EquipmentMaintainScheduleRepository(
 
         return conflict;
     }
+
+    public async Task<IEnumerable<EquipmentMaintainSchedule>> GetByManagerIdAsync(
+        Guid managerId,
+        DateTime? from,
+        DateTime? to,
+        MaintenanceStatus? status,
+        string? sortBy,
+        bool isDescending,
+        CancellationToken token = default)
+    {
+        // 1. Khởi tạo Query (Chưa chạy xuống DB)
+        var query = dbContext.EquipmentMaintainSchedules
+            .Include(s => s.Details)
+                .ThenInclude(d => d.Equipment)
+                    .ThenInclude(e => e.LabRoom)
+            .AsQueryable(); // Chuyển sang IQueryable để cộng dồn điều kiện
+
+        // 2. LỌC THEO MANAGER (Bắt buộc)
+        query = query.Where(s => s.Details.Any(d =>
+            d.Equipment != null &&
+            d.Equipment.LabRoom != null &&
+            d.Equipment.LabRoom.MainManagerId == managerId));
+
+        // 3. LỌC THEO NGÀY (Optional)
+        if (from.HasValue)
+            query = query.Where(s => s.StartTime >= from.Value.ToUniversalTime());
+
+        if (to.HasValue)
+            query = query.Where(s => s.EndTime <= to.Value.ToUniversalTime());
+
+        // 4. LỌC THEO STATUS (Optional)
+        if (status.HasValue)
+            query = query.Where(s => s.Status == status.Value);
+
+        // 5. SẮP XẾP (Sorting)
+        // Mặc định sắp theo StartTime giảm dần nếu không truyền gì cả
+        if (string.IsNullOrEmpty(sortBy)) sortBy = "Date";
+
+        switch (sortBy.ToLower())
+        {
+            case "status":
+                query = isDescending
+                    ? query.OrderByDescending(s => s.Status)
+                    : query.OrderBy(s => s.Status);
+                break;
+
+            case "date":
+            default:
+                query = isDescending
+                    ? query.OrderByDescending(s => s.StartTime)
+                    : query.OrderBy(s => s.StartTime);
+                break;
+        }
+
+        // 6. Thực thi truy vấn
+        return await query.ToListAsync(token);
+    }
 }
 
