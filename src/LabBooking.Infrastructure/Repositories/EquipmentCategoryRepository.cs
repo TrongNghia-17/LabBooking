@@ -13,6 +13,7 @@ internal class EquipmentCategoryRepository(LabBookingDbContext dbContext) : IEqu
     public async Task<IEnumerable<EquipmentCategory>> GetByManagerIdAsync(Guid managerId, CancellationToken cancellationToken = default)
     {
         return await dbContext.EquipmentCategories
+            .Include(c => c.Equipments.Where(e => e.LabRoom.MainManagerId == managerId))
             .Where(c => c.Equipments.Any(e =>
                 e.LabRoom != null &&
                 e.LabRoom.MainManagerId == managerId))
