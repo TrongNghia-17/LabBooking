@@ -7,12 +7,28 @@ public class AutoUpdateEquipmentStatusJobHandler(
 {
     public async Task<string> Handle(AutoUpdateEquipmentStatusJobCommand request, CancellationToken cancellationToken)
     {
-        logger.LogInformation("CronJob: Bắt đầu quét trạng thái thiết bị...");
+        // Lấy giờ hiện tại UTC
+        var utcNow = DateTime.UtcNow;
+        // Tạo giờ Việt Nam để log cho dễ nhìn (UTC + 7)
+        var vnTime = utcNow.AddHours(7);
 
-        var resultMessage = await repository.ProcessAutoStatusUpdatesAsync(cancellationToken);
+        logger.LogInformation("CronJob [AutoUpdateStatus]: Bắt đầu quét lúc {Time} (VN)...", vnTime);
 
-        logger.LogInformation(message: resultMessage);
+        try
+        {
+            // Gọi logic nghiệp vụ từ Repo
+            var resultMessage = await repository.ProcessAutomatedMaintenanceAsync(cancellationToken);
 
-        return resultMessage;
+            var finalMessage = $"{resultMessage} | Thời gian quét: {vnTime:HH:mm:ss dd/MM/yyyy}";
+
+            // Log kết quả
+            logger.LogInformation("CronJob [AutoUpdateStatus]: Success - {Message}", finalMessage);
+            return finalMessage;
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "CronJob [AutoUpdateStatus]: Thất bại.");
+            throw; // Ném lỗi để hệ thống Job biết mà retry (nếu có cấu hình)
+        }
     }
 }

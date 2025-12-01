@@ -1,10 +1,6 @@
-﻿using AutoMapper;
-using FluentAssertions;
-using LabBooking.Application.Features.EquipmentCategories.Queries.GetEquipments;
+﻿using LabBooking.Application.Features.EquipmentCategories.Queries.GetEquipments;
 using LabBooking.Application.Features.Equipments.Dtos;
-using LabBooking.Domain.Entities;
-using LabBooking.Domain.Repositories;
-using Moq;
+using LabBooking.Domain.Enums;
 
 namespace LabBooking.Application.UnitTests.Features.EquipmentCategories;
 

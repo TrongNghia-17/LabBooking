@@ -1,6 +1,4 @@
-﻿using LabBooking.Application.Features.Equipments.Dtos;
-
-namespace LabBooking.Application.Features.EquipmentCategories.Queries.GetEquipments;
+﻿namespace LabBooking.Application.Features.EquipmentCategories.Queries.GetEquipments;
 
 public class GetEquipmentsByCategoryQueryHandler(
     IEquipmentCategoryRepository repository,

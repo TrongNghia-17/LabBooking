@@ -16,9 +16,9 @@ public static class ServiceCollectionExtensions
         var connectionString = configuration.GetConnectionString("LabBookingDb");
         services.AddDbContext<LabBookingDbContext>(options =>
         {
-            options.UseNpgsql(connectionString)
-                   .UseQueryTrackingBehavior(QueryTrackingBehavior.NoTracking)
-                   .UseLazyLoadingProxies(false);
+            options.UseNpgsql(connectionString);
+            //.UseQueryTrackingBehavior(QueryTrackingBehavior.NoTracking)
+            //.UseLazyLoadingProxies(false);
 
             if (isDevelopment)
                 options.EnableSensitiveDataLogging();
@@ -44,6 +44,8 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ILabRoomRepository, LabRoomRepository>();
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<IEquipmentRepository, EquipmentRepository>();
+        services.AddScoped<IEquipmentMaintainScheduleRepository, EquipmentMaintainScheduleRepository>();
+        services.AddScoped<IEquipmentCategoryRepository, EquipmentCategoryRepository>();
         services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
         services.AddScoped<IUserDeviceRepository, UserDeviceRepository>();
         services.AddScoped<INotificationRepository, NotificationRepository>();
@@ -54,10 +56,8 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IProjectRepository, ProjectRepository>();
         services.AddScoped<ICourseRepository, CourseRepository>();
         services.AddScoped<IBookingChangeRequestRepository, BookingChangeRequestRepository>();
-        services.AddScoped<IEquipmentCategoryRepository, EquipmentCategoryRepository>();
 
         services.AddScoped<IUsagePolicyRepository, UsagePolicyRepository>();
-        services.AddScoped<IEquipmentMaintainScheduleRepository, EquipmentMaintainScheduleRepository>();
 
         services.AddScoped<ICachingService, CachingService>();
         services.AddScoped<IJwtService, JwtService>();

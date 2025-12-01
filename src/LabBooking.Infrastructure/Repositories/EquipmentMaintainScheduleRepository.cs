@@ -1,165 +1,161 @@
-﻿namespace LabBooking.Infrastructure.Repositories;
+﻿using LabBooking.Domain.Enums;
+using LabBooking.Domain.NonEntities;
 
-internal class EquipmentMaintainScheduleRepository(LabBookingDbContext dbContext) : IEquipmentMaintainScheduleRepository
+namespace LabBooking.Infrastructure.Repositories;
+
+internal class EquipmentMaintainScheduleRepository(
+    LabBookingDbContext dbContext,
+    ILogger<EquipmentMaintainScheduleRepository> logger) : IEquipmentMaintainScheduleRepository
 {
-    public async Task<Guid> Create(EquipmentMaintainSchedule entity, CancellationToken cancellationToken = default)
+    public async Task CreateAsync(EquipmentMaintainSchedule schedule, CancellationToken token)
     {
-        // Giả định DbContext có DbSet tên là EquipmentMaintainSchedules
-        dbContext.EquipmentMaintainSchedules.Add(entity);
-        await dbContext.SaveChangesAsync(cancellationToken);
-        return entity.Id;
-    }
-    public async Task Update(EquipmentMaintainSchedule entity, CancellationToken cancellationToken = default)
-    {
-        dbContext.Entry(entity).State = EntityState.Modified;
-        await dbContext.SaveChangesAsync(cancellationToken);
+        await dbContext.EquipmentMaintainSchedules.AddAsync(schedule, token);
+        await dbContext.SaveChangesAsync(token);
     }
 
-    public async Task<string> ProcessAutoStatusUpdatesAsync(CancellationToken cancellationToken = default)
+    public async Task<bool> IsOverlapAsync(Guid equipmentId, DateTime start, DateTime end, CancellationToken token)
+    {
+        var utcStart = start.ToUniversalTime();
+        var utcEnd = end.ToUniversalTime();
+
+        return await dbContext.EquipmentMaintenances
+            .Include(x => x.Schedule)
+            .AnyAsync(x =>
+                x.EquipmentId == equipmentId &&
+                x.Status != MaintenanceStatus.Done &&
+                x.Schedule.StartTime < utcEnd && utcStart < x.Schedule.EndTime,
+                token);
+    }
+
+    public async Task<string> ProcessAutomatedMaintenanceAsync(CancellationToken token)
     {
         var now = DateTime.UtcNow;
         int startedCount = 0;
         int endedCount = 0;
 
-        var schedulesToStart = await dbContext.EquipmentMaintainSchedules
-            .Include(s => s.Equipment)
+        // ---------------------------------------------------------
+        // 1. LUỒNG BẮT ĐẦU (START)
+        // ---------------------------------------------------------
+        var runningSchedules = await dbContext.EquipmentMaintainSchedules
+            .Include(s => s.Details)
+            .ThenInclude(d => d.Equipment)
             .Where(s => s.StartTime <= now
                      && s.EndTime > now
-                     && s.Equipment != null
-                     && s.Equipment.Status != EquipmentStatus.Maintain)
-            .ToListAsync(cancellationToken);
+                     && s.Status != MaintenanceStatus.Done)
+            .ToListAsync(token);
 
-        foreach (var schedule in schedulesToStart)
+        // Tạo một danh sách các ID thiết bị ĐANG BẬN để dùng cho bước 2
+        // (Để tránh việc bước 2 trả nhầm thiết bị đang cần bảo trì về Available)
+        var busyEquipmentIds = new HashSet<Guid>();
+
+        foreach (var schedule in runningSchedules)
         {
-            if (schedule.Equipment != null)
+            foreach (var detail in schedule.Details)
             {
-                schedule.Equipment.Status = EquipmentStatus.Maintain;
-                schedule.Equipment.IsAvailable = false;
-                startedCount++;
+                if (detail.Equipment != null)
+                {
+                    // Lưu lại ID thiết bị đang được xử lý bảo trì
+                    busyEquipmentIds.Add(detail.EquipmentId);
+
+                    // Logic chuyển trạng thái
+                    if (detail.Equipment.Status != EquipmentStatus.Maintain)
+                    {
+                        detail.Equipment.Status = EquipmentStatus.Maintain;
+                        detail.Equipment.IsAvailable = false;
+                        startedCount++;
+                    }
+                }
             }
         }
 
-        var schedulesToEnd = await dbContext.EquipmentMaintainSchedules
-            .Include(s => s.Equipment)
+        // ---------------------------------------------------------
+        // 2. LUỒNG KẾT THÚC (END)
+        // ---------------------------------------------------------
+        var expiredSchedules = await dbContext.EquipmentMaintainSchedules
+            .Include(s => s.Details)
+            .ThenInclude(d => d.Equipment)
             .Where(s => s.EndTime <= now
-                     && s.EquimentpMaintainStatus != EquimentpMaintainStatus.Done)
-            .ToListAsync(cancellationToken);
+                     && s.Status != MaintenanceStatus.Done)
+            .ToListAsync(token);
 
-        foreach (var schedule in schedulesToEnd)
+        foreach (var schedule in expiredSchedules)
         {
-            schedule.EquimentpMaintainStatus = EquimentpMaintainStatus.Done;
+            schedule.Status = MaintenanceStatus.Done;
 
-            if (schedule.Equipment != null)
+            foreach (var detail in schedule.Details)
             {
-                if (schedule.Equipment.Status == EquipmentStatus.Maintain)
+                if (detail.Status != MaintenanceStatus.Done)
                 {
-                    schedule.Equipment.Status = EquipmentStatus.Available;
-                    schedule.Equipment.IsAvailable = true;
+                    detail.Status = MaintenanceStatus.Done;
+                    detail.ResultNote = detail.ResultNote ?? "Auto-completed by System";
+                }
+
+                if (detail.Equipment != null)
+                {
+                    // RULE SỬA LỖI:
+                    // Chỉ trả về Available NẾU thiết bị đó KHÔNG nằm trong danh sách đang bận (busyEquipmentIds)
+                    bool isBusyInOtherSchedule = busyEquipmentIds.Contains(detail.EquipmentId);
+
+                    if (!isBusyInOtherSchedule && detail.Equipment.Status == EquipmentStatus.Maintain)
+                    {
+                        detail.Equipment.Status = EquipmentStatus.Available;
+                        detail.Equipment.IsAvailable = true;
+                    }
                 }
             }
             endedCount++;
         }
 
+        // SaveChanges 1 lần duy nhất
         if (startedCount > 0 || endedCount > 0)
         {
-            await dbContext.SaveChangesAsync(cancellationToken);
+            await dbContext.SaveChangesAsync(token);
         }
 
-        return $"Job Report: Đã chuyển {startedCount} thiết bị sang 'Bảo trì' | Đã hoàn tất {endedCount} lịch bảo trì.";
-    }
+        var anomalySchedules = await dbContext.EquipmentMaintainSchedules
+        .Where(s => s.StartTime < DateTime.UtcNow.AddMinutes(-15) // Đã quá khứ 15p
+                 && s.Status == MaintenanceStatus.NotYet)         // Mà chưa chạy?
+        .ToListAsync(token);
 
-    public async Task DeleteAsync(EquipmentMaintainSchedule entity, CancellationToken cancellationToken = default)
-    {
-        dbContext.EquipmentMaintainSchedules.Remove(entity);
-        await dbContext.SaveChangesAsync(cancellationToken);
-    }
-    public async Task<EquipmentMaintainSchedule?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
-    {
-        // Giả định DbContext có DbSet<EquipmentMaintainSchedule> tên là EquipmentMaintainSchedules
-        var schedule = await dbContext.EquipmentMaintainSchedules.FindAsync(new object[] { id }, cancellationToken);
-        return schedule;
-    }
-
-    public async Task<(IEnumerable<EquipmentMaintainSchedule>, int)> GetAllMatchingAsync(
-        string? searchPhrase,
-        EquimentpMaintainStatus? status,
-        int pageSize,
-        int pageNumber,
-        string? sortBy,
-        SortDirection sortDirection,
-        CancellationToken cancellationToken = default)
-    {
-        var searchPhraseLower = searchPhrase?.ToLower();
-
-        // 1. Query cơ sở
-        var baseQuery = dbContext
-            .EquipmentMaintainSchedules
-            // Lọc theo SearchPhrase
-            .Where(s => searchPhraseLower == null ||
-                        (s.Description != null && s.Description.ToLower().Contains(searchPhraseLower)))
-
-            // BỎ MỆNH ĐỀ .Where(s => equipmentId == null || s.EquipmentId == equipmentId)
-
-            // 2. Lọc theo Status
-            .Where(s => status == null || s.EquimentpMaintainStatus == status);
-
-        // 3. Đếm tổng số lượng
-        var totalCount = await baseQuery.CountAsync(cancellationToken);
-
-        // 4. Sắp xếp (giữ nguyên)
-        if (sortBy != null)
+        if (anomalySchedules.Any())
         {
-            var columnsSelector = new Dictionary<string, Expression<Func<EquipmentMaintainSchedule, object>>>
+            var ids = string.Join(", ", anomalySchedules.Select(s => s.Id));
+            var errorMsg = $"CRITICAL ERROR: Phát hiện {anomalySchedules.Count} lịch bị bỏ quên! (IDs: {ids}). Kiểm tra ngay logic DateTime hoặc Server CronJob.";
+
+            // 1. Log lỗi nghiêm trọng (Hiện đỏ trong console/file log)
+            logger.LogError(errorMsg);
+
+            // 2. (Nâng cao) Gửi thông báo về Telegram/Slack/Email cho Dev (Xem Cách 2)
+            //await SendAlertToDevTeamAsync(errorMsg);
+        }
+
+        return $"Job Report: Đã chuyển {startedCount} thiết bị sang 'Maintain' | Đã hoàn tất {endedCount} lịch trình.";
+    }
+
+    public async Task<ScheduleConflictInfo?> GetConflictInfoAsync(Guid equipmentId, DateTime start, DateTime end, CancellationToken token)
+    {
+        var utcStart = start.ToUniversalTime();
+        var utcEnd = end.ToUniversalTime();
+
+        // Query lấy thông tin chi tiết của lịch đang trùng
+        var conflict = await dbContext.EquipmentMaintenances
+            .Include(x => x.Equipment)
+                .ThenInclude(e => e.LabRoom)
+            .Include(x => x.Schedule)
+            .Where(x =>
+                x.EquipmentId == equipmentId &&
+                x.Status != MaintenanceStatus.Done &&
+                x.Schedule.StartTime < utcEnd && utcStart < x.Schedule.EndTime)
+            .Select(x => new ScheduleConflictInfo
             {
-                { "StartTime", s => s.StartTime! },
-                { "EndTime", s => s.EndTime! },
-                { "EquimentpMaintainStatus", s => s.EquimentpMaintainStatus! }
-            };
+                EquipmentName = x.Equipment.EquipmentName,
+                LabRoomName = x.Equipment.LabRoom.LabName ?? "Kho/Chưa phân phòng",
+                StartTime = x.Schedule.StartTime,
+                EndTime = x.Schedule.EndTime
+            })
+            .FirstOrDefaultAsync(token);
 
-            if (columnsSelector.TryGetValue(sortBy, out var selectedColumn))
-            {
-                baseQuery = sortDirection == SortDirection.Ascending
-                    ? baseQuery.OrderBy(selectedColumn)
-                    : baseQuery.OrderByDescending(selectedColumn);
-            }
-        }
-        else
-        {
-            baseQuery = baseQuery.OrderByDescending(s => s.StartTime);
-        }
-
-        // 5. Phân trang
-        var schedules = await baseQuery
-            .Skip(pageSize * (pageNumber - 1))
-            .Take(pageSize)
-            .ToListAsync(cancellationToken);
-
-        return (schedules, totalCount);
-    }
-
-    public async Task<bool> IsOverlapAsync(Guid equipmentId, DateTime start, DateTime end, CancellationToken token = default)
-    {
-        return await dbContext.EquipmentMaintainSchedules
-            .AnyAsync(s =>
-                s.EquipmentId == equipmentId &&
-                s.EquimentpMaintainStatus != EquimentpMaintainStatus.Done &&
-                s.StartTime < end && start < s.EndTime,
-                token);
-    }
-
-    public async Task<bool> IsOverlapAsync(Guid equipmentId, DateTime start, DateTime end, Guid? excludeScheduleId = null, CancellationToken token = default)
-    {
-        var query = dbContext.EquipmentMaintainSchedules
-            .Where(s =>
-                s.EquipmentId == equipmentId &&
-                s.EquimentpMaintainStatus != EquimentpMaintainStatus.Done &&
-                s.StartTime < end && start < s.EndTime);
-
-        if (excludeScheduleId.HasValue)
-        {
-            query = query.Where(s => s.Id != excludeScheduleId.Value);
-        }
-
-        return await query.AnyAsync(token);
+        return conflict;
     }
 }
+

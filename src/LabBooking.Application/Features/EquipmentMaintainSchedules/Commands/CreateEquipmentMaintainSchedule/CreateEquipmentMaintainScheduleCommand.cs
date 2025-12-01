@@ -3,8 +3,8 @@
 namespace LabBooking.Application.Features.EquipmentMaintainSchedules.Commands.CreateEquipmentMaintainSchedule;
 
 public record CreateEquipmentMaintainScheduleCommand(
-    Guid EquipmentId,
+    List<Guid> EquipmentIds,
     DateTime StartTime,
     DateTime EndTime,
     string Description
-) : IRequest<EquipmentMaintainScheduleResponse>;
+) : IRequest<EquipmentMaintainBatchResponse>;

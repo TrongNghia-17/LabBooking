@@ -1,4 +1,5 @@
 ﻿using LabBooking.Application.Features.Equipments.Dtos;
+using LabBooking.Domain.Enums;
 
 namespace LabBooking.Application.Features.EquipmentCategories.Dtos;
 
