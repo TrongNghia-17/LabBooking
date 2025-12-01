@@ -17,4 +17,6 @@ public interface IEquipmentMaintainScheduleRepository
         string? sortBy,
         bool isDescending,
         CancellationToken token = default);
+    Task<EquipmentMaintainSchedule?> GetByIdWithDetailsAsync(Guid id, CancellationToken token);
+    Task DeleteAsync(EquipmentMaintainSchedule schedule, CancellationToken token);
 }

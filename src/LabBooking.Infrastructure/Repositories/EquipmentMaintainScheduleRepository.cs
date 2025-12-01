@@ -215,5 +215,22 @@ internal class EquipmentMaintainScheduleRepository(
         // 6. Thực thi truy vấn
         return await query.ToListAsync(token);
     }
+
+    public async Task<EquipmentMaintainSchedule?> GetByIdWithDetailsAsync(Guid id, CancellationToken token)
+    {
+        // Load sâu 3 cấp: Lịch -> Chi tiết -> Thiết bị -> Phòng Lab
+        // Để phục vụ việc check quyền Manager và đổi trạng thái thiết bị
+        return await dbContext.EquipmentMaintainSchedules
+            .Include(s => s.Details)
+                .ThenInclude(d => d.Equipment)
+                    .ThenInclude(e => e.LabRoom)
+            .FirstOrDefaultAsync(s => s.Id == id, token);
+    }
+
+    public async Task DeleteAsync(EquipmentMaintainSchedule schedule, CancellationToken token)
+    {
+        dbContext.EquipmentMaintainSchedules.Remove(schedule);
+        await dbContext.SaveChangesAsync(token);
+    }
 }
 
