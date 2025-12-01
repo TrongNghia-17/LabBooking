@@ -121,9 +121,15 @@ public class CreateBookingCommandHandler(
         {
             // Logic: Lấy ngày slot đầu tiên làm ngày tham quan mặc định
             // Vì Input OutSideGuest không có ngày, mà Entity bắt buộc có VisitDate
-            var defaultVisitDate = request.Slots.Any()
-                ? request.Slots.Min(s => s.Date).ToDateTime(new TimeOnly(0, 0))
-                : DateTime.UtcNow;
+            var minDate = request.Slots.Any()
+                ? request.Slots.Min(s => s.Date)
+                : DateOnly.FromDateTime(DateTime.UtcNow);
+
+            // Chuyển DateOnly -> DateTime Unspecified -> DateTime UTC
+            var defaultVisitDate = DateTime.SpecifyKind(
+                minDate.ToDateTime(new TimeOnly(0, 0)),
+                DateTimeKind.Utc
+            );
 
             booking.OutSideGuests = request.OutSideGuests.Select(g => new Domain.Entities.OutSideGuest
             {

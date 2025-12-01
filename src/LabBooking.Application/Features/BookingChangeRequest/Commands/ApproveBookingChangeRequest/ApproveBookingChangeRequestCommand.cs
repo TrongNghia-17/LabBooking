@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 namespace LabBooking.Application.Features.BookingChangeRequest.Commands.ApproveBookingChangeRequest
 {
     public record ApproveBookingChangeRequestCommand(
-        Guid BookingChangeRequestId,
+        Guid BookingId,
         Guid ManagerId
     ) : IRequest<bool>;
 }

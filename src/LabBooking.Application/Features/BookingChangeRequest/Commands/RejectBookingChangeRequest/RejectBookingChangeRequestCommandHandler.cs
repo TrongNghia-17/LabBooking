@@ -12,11 +12,11 @@ namespace LabBooking.Application.Features.BookingChangeRequest.Commands.RejectBo
     {
         public async Task<bool> Handle(RejectBookingChangeRequestCommand request, CancellationToken cancellationToken)
         {
-            var isValidManager = await requestRepository.CheckBookingChangeRequestIsBelongToThisManager(request.BookingChangeRequestId, request.ManagerId);
+            var isValidManager = await requestRepository.CheckBookingChangeRequestIsBelongToThisManager(request.BookingId, request.ManagerId);
             if (!isValidManager)
-                throw new InvalidOperationException("Bạn không có quyền từ chối yêu cầu thay đổi này.");
+                throw new BadRequestException("Bạn không có quyền từ chối yêu cầu thay đổi này.");
             // Lưu ý: request.BookingId ở đây thực chất là ID của ChangeRequest (do FE truyền lên)
-            await requestRepository.RejectChangeRequestAsync(request.BookingChangeRequestId, request.ManagerId);
+            await requestRepository.RejectChangeRequestAsync(request.BookingId, request.ManagerId);
 
             return true;
         }
