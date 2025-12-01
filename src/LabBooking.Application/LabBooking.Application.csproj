@@ -24,6 +24,7 @@
 	  <Folder Include="Features\BookingPriorityDetail\Commands\" />
 	  <Folder Include="Features\BookingPriorityDetail\Queries\" />
 	  <Folder Include="Features\BookingSlots\Commands\" />
+	  <Folder Include="Features\EquipmentMaintainSchedules\Queries\" />
 	  <Folder Include="Features\ExternalEquipment\Commands\" />
 	  <Folder Include="Features\ExternalEquipment\Queries\" />
 	  <Folder Include="Features\HistoryBooking\Commands\" />

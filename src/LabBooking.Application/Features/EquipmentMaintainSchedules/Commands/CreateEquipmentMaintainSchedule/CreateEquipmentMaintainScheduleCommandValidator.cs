@@ -2,42 +2,57 @@
 
 public class CreateEquipmentMaintainScheduleCommandValidator : AbstractValidator<CreateEquipmentMaintainScheduleCommand>
 {
-    // Giả định bạn có một repository cho Equipment
-    private readonly IEquipmentRepository _equipmentRepository;
-
-    public CreateEquipmentMaintainScheduleCommandValidator(IEquipmentRepository equipmentRepository)
+    public CreateEquipmentMaintainScheduleCommandValidator(IEquipmentMaintainScheduleRepository repo)
     {
-        _equipmentRepository = equipmentRepository;
+        RuleFor(c => c.EquipmentIds).NotEmpty().WithMessage("Chọn ít nhất 1 thiết bị.");
+        RuleFor(c => c.StartTime)
+        .Must(startTime =>
+        {
+            // Logic kiểm tra: Input (UTC) phải lớn hơn Hiện tại (UTC) - 5 phút
+            return startTime.ToUniversalTime() > DateTime.UtcNow.AddMinutes(-5);
+        })
+        .WithMessage(c =>
+        {
+            // Logic thông báo: Hiển thị giờ Việt Nam cho người dùng dễ hiểu
+            // Lấy giờ UTC hiện tại + 7 tiếng
+            var nowVN = DateTime.UtcNow.AddHours(7);
+            return $"Thời gian bắt đầu không được ở quá khứ (Phải sau {nowVN:HH:mm dd/MM/yyyy}).";
+        });
 
-        // --- EquipmentId Rules ---
-        RuleFor(c => c.EquipmentId)
-            .NotEmpty().WithMessage("EquipmentId is required.")
-            .MustAsync(EquipmentMustExist) // Giả định IEquipmentRepository có ExistsAsync
-            .WithMessage("The specified Equipment was not found.");
-
-        // --- Date Logic (Tương tự RoomMaintainSchedule) ---
         RuleFor(c => c.EndTime)
             .GreaterThan(c => c.StartTime)
-            .WithMessage("End Time must be after Start Time.")
-            .When(c => c.StartTime.HasValue && c.EndTime.HasValue);
+            .WithMessage("Thời gian kết thúc phải sau thời gian bắt đầu.");
 
-        // --- NumberOfSlot Logic ---
-        RuleFor(c => c.NumberOfSlot)
-            .GreaterThan(0)
-            .When(c => c.NumberOfSlot.HasValue)
-            .WithMessage("Number of Slots must be greater than 0.");
+        RuleFor(c => c.Description).NotEmpty().MaximumLength(1000);
 
-        // --- Description Logic ---
-        RuleFor(c => c.Description)
-            .MaximumLength(1000).WithMessage("Description must not exceed 1000 characters.");
-    }
+        RuleForEach(c => c.EquipmentIds)
+            .CustomAsync(async (eqId, context, token) =>
+            {
+                var cmd = (CreateEquipmentMaintainScheduleCommand)context.InstanceToValidate;
+                var conflict = await repo.GetConflictInfoAsync(eqId, cmd.StartTime, cmd.EndTime, token);
 
-    /// <summary>
-    /// Kiểm tra Equipment có tồn tại hay không
-    /// </summary>
-    private async Task<bool> EquipmentMustExist(Guid id, CancellationToken token)
-    {
-        // Giả định IEquipmentRepository có phương thức ExistsAsync
-        return await _equipmentRepository.ExistsAsync(id, token);
+                if (conflict != null)
+                {
+                    var startVN = conflict.StartTime.AddHours(7);
+                    var endVN = conflict.EndTime.AddHours(7);
+
+                    string timeString;
+
+                    // Logic hiển thị thông minh
+                    if (startVN.Date == endVN.Date)
+                    {
+                        // Nếu cùng ngày: "08:00 01/12 đến 10:00"
+                        timeString = $"(Từ {startVN:HH:mm dd/MM} đến {endVN:HH:mm})";
+                    }
+                    else
+                    {
+                        // Nếu khác ngày: "08:00 01/12 đến 08:30 02/12" <--- SỬA CHỖ NÀY
+                        timeString = $"(Từ {startVN:HH:mm dd/MM} đến {endVN:HH:mm dd/MM})";
+                    }
+
+                    var errorMessage = $"Thiết bị '{conflict.EquipmentName}' đang có lịch bảo trì tại '{conflict.LabRoomName}' {timeString}.";
+                    context.AddFailure(errorMessage);
+                }
+            });
     }
 }

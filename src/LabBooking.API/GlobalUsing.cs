@@ -17,6 +17,8 @@ global using LabBooking.Application.Features.LabRooms.Commands.UpdateLabRoom;
 global using LabBooking.Application.Features.LabRooms.Dtos;
 global using LabBooking.Application.Features.LabRooms.Queries.GetAllLabRooms;
 global using LabBooking.Application.Features.LabRooms.Queries.GetByIdLabRoom;
+global using LabBooking.Application.Features.Managers.Dtos;
+global using LabBooking.Application.Features.Managers.Queries.GetManagerLabDetails;
 global using LabBooking.Application.Features.Supports.Commands.CreateSupport;
 global using LabBooking.Application.Features.Supports.Commands.UpdateSupport;
 global using LabBooking.Application.Features.Supports.Dtos;
@@ -37,6 +39,7 @@ global using Serilog;
 global using System.Diagnostics;
 global using System.Security.Claims;
 global using System.Text;
+
 
 
 

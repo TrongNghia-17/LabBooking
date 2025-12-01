@@ -18,4 +18,10 @@
 		<PackageReference Include="Microsoft.Extensions.Caching.StackExchangeRedis" Version="8.0.20" />
 	</ItemGroup>
 
+	<ItemGroup>
+		<AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
+			<_Parameter1>LabBooking.Infrastructure.UnitTests</_Parameter1>
+		</AssemblyAttribute>
+	</ItemGroup>
+
 </Project>
