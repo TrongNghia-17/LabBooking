@@ -30,6 +30,7 @@ internal class EquipmentMaintainScheduleRepository(
     public async Task<string> ProcessAutomatedMaintenanceAsync(CancellationToken token)
     {
         var now = DateTime.UtcNow;
+        var lookAheadTime = now.AddMinutes(5);
         int startedCount = 0;
         int endedCount = 0;
 
@@ -39,7 +40,7 @@ internal class EquipmentMaintainScheduleRepository(
         var runningSchedules = await dbContext.EquipmentMaintainSchedules
             .Include(s => s.Details)
             .ThenInclude(d => d.Equipment)
-            .Where(s => s.StartTime <= now
+            .Where(s => s.StartTime <= lookAheadTime
                      && s.EndTime > now
                      && s.Status != MaintenanceStatus.Done)
             .ToListAsync(token);
