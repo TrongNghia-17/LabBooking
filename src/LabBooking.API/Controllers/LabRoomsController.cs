@@ -78,7 +78,7 @@ public class LabRoomsController(
     /// <param name="query">Query parameters for filtering lab rooms</param>
     /// <returns>List of lab rooms</returns>
     [HttpGet]
-    [Authorize(Roles = "Admin")]
+    [Authorize(Roles = "Admin, Student, Lecturer, Manager, SecurityGuard")]
     [ProducesResponseType(typeof(PagedResult<LabRoomResponse>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
