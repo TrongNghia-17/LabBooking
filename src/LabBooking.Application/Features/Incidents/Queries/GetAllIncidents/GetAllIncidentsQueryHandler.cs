@@ -10,35 +10,50 @@ public class GetIncidentsQueryHandler(
 {
     public async Task<IEnumerable<IncidentResponse>> Handle(GetIncidentsQuery request, CancellationToken cancellationToken)
     {
-        // 1. Lấy thông tin User
-        var currentUserId = currentUserService.UserId
-            ?? throw new UnauthorizedAccessException("Bạn cần đăng nhập.");
+        var currentUserId = currentUserService.UserId ?? throw new UnauthorizedAccessException();
         var roles = currentUserService.Roles.ToList();
 
-        // 2. XÁC ĐỊNH SCOPE (PHẠM VI DỮ LIỆU)
-        Guid? managerIdParam = null;
+        // Biến cấu hình query
+        Guid? filterManagerId = null;
+        Guid? filterReporterId = null;
+        bool hideSensitiveInfo = false; // Cờ ẩn tên/sđt
 
-        if (roles.Contains("Admin") || roles.Contains("Guard"))
+        // --- PHÂN QUYỀN ---
+
+        if (roles.Contains("Admin"))
         {
-            // Nếu là Admin hoặc Bảo vệ -> Xem toàn cục -> managerIdParam = null
-            managerIdParam = null;
+            // Admin: Xem hết, không bị giới hạn gì cả
+            filterManagerId = null;
+            filterReporterId = null;
+            hideSensitiveInfo = false;
         }
         else if (roles.Contains("Manager"))
         {
-            // Nếu là Manager -> Bị giới hạn phạm vi -> Truyền ID vào để Repo lọc
-            managerIdParam = currentUserId;
+            // Manager: Chỉ xem phòng mình quản lý
+            filterManagerId = currentUserId;
+            filterReporterId = null;
+            hideSensitiveInfo = false; // Manager cần thấy SĐT để liên hệ
+        }
+        else if (roles.Contains("Guard")) // Hoặc Security
+        {
+            // Bảo vệ: Xem hết (để đi tuần tra), nhưng có thể lọc theo LabRoomId từ Frontend gửi lên
+            filterManagerId = null;
+            filterReporterId = null;
+            hideSensitiveInfo = true; // Yêu cầu của bạn: Bảo vệ không cần thấy tên/sđt người báo
         }
         else
         {
-            // Sinh viên/Giảng viên không được gọi API này (hoặc chỉ xem của mình - logic khác)
-            // Tạm thời trả về rỗng hoặc Throw Forbid tùy bạn
-            return [];
+            // Sinh viên/Giảng viên: Chỉ xem cái mình tạo
+            filterManagerId = null;
+            filterReporterId = currentUserId;
+            hideSensitiveInfo = false; // Xem của mình thì cứ hiện
         }
 
-        // 3. GỌI REPO VỚI BỘ LỌC FULL OPTION
+        // --- GỌI REPO ---
         var incidents = await repository.GetFilteredAsync(
-            managerIdParam,
-            request.LabRoomId,
+            filterManagerId,   // Tham số quan trọng 1
+            filterReporterId,  // Tham số quan trọng 2
+            request.LabRoomId, // Filter từ FE
             request.FromDate,
             request.ToDate,
             request.IsResolved,
@@ -46,18 +61,15 @@ public class GetIncidentsQueryHandler(
             request.IsDescending,
             cancellationToken);
 
-        // 4. MAP DATA
+        // --- MAP & ẨN THÔNG TIN ---
         var response = mapper.Map<IEnumerable<IncidentResponse>>(incidents);
 
-        // (Tùy chọn) Ẩn thông tin người báo nếu là Guard (như bài trước)
-        if (roles.Contains("Guard") && !roles.Contains("Manager") && !roles.Contains("Admin"))
+        if (hideSensitiveInfo)
         {
             foreach (var item in response)
             {
-                // Guard chỉ quan tâm sự cố, không cần biết tên user báo cáo (trừ khi cần liên hệ)
-                // Tùy nghiệp vụ đồ án của bạn, có thể comment dòng này lại nếu muốn hiện luôn.
-                item.ReportedByName = "Người dùng";
-                item.ReportedByPhone = null;
+                item.ReportedByName = null;  // Ẩn
+                item.ReportedByPhone = null; // Ẩn
             }
         }
 

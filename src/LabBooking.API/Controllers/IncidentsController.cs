@@ -32,7 +32,7 @@ public class IncidentsController(IMediator mediator) : ControllerBase
     }
 
     [HttpGet]
-    [Authorize(Roles = "Admin, Manager, SecurityGuard")]
+    [Authorize]
     public async Task<IActionResult> GetAll([FromQuery] GetIncidentsQuery query)
     {
         var result = await mediator.Send(query);

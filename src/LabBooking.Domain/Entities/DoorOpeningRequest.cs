@@ -1,18 +1,5 @@
 ﻿namespace LabBooking.Domain.Entities;
 
-public enum DoorRequestStatus
-{
-    Pending,
-    Accepted,
-    Rejected,
-    Completed
-}
-public enum DoorRequestType
-{
-    Open,
-    Close
-}
-
 public class DoorOpeningRequest
 {
     public Guid Id { get; set; } = (Guid)Uuid7.NewUuid7();

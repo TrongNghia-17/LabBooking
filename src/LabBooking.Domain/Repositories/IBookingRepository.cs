@@ -17,6 +17,9 @@
         Task RejectBookingAsync(Guid bookingId, Guid managerId);
         Task<List<Guid>> GetBookedLabIdsAsync(DateOnly date, Guid slotId, CancellationToken ct);
         Task<List<Booking>> GetHistoryByUserIdAsync(Guid userId);
+
+        //Nghia
+        Task<Booking?> GetUpcomingBookingAsync(Guid userId, Guid labRoomId, DateTime checkTime, CancellationToken token);
     }
 
     public enum BookingApprovalResult

@@ -1,6 +1,5 @@
 ﻿using LabBooking.Application.Services.Notifications;
 using LabBooking.Domain.Exceptions;
-using LabBooking.Domain.Repositories;
 
 namespace LabBooking.Infrastructure.Repositories
 {
@@ -630,5 +629,11 @@ namespace LabBooking.Infrastructure.Repositories
         //        // _logger.LogError(ex, "..."); // Nếu có Logger
         //    }
         //}
+
+        //Nghia
+        public async Task<Booking?> GetUpcomingBookingAsync(Guid userId, Guid labRoomId, DateTime checkTime, CancellationToken token)
+        {
+            throw new NotImplementedException();
+        }
     }
 }

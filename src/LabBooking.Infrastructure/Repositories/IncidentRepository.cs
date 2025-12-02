@@ -99,8 +99,9 @@ internal class IncidentRepository(LabBookingDbContext dbContext) : IIncidentRepo
     }
 
     public async Task<IEnumerable<Incident>> GetFilteredAsync(
-    Guid? managerId,
-    Guid? labRoomId,
+    Guid? managerId,   // Nếu != null -> Chỉ lấy phòng do ông này quản lý
+    Guid? reporterId,  // Nếu != null -> Chỉ lấy incident do ông này tạo
+    Guid? labRoomId,   // Lọc theo phòng cụ thể
     DateTime? from,
     DateTime? to,
     bool? isResolved,
@@ -108,41 +109,45 @@ internal class IncidentRepository(LabBookingDbContext dbContext) : IIncidentRepo
     bool isDescending,
     CancellationToken token)
     {
-        // 1. Khởi tạo Query & Include bảng liên quan
         var query = dbContext.Incidents
             .Include(i => i.LabRoom)
             .Include(i => i.Equipment)
-            .Include(i => i.ReportedBy) // Để hiển thị tên người báo
+            .Include(i => i.ReportedBy)
             .AsQueryable();
 
-        // 2. LOGIC PHÂN QUYỀN (Manager chỉ xem phòng mình)
+        // 1. LOGIC MANAGER (Bị giới hạn quyền)
         if (managerId.HasValue)
         {
+            // Bắt buộc: Incident phải thuộc phòng do Manager này quản lý
             query = query.Where(i => i.LabRoom.MainManagerId == managerId.Value);
         }
 
-        // 3. LOGIC LỌC PHÒNG LAB (Guard chọn phòng cụ thể)
+        // 2. LOGIC REPORTER (Nếu muốn xem của riêng mình - Dành cho SV/GV)
+        if (reporterId.HasValue)
+        {
+            query = query.Where(i => i.ReportedById == reporterId.Value);
+        }
+
+        // 3. LOGIC LỌC PHÒNG (Guard chọn phòng để xem)
         if (labRoomId.HasValue)
         {
             query = query.Where(i => i.LabRoomId == labRoomId.Value);
         }
 
-        // 4. LOGIC LỌC NGÀY THÁNG
+        // 4. CÁC BỘ LỌC KHÁC (Chung cho tất cả)
         if (from.HasValue)
             query = query.Where(i => i.CreatedAt >= from.Value.ToUniversalTime());
 
         if (to.HasValue)
             query = query.Where(i => i.CreatedAt <= to.Value.ToUniversalTime());
 
-        // 5. LOGIC LỌC TRẠNG THÁI (Done / Not Yet)
         if (isResolved.HasValue)
             query = query.Where(i => i.IsResolved == isResolved.Value);
 
-        // 6. LOGIC LỌC MỨC ĐỘ
         if (importance.HasValue)
             query = query.Where(i => i.ImportanceLevel == importance.Value);
 
-        // 7. SẮP XẾP
+        // 5. SẮP XẾP
         query = isDescending
             ? query.OrderByDescending(i => i.CreatedAt)
             : query.OrderBy(i => i.CreatedAt);
