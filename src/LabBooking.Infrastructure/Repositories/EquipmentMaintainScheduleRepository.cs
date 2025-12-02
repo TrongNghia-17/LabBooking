@@ -101,6 +101,34 @@ internal class EquipmentMaintainScheduleRepository(
                     {
                         detail.Equipment.Status = EquipmentStatus.Available;
                         detail.Equipment.IsAvailable = true;
+
+                        // Force Update status thiết bị
+                        dbContext.Entry(detail.Equipment).State = EntityState.Modified;
+
+                        // ------------------------------------------------------------
+                        // --- NEW LOGIC: TỰ ĐỘNG ĐÓNG SỰ CỐ LIÊN QUAN (AUTO-RESOLVE) ---
+                        // ------------------------------------------------------------
+
+                        // Tìm tất cả sự cố của máy này mà CHƯA ĐƯỢC XỬ LÝ
+                        var relatedIncidents = await dbContext.Incidents
+                            .Where(i => i.EquipmentId == detail.EquipmentId && !i.IsResolved)
+                            .ToListAsync(token);
+
+                        if (relatedIncidents.Any())
+                        {
+                            foreach (var incident in relatedIncidents)
+                            {
+                                incident.IsResolved = true;
+                                incident.ResolvedAt = DateTime.UtcNow;
+
+                                // Force Update Incident
+                                dbContext.Entry(incident).State = EntityState.Modified;
+                            }
+
+                            // (Optional) Ghi chú vào log của lịch bảo trì để biết nó đã fix lỗi gì
+                            detail.ResultNote += $" (Đã tự động đóng {relatedIncidents.Count} sự cố liên quan)";
+                        }
+                        // ------------------------------------------------------------
                     }
                 }
             }

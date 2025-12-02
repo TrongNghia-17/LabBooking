@@ -10,4 +10,6 @@ public interface IIncidentRepository
        SortDirection sortDirection);
     Task<Guid> CreateAsync(Incident incident, CancellationToken token);
     Task<bool> IsSpamAsync(Guid userId, Guid labRoomId, IncidentType type, CancellationToken token);
+    Task<Incident?> GetByIdWithDetailsAsync(Guid id, CancellationToken token);
+    Task DeleteAsync(Incident incident, CancellationToken token);
 }

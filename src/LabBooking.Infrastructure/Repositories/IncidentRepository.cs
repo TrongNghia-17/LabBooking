@@ -59,4 +59,18 @@ internal class IncidentRepository(LabBookingDbContext dbContext) : IIncidentRepo
                         && x.Type == type
                         && x.CreatedAt > oneMinuteAgo, token);
     }
+    public async Task<Incident?> GetByIdWithDetailsAsync(Guid id, CancellationToken token)
+    {
+        return await dbContext.Incidents
+            .Include(i => i.ReportedBy) // Lấy thông tin người báo
+            .Include(i => i.LabRoom)    // Lấy thông tin phòng (để check Manager)
+            .Include(i => i.Equipment)  // Lấy thiết bị (để revert status)
+            .FirstOrDefaultAsync(i => i.Id == id, token);
+    }
+
+    public async Task DeleteAsync(Incident incident, CancellationToken token)
+    {
+        dbContext.Incidents.Remove(incident);
+        await dbContext.SaveChangesAsync(token);
+    }
 }

@@ -1,4 +1,5 @@
 ﻿using LabBooking.Application.Features.Incidents.Commands.CreateIncident;
+using LabBooking.Application.Features.Incidents.Commands.Delete;
 
 namespace LabBooking.API.Controllers;
 
@@ -18,5 +19,14 @@ public class IncidentsController(IMediator mediator) : ControllerBase
     {
         var id = await mediator.Send(command);
         return CreatedAtAction(nameof(Create), new { id }, id);
+    }
+
+    [HttpDelete("{id:guid}")]
+    [Authorize(Roles = "Admin, Manager, SecurityGuard")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    public async Task<IActionResult> Delete(Guid id)
+    {
+        await mediator.Send(new DeleteIncidentCommand(id));
+        return NoContent();
     }
 }

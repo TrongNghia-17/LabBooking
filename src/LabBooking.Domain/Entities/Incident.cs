@@ -24,6 +24,7 @@ public class Incident
     public string Description { get; set; } = string.Empty;
     public bool IsResolved { get; set; } = false;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public DateTime? ResolvedAt { get; set; }
     public LevelOfImportance ImportanceLevel { get; set; } = LevelOfImportance.Low;
 }
 
