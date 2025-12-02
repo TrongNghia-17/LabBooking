@@ -4,6 +4,16 @@ public class IncidentProfile : Profile
 {
     public IncidentProfile()
     {
+        CreateMap<CreateIncidentCommand, Incident>()
+            .ForMember(dest => dest.Id, opt => opt.Ignore())
+            .ForMember(dest => dest.ReportedById, opt => opt.Ignore())
+            .ForMember(dest => dest.CreatedAt, opt => opt.Ignore())
+            .ForMember(dest => dest.IsResolved, opt => opt.Ignore())
+            .ForMember(dest => dest.SlotId, opt => opt.Ignore())
+            .ForMember(dest => dest.LabRoom, opt => opt.Ignore())
+            .ForMember(dest => dest.Equipment, opt => opt.Ignore())
+            .ForMember(dest => dest.ReportedBy, opt => opt.Ignore());
+
         CreateMap<Incident, IncidentResponse>()
             // 1. Map Tên Phòng (Phòng thủ nếu LabRoom bị null)
             .ForMember(dest => dest.LabRoomName, opt => opt.MapFrom(src =>
