@@ -1,12 +1,15 @@
-﻿namespace LabBooking.Infrastructure.Repositories;
+﻿using LabBooking.Domain.Enums;
+
+namespace LabBooking.Infrastructure.Repositories;
 
 internal class IncidentRepository(LabBookingDbContext dbContext) : IIncidentRepository
 {
-    public async Task<Guid> Create(Incident entity, CancellationToken cancellationToken = default)
+    public async Task<Guid> CreateAsync(Incident incident, CancellationToken token)
     {
-        dbContext.Incidents.Add(entity);
-        await dbContext.SaveChangesAsync(cancellationToken);
-        return entity.Id;
+        await dbContext.Incidents.AddAsync(incident, token);
+        await dbContext.SaveChangesAsync(token);
+
+        return incident.Id;
     }
 
     public async Task<(IEnumerable<Incident>, int)> GetAllMatchingAsync(
@@ -46,4 +49,14 @@ internal class IncidentRepository(LabBookingDbContext dbContext) : IIncidentRepo
         return (labs, totalCount);
     }
 
+    public async Task<bool> IsSpamAsync(Guid userId, Guid labRoomId, IncidentType type, CancellationToken token)
+    {
+        var oneMinuteAgo = DateTime.UtcNow.AddMinutes(-1);
+
+        return await dbContext.Incidents
+            .AnyAsync(x => x.ReportedById == userId
+                        && x.LabRoomId == labRoomId
+                        && x.Type == type
+                        && x.CreatedAt > oneMinuteAgo, token);
+    }
 }

@@ -8,5 +8,6 @@ public interface IIncidentRepository
        int pageNumber,
        string? sortBy,
        SortDirection sortDirection);
-    Task<Guid> Create(Incident entity, CancellationToken cancellationToken = default);
+    Task<Guid> CreateAsync(Incident incident, CancellationToken token);
+    Task<bool> IsSpamAsync(Guid userId, Guid labRoomId, IncidentType type, CancellationToken token);
 }

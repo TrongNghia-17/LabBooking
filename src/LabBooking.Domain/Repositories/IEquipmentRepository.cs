@@ -4,7 +4,7 @@ public interface IEquipmentRepository
 {
     Task<Guid> Create(Equipment entity);
     Task<Equipment?> GetByIdAsync(Guid id);
-    Task Update(Equipment entity);
+    Task UpdateAsync(Equipment equipment, CancellationToken token = default);
     Task DeleteAsync(Equipment entity);
     Task<bool> ExistsAsync(Guid id, CancellationToken cancellationToken = default);
     Task<(IEnumerable<Equipment>, int)> GetAllMatchingAsync(
@@ -13,4 +13,5 @@ public interface IEquipmentRepository
         int pageNumber,
         string? sortBy,
         SortDirection sortDirection);
+    Task<bool> IsEquipmentInLabAsync(Guid equipmentId, Guid labRoomId, CancellationToken token = default);
 }

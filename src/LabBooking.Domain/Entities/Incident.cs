@@ -1,16 +1,5 @@
 ﻿namespace LabBooking.Domain.Entities;
 
-public enum IncidentType
-{
-    Fire,
-    PowerOutage,
-    EquipmentFailure,
-    SecurityIssue,
-    Opened,
-    Closed,
-    Other
-}
-
 public class Incident
 {
     public Guid Id { get; set; } = (Guid)Uuid7.NewUuid7();
@@ -27,6 +16,10 @@ public class Incident
     [ForeignKey(nameof(SlotId))]
     public Slot? Slot { get; set; }
 
+    public Guid? EquipmentId { get; set; }
+    [ForeignKey(nameof(EquipmentId))]
+    public Equipment? Equipment { get; set; }
+
     public IncidentType Type { get; set; }
     public string Description { get; set; } = string.Empty;
     public bool IsResolved { get; set; } = false;
@@ -34,9 +27,4 @@ public class Incident
     public LevelOfImportance ImportanceLevel { get; set; } = LevelOfImportance.Low;
 }
 
-public enum LevelOfImportance
-{
-    Low,
-    Medium,
-    High
-}
+

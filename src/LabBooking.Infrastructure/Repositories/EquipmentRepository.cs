@@ -21,10 +21,11 @@ internal class EquipmentRepository(LabBookingDbContext dbContext) : IEquipmentRe
         return equipment;
     }
 
-    public async Task Update(Equipment entity)
+    public async Task UpdateAsync(Equipment equipment, CancellationToken token = default)
     {
-        dbContext.Entry(entity).State = EntityState.Modified;
-        await dbContext.SaveChangesAsync();
+        dbContext.Equipments.Update(equipment);
+
+        await dbContext.SaveChangesAsync(token);
     }
 
     public async Task<(IEnumerable<Equipment>, int)> GetAllMatchingAsync(
@@ -83,5 +84,12 @@ internal class EquipmentRepository(LabBookingDbContext dbContext) : IEquipmentRe
     public async Task<bool> ExistsAsync(Guid id, CancellationToken cancellationToken = default)
     {
         return await dbContext.Equipments.AnyAsync(e => e.Id == id, cancellationToken);
+    }
+
+    public async Task<bool> IsEquipmentInLabAsync(Guid equipmentId, Guid labRoomId, CancellationToken token = default)
+    {
+        // Check xem có thiết bị nào ID như thế VÀ LabRoomId khớp không
+        return await dbContext.Equipments
+            .AnyAsync(e => e.Id == equipmentId && e.LabRoomId == labRoomId, token);
     }
 }
