@@ -1,5 +1,4 @@
-﻿using LabBooking.Application.Features.LabRooms.Dtos;
-using LabBooking.Application.Services.Notifications;
+﻿using LabBooking.Application.Services.Notifications;
 using LabBooking.Domain.Exceptions;
 
 namespace LabBooking.Infrastructure.Repositories
@@ -629,49 +628,6 @@ namespace LabBooking.Infrastructure.Repositories
 
         //        // _logger.LogError(ex, "..."); // Nếu có Logger
         //    }
-        //}
-
-        public async Task<IEnumerable<MonthlyTopLabDto>> GetTopLabPerMonthAsync(int year, CancellationToken token)
-        {
-            // Bước 1: Query Database để lấy thống kê thô
-            // Gom nhóm theo (Tháng, Phòng) và đếm số lượng
-            var rawStats = await dbContext.Bookings
-                .AsNoTracking()
-                .Where(b => b.Status == BookingStatus.Approved) // Chỉ tính đơn đã duyệt
-                .Where(b => b.CreatedAt.HasValue && b.CreatedAt.Value.Year == year) // Lọc theo năm user chọn
-                .GroupBy(b => new
-                {
-                    Month = b.CreatedAt.Value.Month,
-                    LabId = b.LabRoomId,
-                    LabName = b.LabRoom.LabName
-                })
-                .Select(g => new
-                {
-                    Month = g.Key.Month,
-                    LabName = g.Key.LabName ?? "Unknown",
-                    Count = g.Count()
-                })
-                .ToListAsync(token);
-
-            // Bước 2: Xử lý Logic tìm Top 1 mỗi tháng (Làm trên RAM cho dễ)
-            var result = rawStats
-                .GroupBy(x => x.Month) // Gom lại theo tháng
-                .Select(g =>
-                {
-                    // Trong mỗi tháng, tìm phòng có Count cao nhất
-                    var topRoom = g.OrderByDescending(x => x.Count).First();
-
-                    return new MonthlyTopLabDto
-                    {
-                        MonthYear = $"{topRoom.Month}/{year}",
-                        LabName = topRoom.LabName,
-                        TotalBookings = topRoom.Count
-                    };
-                })
-                .OrderBy(x => x.MonthYear) // Sắp xếp thời gian
-                .ToList();
-
-            return result;
-        }
+        //}        
     }
 }

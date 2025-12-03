@@ -5,5 +5,6 @@ public enum DoorRequestStatus
     Pending,
     Accepted,
     Rejected,
-    Completed
+    Completed,
+    Cancelled
 }

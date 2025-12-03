@@ -1,4 +1,5 @@
 ﻿using LabBooking.Application.Features.DoorRequests.Commands.AcceptDoorRequest;
+using LabBooking.Application.Features.DoorRequests.Commands.CancelDoorRequest;
 using LabBooking.Application.Features.DoorRequests.Commands.Create;
 using LabBooking.Application.Features.DoorRequests.Queries.GetGuardPendingRequests;
 using LabBooking.Application.Features.DoorRequests.Queries.GetHistory;
@@ -10,7 +11,7 @@ namespace LabBooking.API.Controllers;
 public class DoorRequestsController(IMediator mediator) : ControllerBase
 {
     [HttpPost]
-    [Authorize(Roles = "Lecturer, Student")]
+    [Authorize(Roles = "Manager, Lecturer, Student")]
     public async Task<IActionResult> Create([FromBody] CreateDoorRequestCommand command)
     {
         var id = await mediator.Send(command);
@@ -34,10 +35,18 @@ public class DoorRequestsController(IMediator mediator) : ControllerBase
     }
 
     [HttpGet("history")]
-    [Authorize(Roles = "Lecturer, Student, SecurityGuard")]
+    [Authorize(Roles = "Manager, Lecturer, Student, SecurityGuard")]
     public async Task<IActionResult> GetHistory([FromQuery] GetDoorRequestHistoryQuery query)
     {
         var result = await mediator.Send(query);
         return Ok(result);
+    }
+
+    [HttpPost("cancel/{id}")]
+    [Authorize(Roles = "Manager, Lecturer, Student")]
+    public async Task<IActionResult> CancelRequest(Guid id)
+    {
+        await mediator.Send(new CancelDoorRequestCommand(id));
+        return Ok(new { Message = "Đã hủy yêu cầu thành công." });
     }
 }
