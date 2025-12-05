@@ -37,9 +37,9 @@ public class GoogleLoginCommandHandler(
             throw new ForbidException("Email domain is not allowed.");
 
         // 3. Check the campus
-        var campusInfo = googlePayload.FamilyName;
-        if (string.IsNullOrWhiteSpace(campusInfo) || !campusInfo.Contains("HCM", StringComparison.OrdinalIgnoreCase))
-            throw new ForbidException("Account does not belong to HCM facility.");
+        //var campusInfo = googlePayload.FamilyName;
+        //if (string.IsNullOrWhiteSpace(campusInfo) || !campusInfo.Contains("HCM", StringComparison.OrdinalIgnoreCase))
+        //    throw new ForbidException("Account does not belong to HCM facility.");
 
         // 4. Find the user in the database
         var user = await userManager.FindByEmailAsync(googlePayload.Email);
