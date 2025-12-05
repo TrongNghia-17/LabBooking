@@ -29,9 +29,9 @@ public class GoogleLoginCommandHandler(
         string userRole;
         if (googlePayload.Email.EndsWith("@fpt.edu.vn", StringComparison.OrdinalIgnoreCase))
             userRole = "Student";
-        else if (googlePayload.Email.EndsWith("@fe.edu.vn", StringComparison.OrdinalIgnoreCase))
+        if (googlePayload.Email.EndsWith("@fe.edu.vn", StringComparison.OrdinalIgnoreCase))
             userRole = "Lecturer";
-        else if (googlePayload.Email.EndsWith("@gmail.com", StringComparison.OrdinalIgnoreCase))
+        if (googlePayload.Email.EndsWith("@gmail.com", StringComparison.OrdinalIgnoreCase))
             userRole = "Manager";
         else
             throw new ForbidException("Email domain is not allowed.");
