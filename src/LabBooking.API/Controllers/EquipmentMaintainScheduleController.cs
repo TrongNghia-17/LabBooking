@@ -1,5 +1,7 @@
 ﻿using LabBooking.Application.Features.EquipmentMaintainSchedules.Commands.CreateEquipmentMaintainSchedule;
+using LabBooking.Application.Features.EquipmentMaintainSchedules.Commands.Delete;
 using LabBooking.Application.Features.EquipmentMaintainSchedules.Dtos;
+using LabBooking.Application.Features.EquipmentMaintainSchedules.Queries.GetAll;
 
 namespace LabBooking.API.Controllers;
 
@@ -14,5 +16,25 @@ public class EquipmentMaintainScheduleController(IMediator mediator) : Controlle
     {
         var result = await mediator.Send(command);
         return StatusCode(StatusCodes.Status201Created, result);
+    }
+
+    [HttpGet]
+    [Authorize(Roles = "Manager, Admin")]
+    public async Task<IActionResult> GetAll([FromQuery] GetAllMaintainSchedulesQuery query)
+    {
+        var result = await mediator.Send(query);
+        return Ok(result);
+    }
+
+    [HttpDelete("{id:guid}")]
+    [Authorize(Roles = "Manager, Admin")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    public async Task<IActionResult> Delete(Guid id)
+    {
+        await mediator.Send(new DeleteMaintainScheduleCommand(id));
+
+        return NoContent();
     }
 }

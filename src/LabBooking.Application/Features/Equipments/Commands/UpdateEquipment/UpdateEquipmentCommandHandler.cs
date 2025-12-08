@@ -38,7 +38,7 @@ public class UpdateEquipmentCommandHandler(
 
         mapper.Map(request, equipmentToUpdate);
 
-        await equipmentRepository.Update(equipmentToUpdate);
+        await equipmentRepository.UpdateAsync(equipmentToUpdate);
 
         logger.LogInformation("Successfully updated equipment: {EquipmentId}", equipmentToUpdate.Id);
 

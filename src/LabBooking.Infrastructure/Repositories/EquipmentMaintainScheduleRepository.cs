@@ -30,6 +30,7 @@ internal class EquipmentMaintainScheduleRepository(
     public async Task<string> ProcessAutomatedMaintenanceAsync(CancellationToken token)
     {
         var now = DateTime.UtcNow;
+        var lookAheadTime = now.AddMinutes(5);
         int startedCount = 0;
         int endedCount = 0;
 
@@ -39,7 +40,7 @@ internal class EquipmentMaintainScheduleRepository(
         var runningSchedules = await dbContext.EquipmentMaintainSchedules
             .Include(s => s.Details)
             .ThenInclude(d => d.Equipment)
-            .Where(s => s.StartTime <= now
+            .Where(s => s.StartTime <= lookAheadTime
                      && s.EndTime > now
                      && s.Status != MaintenanceStatus.Done)
             .ToListAsync(token);
@@ -100,6 +101,34 @@ internal class EquipmentMaintainScheduleRepository(
                     {
                         detail.Equipment.Status = EquipmentStatus.Available;
                         detail.Equipment.IsAvailable = true;
+
+                        // Force Update status thiết bị
+                        dbContext.Entry(detail.Equipment).State = EntityState.Modified;
+
+                        // ------------------------------------------------------------
+                        // --- NEW LOGIC: TỰ ĐỘNG ĐÓNG SỰ CỐ LIÊN QUAN (AUTO-RESOLVE) ---
+                        // ------------------------------------------------------------
+
+                        // Tìm tất cả sự cố của máy này mà CHƯA ĐƯỢC XỬ LÝ
+                        var relatedIncidents = await dbContext.Incidents
+                            .Where(i => i.EquipmentId == detail.EquipmentId && !i.IsResolved)
+                            .ToListAsync(token);
+
+                        if (relatedIncidents.Any())
+                        {
+                            foreach (var incident in relatedIncidents)
+                            {
+                                incident.IsResolved = true;
+                                incident.ResolvedAt = DateTime.UtcNow;
+
+                                // Force Update Incident
+                                dbContext.Entry(incident).State = EntityState.Modified;
+                            }
+
+                            // (Optional) Ghi chú vào log của lịch bảo trì để biết nó đã fix lỗi gì
+                            detail.ResultNote += $" (Đã tự động đóng {relatedIncidents.Count} sự cố liên quan)";
+                        }
+                        // ------------------------------------------------------------
                     }
                 }
             }
@@ -156,6 +185,80 @@ internal class EquipmentMaintainScheduleRepository(
             .FirstOrDefaultAsync(token);
 
         return conflict;
+    }
+
+    public async Task<IEnumerable<EquipmentMaintainSchedule>> GetByManagerIdAsync(
+        Guid managerId,
+        DateTime? from,
+        DateTime? to,
+        MaintenanceStatus? status,
+        string? sortBy,
+        bool isDescending,
+        CancellationToken token = default)
+    {
+        // 1. Khởi tạo Query (Chưa chạy xuống DB)
+        var query = dbContext.EquipmentMaintainSchedules
+            .Include(s => s.Details)
+                .ThenInclude(d => d.Equipment)
+                    .ThenInclude(e => e.LabRoom)
+            .AsQueryable(); // Chuyển sang IQueryable để cộng dồn điều kiện
+
+        // 2. LỌC THEO MANAGER (Bắt buộc)
+        query = query.Where(s => s.Details.Any(d =>
+            d.Equipment != null &&
+            d.Equipment.LabRoom != null &&
+            d.Equipment.LabRoom.MainManagerId == managerId));
+
+        // 3. LỌC THEO NGÀY (Optional)
+        if (from.HasValue)
+            query = query.Where(s => s.StartTime >= from.Value.ToUniversalTime());
+
+        if (to.HasValue)
+            query = query.Where(s => s.EndTime <= to.Value.ToUniversalTime());
+
+        // 4. LỌC THEO STATUS (Optional)
+        if (status.HasValue)
+            query = query.Where(s => s.Status == status.Value);
+
+        // 5. SẮP XẾP (Sorting)
+        // Mặc định sắp theo StartTime giảm dần nếu không truyền gì cả
+        if (string.IsNullOrEmpty(sortBy)) sortBy = "Date";
+
+        switch (sortBy.ToLower())
+        {
+            case "status":
+                query = isDescending
+                    ? query.OrderByDescending(s => s.Status)
+                    : query.OrderBy(s => s.Status);
+                break;
+
+            case "date":
+            default:
+                query = isDescending
+                    ? query.OrderByDescending(s => s.StartTime)
+                    : query.OrderBy(s => s.StartTime);
+                break;
+        }
+
+        // 6. Thực thi truy vấn
+        return await query.ToListAsync(token);
+    }
+
+    public async Task<EquipmentMaintainSchedule?> GetByIdWithDetailsAsync(Guid id, CancellationToken token)
+    {
+        // Load sâu 3 cấp: Lịch -> Chi tiết -> Thiết bị -> Phòng Lab
+        // Để phục vụ việc check quyền Manager và đổi trạng thái thiết bị
+        return await dbContext.EquipmentMaintainSchedules
+            .Include(s => s.Details)
+                .ThenInclude(d => d.Equipment)
+                    .ThenInclude(e => e.LabRoom)
+            .FirstOrDefaultAsync(s => s.Id == id, token);
+    }
+
+    public async Task DeleteAsync(EquipmentMaintainSchedule schedule, CancellationToken token)
+    {
+        dbContext.EquipmentMaintainSchedules.Remove(schedule);
+        await dbContext.SaveChangesAsync(token);
     }
 }
 

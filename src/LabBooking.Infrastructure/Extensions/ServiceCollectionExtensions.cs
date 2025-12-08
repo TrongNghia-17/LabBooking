@@ -57,6 +57,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ICourseRepository, CourseRepository>();
         services.AddScoped<IBookingChangeRequestRepository, BookingChangeRequestRepository>();
         services.AddScoped<IBookingConsentRequestRepository, BookingConsentRequestRepository>();
+        services.AddScoped<IDoorRequestRepository, DoorRequestRepository>();
 
         services.AddScoped<IUsagePolicyRepository, UsagePolicyRepository>();
 

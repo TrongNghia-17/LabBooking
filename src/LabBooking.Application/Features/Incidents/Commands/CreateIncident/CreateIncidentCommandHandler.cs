@@ -2,37 +2,70 @@
 
 namespace LabBooking.Application.Features.Incidents.Commands.CreateIncident;
 
-public class CreateIncidentCommandHandler(
-    ILogger<CreateIncidentCommandHandler> logger,
-    IMapper mapper,
+public class CreateIncidentHandler(
     IIncidentRepository incidentRepository,
-    ICurrentUserService currentUserService
+    ILabRoomRepository labRoomRepository,
+    ICurrentUserService currentUserService,
+    ILogger<CreateIncidentHandler> logger,
+    IEquipmentRepository equipmentRepository,
+    IMapper mapper
     ) : IRequestHandler<CreateIncidentCommand, Guid>
 {
     public async Task<Guid> Handle(CreateIncidentCommand request, CancellationToken cancellationToken)
     {
-        // 1. Lấy ID người báo cáo (User đang đăng nhập)
-        var reporterId = currentUserService.UserId;
+        // 1. Check Login
+        var reporterId = currentUserService.UserId
+            ?? throw new UnauthorizedAccessException("Bạn cần đăng nhập để báo cáo sự cố.");
 
-        if (reporterId == null)
+        // 2. Check Phòng Lab tồn tại
+        var labExists = await labRoomRepository.ExistsAsync(request.LabRoomId, cancellationToken);
+        if (!labExists)
+            throw new NotFoundException(nameof(LabRoom), request.LabRoomId.ToString());
+
+        // 3. (MỚI) CHECK LOGIC TRÙNG LẶP / SPAM
+        // Logic: Nếu User này vừa báo cáo loại lỗi này ở phòng này cách đây < 1 phút -> Chặn
+        bool isSpam = await incidentRepository.IsSpamAsync(reporterId, request.LabRoomId, request.Type, cancellationToken);
+        if (isSpam)
+            throw new BadRequestException("Bạn vừa báo cáo sự cố này rồi. Vui lòng đợi một lát nếu muốn báo cáo tiếp.");
+
+        if (request.Type == IncidentType.EquipmentFailure && request.EquipmentId.HasValue)
         {
-            logger.LogWarning("Cố gắng tạo Incident khi chưa đăng nhập.");
-            throw new UnauthorizedAccessException("Bạn cần đăng nhập để báo cáo sự cố.");
+            // Lấy thiết bị ra
+            var equipment = await equipmentRepository.GetByIdAsync(request.EquipmentId.Value);
+
+            // Validate kỹ: Máy này có thuộc phòng Lab đang báo cáo không?
+            if (equipment == null || equipment.LabRoomId != request.LabRoomId)
+            {
+                throw new BadRequestException("Thiết bị không thuộc phòng Lab này.");
+            }
+
+            // Đổi trạng thái sang Hỏng (Broken)
+            if (equipment.Status != EquipmentStatus.Broken)
+            {
+                equipment.Status = EquipmentStatus.Broken;
+                equipment.IsAvailable = false;
+
+                // Cần hàm Update trong EquipmentRepo
+                await equipmentRepository.UpdateAsync(equipment, cancellationToken);
+            }
         }
 
-        logger.LogInformation("User {UserId} đang tạo báo cáo sự cố cho Lab {LabId}", reporterId, request.LabRoomId);
-
-        // 2. Map dữ liệu
+        // 4. MAP DỮ LIỆU (Dùng AutoMapper)
         var incident = mapper.Map<Incident>(request);
 
-        // 3. Gán các field hệ thống
-        incident.ReportedById = reporterId.Value;
-        incident.CreatedAt = DateTime.UtcNow; // Bắt buộc dùng UtcNow cho Postgres
-        incident.IsResolved = false; // Mặc định chưa giải quyết
+        // 5. GÁN CÁC GIÁ TRỊ CÒN THIẾU (Decorate)
+        incident.Id = Guid.NewGuid();
+        incident.ReportedById = reporterId;
+        incident.CreatedAt = DateTime.UtcNow; // Luôn dùng UTC
+        incident.IsResolved = false;
+        incident.SlotId = null;
+        incident.EquipmentId = request.EquipmentId;
 
-        // 4. Lưu xuống DB
-        var incidentId = await incidentRepository.Create(incident, cancellationToken);
+        // 6. Lưu vào DB
+        await incidentRepository.CreateAsync(incident, cancellationToken);
 
-        return incidentId;
+        logger.LogInformation("Incident Created: User {User} báo cáo {Type} tại phòng {Room}.", reporterId, request.Type, request.LabRoomId);
+
+        return incident.Id;
     }
 }

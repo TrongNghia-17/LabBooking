@@ -312,6 +312,9 @@ namespace LabBooking.Application.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<DateTime?>("AcceptedTime")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<Guid?>("BookingId")
                         .HasColumnType("uuid");
 
@@ -487,6 +490,9 @@ namespace LabBooking.Application.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<Guid?>("EquipmentId")
+                        .HasColumnType("uuid");
+
                     b.Property<int>("ImportanceLevel")
                         .HasColumnType("integer");
 
@@ -499,6 +505,9 @@ namespace LabBooking.Application.Migrations
                     b.Property<Guid>("ReportedById")
                         .HasColumnType("uuid");
 
+                    b.Property<DateTime?>("ResolvedAt")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<Guid?>("SlotId")
                         .HasColumnType("uuid");
 
@@ -506,6 +515,8 @@ namespace LabBooking.Application.Migrations
                         .HasColumnType("integer");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("EquipmentId");
 
                     b.HasIndex("LabRoomId");
 
@@ -841,6 +852,9 @@ namespace LabBooking.Application.Migrations
 
                     b.Property<bool>("EmailConfirmed")
                         .HasColumnType("boolean");
+
+                    b.Property<string>("FullName")
+                        .HasColumnType("text");
 
                     b.Property<bool>("LockoutEnabled")
                         .HasColumnType("boolean");
@@ -1223,6 +1237,10 @@ namespace LabBooking.Application.Migrations
 
             modelBuilder.Entity("LabBooking.Domain.Entities.Incident", b =>
                 {
+                    b.HasOne("LabBooking.Domain.Entities.Equipment", "Equipment")
+                        .WithMany()
+                        .HasForeignKey("EquipmentId");
+
                     b.HasOne("LabBooking.Domain.Entities.LabRoom", "LabRoom")
                         .WithMany("Incidents")
                         .HasForeignKey("LabRoomId")
@@ -1238,6 +1256,8 @@ namespace LabBooking.Application.Migrations
                     b.HasOne("LabBooking.Domain.Entities.Slot", "Slot")
                         .WithMany()
                         .HasForeignKey("SlotId");
+
+                    b.Navigation("Equipment");
 
                     b.Navigation("LabRoom");
 

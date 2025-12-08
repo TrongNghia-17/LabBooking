@@ -7,28 +7,31 @@ public class AutoUpdateEquipmentStatusJobHandler(
 {
     public async Task<string> Handle(AutoUpdateEquipmentStatusJobCommand request, CancellationToken cancellationToken)
     {
-        // Lấy giờ hiện tại UTC
         var utcNow = DateTime.UtcNow;
-        // Tạo giờ Việt Nam để log cho dễ nhìn (UTC + 7)
         var vnTime = utcNow.AddHours(7);
 
-        logger.LogInformation("CronJob [AutoUpdateStatus]: Bắt đầu quét lúc {Time} (VN)...", vnTime);
+        // 1. Dùng ký tự đặc biệt để tách biệt Job này với các log khác
+        logger.LogInformation("===============================================================");
+        logger.LogInformation(">>> [CRON-START] AutoUpdateStatus | VN Time: {Time:HH:mm:ss dd/MM}", vnTime);
 
         try
         {
-            // Gọi logic nghiệp vụ từ Repo
             var resultMessage = await repository.ProcessAutomatedMaintenanceAsync(cancellationToken);
 
-            var finalMessage = $"{resultMessage} | Thời gian quét: {vnTime:HH:mm:ss dd/MM/yyyy}";
+            // 2. Format lại message cho gọn
+            var finalMessage = $"Result: {resultMessage}";
 
-            // Log kết quả
-            logger.LogInformation("CronJob [AutoUpdateStatus]: Success - {Message}", finalMessage);
+            logger.LogInformation("<<< [CRON-END]   Status: SUCCESS  | {Message}", finalMessage);
+            logger.LogInformation("===============================================================");
+
             return finalMessage;
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "CronJob [AutoUpdateStatus]: Thất bại.");
-            throw; // Ném lỗi để hệ thống Job biết mà retry (nếu có cấu hình)
+            // Log lỗi cũng cần nổi bật
+            logger.LogError("<<< [CRON-END]   Status: FAILED   | Error: {Error}", ex.Message);
+            logger.LogInformation("===============================================================");
+            throw;
         }
     }
 }

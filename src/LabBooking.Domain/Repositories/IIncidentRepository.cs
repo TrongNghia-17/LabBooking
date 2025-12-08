@@ -8,5 +8,20 @@ public interface IIncidentRepository
        int pageNumber,
        string? sortBy,
        SortDirection sortDirection);
-    Task<Guid> Create(Incident entity, CancellationToken cancellationToken = default);
+    Task<IEnumerable<Incident>> GetFilteredAsync(
+     Guid? managerId,   // Nếu != null -> Chỉ lấy phòng do ông này quản lý
+     Guid? reporterId,  // Nếu != null -> Chỉ lấy incident do ông này tạo
+     Guid? labRoomId,   // Lọc theo phòng cụ thể
+     DateTime? from,
+     DateTime? to,
+     bool? isResolved,
+     LevelOfImportance? importance,
+     bool isDescending,
+     CancellationToken token);
+    Task<Guid> CreateAsync(Incident incident, CancellationToken token);
+    Task<bool> IsSpamAsync(Guid userId, Guid labRoomId, IncidentType type, CancellationToken token);
+    Task<Incident?> GetByIdWithDetailsAsync(Guid id, CancellationToken token);
+    Task DeleteAsync(Incident incident, CancellationToken token);
+    Task<IEnumerable<Incident>> GetByReporterIdAsync(Guid reporterId, CancellationToken token);
+    Task<IEnumerable<Incident>> GetByManagerIdAsync(Guid managerId, CancellationToken token);
 }
