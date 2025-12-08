@@ -1,14 +1,53 @@
 ﻿using LabBooking.Domain.Enums;
+using StackExchange.Redis;
 
 namespace LabBooking.Infrastructure.Repositories;
 
-internal class DoorRequestRepository(LabBookingDbContext dbContext) : IDoorRequestRepository
+internal class DoorRequestRepository(LabBookingDbContext dbContext, INotificationRepository notificationRepo) : IDoorRequestRepository
 {
     // 1. Tạo yêu cầu mới
     public async Task CreateAsync(DoorOpeningRequest request, CancellationToken token)
     {
+        var pushQueue = new List<PushNotificationData>();
+
+        // 1. Lấy tên phòng Lab để nội dung thông báo rõ ràng hơn
+        var labName = await dbContext.LabRooms
+            .Where(l => l.Id == request.LabRoomId)
+            .Select(l => l.LabName)
+            .FirstOrDefaultAsync(token) ?? "Phòng Lab";
+
         await dbContext.DoorOpeningRequests.AddAsync(request, token);
+
+        var guardRoleName = "SecurityGuard";
+
+        var guardIds = await (from user in dbContext.Users
+                              join userRole in dbContext.UserRoles on user.Id equals userRole.UserId
+                              join role in dbContext.Roles on userRole.RoleId equals role.Id
+                              where role.Name == guardRoleName
+                              select user.Id)
+                                 .ToListAsync(token);
+
+        if (guardIds.Any())
+        {
+            var title = "🔑 Yêu cầu mở cửa mới";
+            var message = $"Có yêu cầu mở cửa tại {labName}. Vui lòng kiểm tra.";
+
+            foreach (var guardId in guardIds)
+            {
+                var (_, pushData) = notificationRepo.PrepareNotification(
+                    guardId,
+                    title,
+                    message,
+                    "DOOR_OPENING_REQUEST",
+                    new { requestId = request.Id, labId = request.LabRoomId }
+                );
+
+                pushQueue.Add(pushData);
+            }
+        }
         await dbContext.SaveChangesAsync(token);
+
+        notificationRepo.RunPushNotificationTask(pushQueue);
     }
 
     // 2. Check Spam: User này có đang treo yêu cầu nào ở phòng này không?
