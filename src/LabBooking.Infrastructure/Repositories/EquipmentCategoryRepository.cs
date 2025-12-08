@@ -49,4 +49,17 @@ internal class EquipmentCategoryRepository(LabBookingDbContext dbContext) : IEqu
         return await dbContext.EquipmentCategories
             .AnyAsync(x => x.Id == id, cancellationToken);
     }
+
+    public async Task<IEnumerable<EquipmentCategory>> GetByLabIdAsync(Guid labId, CancellationToken cancellationToken = default)
+    {
+        return await dbContext.EquipmentCategories
+            // 1. Chỉ include những thiết bị thuộc về LabId này
+            .Include(c => c.Equipments.Where(e => e.LabRoomId == labId))
+            // 2. Chỉ lấy những Category có chứa ít nhất 1 thiết bị thuộc LabId này
+            .Where(c => c.Equipments.Any(e => e.LabRoomId == labId))
+            .OrderBy(c => c.Name)
+            .ToListAsync(cancellationToken);
+    }
+
+
 }

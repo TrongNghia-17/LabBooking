@@ -1,5 +1,6 @@
 ﻿using LabBooking.Application.Features.EquipmentCategories.Dtos;
 using LabBooking.Application.Features.EquipmentCategories.Queries.GetAll;
+using LabBooking.Application.Features.EquipmentCategories.Queries.GetByLabId;
 using LabBooking.Application.Features.EquipmentCategories.Queries.GetEquipments;
 
 namespace LabBooking.API.Controllers;
@@ -30,6 +31,19 @@ public class EquipmentCategoriesController(IMediator mediator) : ControllerBase
     public async Task<IActionResult> GetEquipmentsByCategory(Guid id)
     {
         var result = await mediator.Send(new GetEquipmentsByCategoryQuery(id));
+        return Ok(result);
+    }
+
+    /// <summary>
+    /// Lấy danh sách loại thiết bị và thiết bị thuộc về một phòng Lab cụ thể.
+    /// </summary>
+    /// <param name="labId">ID của phòng Lab</param>
+    [HttpGet("lab/{labId:guid}")]
+    [Authorize(Roles = "Admin")]
+    [ProducesResponseType(typeof(IEnumerable<EquipmentCategoryResponse>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetByLabId(Guid labId)
+    {
+        var result = await mediator.Send(new GetCategoriesByLabIdQuery(labId));
         return Ok(result);
     }
 }

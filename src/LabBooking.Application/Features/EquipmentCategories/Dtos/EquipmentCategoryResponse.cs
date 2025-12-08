@@ -6,4 +6,7 @@ public class EquipmentCategoryResponse
     public string Name { get; set; } = string.Empty;
     public string? Description { get; set; }
     public int EquipmentCount { get; set; }
+
+    // THÊM DÒNG NÀY: Để chứa danh sách thiết bị chi tiết
+    public IEnumerable<EquipmentSimpleResponse> Equipments { get; set; } = new List<EquipmentSimpleResponse>();
 }

@@ -1,4 +1,5 @@
 ﻿using LabBooking.Application.Features.LabRooms.Commands.DeleteLabRoom;
+using LabBooking.Application.Features.LabRooms.Queries.GetLabStatistics;
 using LabBooking.Application.Features.LabRooms.Queries.GetTopLabs;
 using LabBooking.Application.Features.LabRooms.Queries.GetUnmaintainedLabRooms;
 
@@ -136,6 +137,17 @@ public class LabRoomsController(
     public async Task<IActionResult> GetTopLabs([FromQuery] int year)
     {
         var result = await mediator.Send(new GetTopLabsQuery(year));
+        return Ok(result);
+    }
+
+    [HttpGet("labs")]
+    [Authorize(Roles = "Admin")] // Bật lại nếu cần bảo mật
+    public async Task<IActionResult> GetLabStatistics([FromQuery] int year)
+    {
+        // Nếu không truyền năm, lấy năm hiện tại
+        if (year <= 0) year = DateTime.Now.Year;
+
+        var result = await mediator.Send(new GetLabStatisticsQuery(year));
         return Ok(result);
     }
 }
