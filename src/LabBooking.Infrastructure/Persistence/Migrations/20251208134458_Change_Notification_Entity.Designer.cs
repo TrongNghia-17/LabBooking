@@ -3,6 +3,7 @@ using System;
 using LabBooking.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace LabBooking.Application.Migrations
 {
     [DbContext(typeof(LabBookingDbContext))]
-    partial class LabBookingDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251208134458_Change_Notification_Entity")]
+    partial class Change_Notification_Entity
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -312,9 +315,6 @@ namespace LabBooking.Application.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
-                    b.Property<DateTime?>("AcceptedTime")
-                        .HasColumnType("timestamp with time zone");
-
                     b.Property<Guid?>("BookingId")
                         .HasColumnType("uuid");
 
@@ -502,9 +502,6 @@ namespace LabBooking.Application.Migrations
                     b.Property<Guid>("ReportedById")
                         .HasColumnType("uuid");
 
-                    b.Property<DateTime?>("ResolvedAt")
-                        .HasColumnType("timestamp with time zone");
-
                     b.Property<Guid?>("SlotId")
                         .HasColumnType("uuid");
 
@@ -520,27 +517,6 @@ namespace LabBooking.Application.Migrations
                     b.HasIndex("SlotId");
 
                     b.ToTable("Incidents");
-                });
-
-            modelBuilder.Entity("LabBooking.Domain.Entities.IncidentEquipment", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid>("EquipmentId")
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid>("IncidentId")
-                        .HasColumnType("uuid");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("EquipmentId");
-
-                    b.HasIndex("IncidentId");
-
-                    b.ToTable("IncidentEquipments");
                 });
 
             modelBuilder.Entity("LabBooking.Domain.Entities.LabRoom", b =>
@@ -868,9 +844,6 @@ namespace LabBooking.Application.Migrations
 
                     b.Property<bool>("EmailConfirmed")
                         .HasColumnType("boolean");
-
-                    b.Property<string>("FullName")
-                        .HasColumnType("text");
 
                     b.Property<bool>("LockoutEnabled")
                         .HasColumnType("boolean");
@@ -1276,25 +1249,6 @@ namespace LabBooking.Application.Migrations
                     b.Navigation("Slot");
                 });
 
-            modelBuilder.Entity("LabBooking.Domain.Entities.IncidentEquipment", b =>
-                {
-                    b.HasOne("LabBooking.Domain.Entities.Equipment", "Equipment")
-                        .WithMany()
-                        .HasForeignKey("EquipmentId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("LabBooking.Domain.Entities.Incident", "Incident")
-                        .WithMany("IncidentEquipments")
-                        .HasForeignKey("IncidentId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Equipment");
-
-                    b.Navigation("Incident");
-                });
-
             modelBuilder.Entity("LabBooking.Domain.Entities.LabRoom", b =>
                 {
                     b.HasOne("LabBooking.Domain.Entities.User", "CreatedBy")
@@ -1471,11 +1425,6 @@ namespace LabBooking.Application.Migrations
             modelBuilder.Entity("LabBooking.Domain.Entities.EquipmentMaintainSchedule", b =>
                 {
                     b.Navigation("Details");
-                });
-
-            modelBuilder.Entity("LabBooking.Domain.Entities.Incident", b =>
-                {
-                    b.Navigation("IncidentEquipments");
                 });
 
             modelBuilder.Entity("LabBooking.Domain.Entities.LabRoom", b =>

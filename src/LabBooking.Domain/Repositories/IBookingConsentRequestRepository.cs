@@ -1,4 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using LabBooking.Domain.NonEntities;
+using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -11,5 +12,7 @@ namespace LabBooking.Domain.Repositories
     {
         public Task<BookingConsentRequest?> GetByIdWithBookingAndSlotsAsync(Guid id, CancellationToken cancellationToken);
         Task ConfirmConsentCancelAsync(Guid consentId, CancellationToken cancellationToken);
+        Task CreateRescheduleRequestAsync(Guid consentId, List<NewSlotInput> newSlots, CancellationToken cancellationToken);
+        Task<Dictionary<Guid, string>> GetStatusesAsync(List<Guid> consentIds, CancellationToken cancellationToken);
     }
 }

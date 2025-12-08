@@ -44,8 +44,8 @@ public class CreateRoomMaintainScheduleCommandHandler(
 
         // 3. Lưu vào database
         // (Giả định phương thức Create trả về Guid giống như LabRoomRepository)
-        var scheduleId = await roomMaintainScheduleRepository.Create(schedule, cancellationToken);
-
+        //var scheduleId = await roomMaintainScheduleRepository.Create(schedule, cancellationToken);
+        var scheduleId = await roomMaintainScheduleRepository.CreateWithOverrideLogicAsync(schedule, cancellationToken);
         return scheduleId;
     }
 }

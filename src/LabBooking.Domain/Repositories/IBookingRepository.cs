@@ -14,9 +14,10 @@
 
         // Hàm "Thần thánh": Xử lý toàn bộ logic Duyệt + Đè + Tạo Consent
         Task ApproveBookingWithOverrideLogicAsync(Booking booking);
-        Task RejectBookingAsync(Guid bookingId, Guid managerId);
+        Task RejectBookingAsync(Guid bookingId, Guid managerId, string? reason);
         Task<List<Guid>> GetBookedLabIdsAsync(DateOnly date, Guid slotId, CancellationToken ct);
         Task<List<Booking>> GetHistoryByUserIdAsync(Guid userId);
+        Task<List<Booking>> GetApprovedHistoryByUserIdAsync(Guid userId, CancellationToken cancellationToken);
     }
 
     public enum BookingApprovalResult
