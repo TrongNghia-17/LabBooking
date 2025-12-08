@@ -16,7 +16,7 @@ namespace LabBooking.Application.Features.BookingChangeRequest.Commands.RejectBo
             if (!isValidManager)
                 throw new BadRequestException("Bạn không có quyền từ chối yêu cầu thay đổi này.");
             // Lưu ý: request.BookingId ở đây thực chất là ID của ChangeRequest (do FE truyền lên)
-            await requestRepository.RejectChangeRequestAsync(request.BookingId, request.ManagerId);
+            await requestRepository.RejectChangeRequestAsync(request.BookingId, request.ManagerId, request.Reason);
 
             return true;
         }

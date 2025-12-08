@@ -3,17 +3,60 @@ using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection.Metadata;
 using System.Text;
 using System.Threading.Tasks;
+using static Microsoft.EntityFrameworkCore.DbLoggerCategory.Database;
 
 namespace LabBooking.Infrastructure.Repositories
 {
-    internal class BookingChangeRequestRepository(LabBookingDbContext dbContext) : IBookingChangeRequestRepository
+    internal class BookingChangeRequestRepository(LabBookingDbContext dbContext, INotificationRepository notificationRepo) : IBookingChangeRequestRepository
     {
         public async Task<BookingChangeRequest> CreateAsync(BookingChangeRequest entity)
         {
+            var pushQueue = new List<PushNotificationData>();
+
             dbContext.BookingChangeRequests.Add(entity);
+
+            var bookingInfo = await dbContext.Bookings
+                .Where(b => b.Id == entity.BookingId)
+                .Select(b => new
+                {
+                    b.Title,
+                    LabName = b.LabRoom.LabName,
+                    ManagerId = b.LabRoom.MainManagerId
+                })
+                .FirstOrDefaultAsync();
+
+            if (bookingInfo == null)
+                throw new NotFoundException("Booking", entity.BookingId.ToString());
+
+            // 2. [FIX] Gửi thông báo cho MANAGER (Thay vì người yêu cầu)
+            var (_, mgrPush) = notificationRepo.PrepareNotification(
+                bookingInfo.ManagerId, // 👈 Gửi về ID của Manager
+                "📝 Có yêu cầu thay đổi lịch mới",
+                $"Đơn '{bookingInfo.Title}' tại {bookingInfo.LabName} có yêu cầu thay đổi lịch cần duyệt.",
+                "MANAGER_NewChangeRequest", // Loại notification để FE Manager xử lý
+                new { requestId = entity.Id, bookingId = entity.BookingId }
+            );
+            pushQueue.Add(mgrPush);
+
+            // 3. (Optional) Gửi xác nhận cho User tạo yêu cầu (để họ yên tâm)
+            var (_, userPush) = notificationRepo.PrepareNotification(
+                entity.RequestedById,
+                "⏳ Đã gửi yêu cầu thay đổi",
+                $"Yêu cầu đổi lịch cho đơn '{bookingInfo.Title}' đang chờ quản lý xét duyệt.",
+                "CHANGE_REQUEST_SENT",
+                new { requestId = entity.Id }
+            );
+            pushQueue.Add(userPush);
+
+            // 2. Save
             await dbContext.SaveChangesAsync();
+
+            // 3. Bắn Push (Fire-and-forget)
+            notificationRepo.RunPushNotificationTask(pushQueue);
+
             return await dbContext.BookingChangeRequests
                 .Include(r => r.NewSlots) // Load slot mới
                 .Include(r => r.Booking)  // Load booking gốc
@@ -61,8 +104,9 @@ namespace LabBooking.Infrastructure.Repositories
                 .ToListAsync();
         }
 
-        public async Task RejectChangeRequestAsync(Guid requestId, Guid managerId)
+        public async Task RejectChangeRequestAsync(Guid requestId, Guid managerId, string reason)
         {
+            var pushQueue = new List<PushNotificationData>();
             // 1. Tìm Request
             var request = await dbContext.BookingChangeRequests
                 .FirstOrDefaultAsync(r => r.Id == requestId);
@@ -75,10 +119,47 @@ namespace LabBooking.Infrastructure.Repositories
 
             // 2. Update trạng thái
             request.Status = BookingChangeRequestStatus.Rejected;
-            // request.RejectedById = managerId; // (Optional)
+            //request.RejectedById = managerId; // (Optional)
+
+            var (_, rejectPush) = notificationRepo.PrepareNotification(
+                request.RequestedById,
+                "❌ Yêu cầu đổi lịch bị từ chối",
+                $"Quản lý đã từ chối yêu cầu đổi lịch của bạn. Lý do: {reason}",
+                "CHANGE_REQUEST_REJECTED",
+                new { requestId = request.Id, reason }
+            );
+            pushQueue.Add(rejectPush);
+
+            var relatedConsent = await dbContext.BookingConsentRequests
+            .FirstOrDefaultAsync(c =>
+            c.BookingId == request.BookingId &&       // Cùng Booking gốc
+            c.CreatedById == request.RequestedById && // Cùng người yêu cầu
+            c.Status == ConsentStatus.Rescheduled);   // Đang trong trạng thái chờ
+
+            if (relatedConsent != null)
+            {
+                // Reset về Pending => App User sẽ thấy lại nút "Hủy / Chọn lịch bù"
+                relatedConsent.Status = ConsentStatus.Pending;
+
+                // (Optional) Update thời gian để biết vừa mới bị reset
+                // relatedConsent.UpdatedAt = DateTime.UtcNow; 
+
+                var notification = await dbContext.Notifications
+                .FirstOrDefaultAsync(n => n.DataPayload.Contains(relatedConsent.Id.ToString()));
+
+                if (notification != null)
+                {
+                    notification.IsRead = false; // 👈 QUAN TRỌNG: Bắt buộc user phải đọc lại
+                    notification.CreatedAt = DateTime.UtcNow; // (Tuỳ chọn) Đẩy lên đầu danh sách
+
+                    // Cập nhật nội dung cho hợp ngữ cảnh
+                    notification.Message = $"Yêu cầu đổi lịch của bạn bị từ chối. Lý do: {reason}. Vui lòng chọn lại.";
+                }
+            }
 
             // 3. Save
-            //await dbContext.SaveChangesAsync();
+            await dbContext.SaveChangesAsync();
+            notificationRepo.RunPushNotificationTask(pushQueue);
         }
 
         public Task<bool> CheckBookingChangeRequestIsBelongToThisManager(Guid bookingChangeId, Guid managerId)
@@ -98,6 +179,7 @@ namespace LabBooking.Infrastructure.Repositories
 
         public async Task ApproveRequestAsync(Guid requestId, Guid managerId)
         {
+            var pushQueue = new List<PushNotificationData>();
             // 1. LẤY REQUEST & BOOKING GỐC
             var request = await GetRequestWithDetailsAsync(requestId);
             if (request == null)
@@ -280,6 +362,7 @@ namespace LabBooking.Infrastructure.Repositories
                     }
                 }
 
+
                 // B. Thêm các slot mới chưa có trong DB
                 foreach (var newReqSlot in request.NewSlots)
                 {
@@ -305,11 +388,47 @@ namespace LabBooking.Infrastructure.Repositories
 
             // 4. CẬP NHẬT TRẠNG THÁI REQUEST
             request.Status = BookingChangeRequestStatus.Approved;
+            request.ProcessedById = managerId;
+            request.ProcessedAt = DateTime.UtcNow;
             // request.ApprovedById = managerId; // Nếu có trường này
             dbContext.Entry(request).State = EntityState.Modified;
 
+            // 7. [DÙNG REPO] Gửi thông báo thành công
+            var (_, successPush) = notificationRepo.PrepareNotification(
+                request.RequestedById,
+                "✅ Yêu cầu thay đổi được chấp thuận",
+                $"Các thay đổi cho đơn '{booking.Title}' đã được cập nhật thành công.",
+                "CHANGE_REQUEST_APPROVED",
+                new { requestId = request.Id, bookingId = booking.Id }
+            );
+            pushQueue.Add(successPush);
+
+            var relatedConsent = await dbContext.BookingConsentRequests
+                .FirstOrDefaultAsync(c =>
+                    c.BookingId == request.BookingId &&
+                    c.CreatedById == request.RequestedById &&
+                    c.Status == ConsentStatus.Rescheduled);
+
+            if (relatedConsent != null)
+            {
+                // A. Cập nhật Consent thành "Đã Xong" (AcceptedCancel hoặc RescheduledSuccess tùy enum của bạn)
+                // Ở đây giữ Rescheduled cũng được, hoặc có thể thêm trạng thái Finished
+                // relatedConsent.Status = ConsentStatus.Finished; 
+
+                // B. TÌM VÀ ĐÁNH DẤU THÔNG BÁO LÀ "ĐÃ ĐỌC"
+                var notification = await dbContext.Notifications
+                    .FirstOrDefaultAsync(n => n.DataPayload.Contains(relatedConsent.Id.ToString()) && !n.IsRead);
+
+                if (notification != null)
+                {
+                    notification.IsRead = true; // ✅ Đánh dấu đã đọc -> App sẽ hiện màu xám
+                }
+
+            }
+
             // 5. LƯU THAY ĐỔI
             await dbContext.SaveChangesAsync();
+            notificationRepo.RunPushNotificationTask(pushQueue);
         }
 
         public async Task<List<BookingSlot>> GetConflictingSlotsAsync(Guid labRoomId, List<BookingSlot> requestedSlots, Guid? excludeBookingId = null)

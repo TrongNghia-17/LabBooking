@@ -16,7 +16,7 @@ namespace LabBooking.Application.Features.Booking.Commands.RejectBooking
             if (!isValidManager)
                 throw new BadRequestException("Bạn không có quyền từ chối đơn này.");
             // Gọi hàm trong Repository để xử lý toàn bộ logic
-            await bookingRepository.RejectBookingAsync(request.BookingId, request.ManagerId);
+            await bookingRepository.RejectBookingAsync(request.BookingId, request.ManagerId, request.reason);
 
             return true;
         }

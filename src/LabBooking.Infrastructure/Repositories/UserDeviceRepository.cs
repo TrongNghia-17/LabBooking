@@ -20,7 +20,7 @@ internal class UserDeviceRepository(LabBookingDbContext dbContext) : IUserDevice
         await dbContext.SaveChangesAsync(cancellation);
     }
 
-    public async Task<List<string>> GetTokensByUserIdAsync(Guid userId, CancellationToken cancellation = default)
+    public async Task<List<string>> GetTokensByUserIdAsync(Guid? userId, CancellationToken cancellation = default)
     {
         return await dbContext.UserDevices
             .Where(d => d.UserId == userId)
