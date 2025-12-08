@@ -8,6 +8,7 @@ namespace LabBooking.Application.Features.Booking.Commands.RejectBooking
 {
     public record RejectBookingCommand(
     Guid BookingId,
-    Guid ManagerId
+    Guid ManagerId,
+    string? reason
 ) : IRequest<bool>;
 }

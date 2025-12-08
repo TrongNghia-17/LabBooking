@@ -18,15 +18,38 @@ namespace LabBooking.Infrastructure.Repositories
 
             dbContext.BookingChangeRequests.Add(entity);
 
-            // 1. [THÊM MỚI] Tạo thông báo xác nhận cho người dùng
-            var (_, pushData) = notificationRepo.PrepareNotification(
-                entity.RequestedById,
-                "📝 Yêu cầu thay đổi đã được gửi",
-                "Yêu cầu đổi lịch của bạn đang chờ quản lý xét duyệt.",
-                "CHANGE_REQUEST_CREATED",
+            var bookingInfo = await dbContext.Bookings
+                .Where(b => b.Id == entity.BookingId)
+                .Select(b => new
+                {
+                    b.Title,
+                    LabName = b.LabRoom.LabName,
+                    ManagerId = b.LabRoom.MainManagerId
+                })
+                .FirstOrDefaultAsync();
+
+            if (bookingInfo == null)
+                throw new NotFoundException("Booking", entity.BookingId.ToString());
+
+            // 2. [FIX] Gửi thông báo cho MANAGER (Thay vì người yêu cầu)
+            var (_, mgrPush) = notificationRepo.PrepareNotification(
+                bookingInfo.ManagerId, // 👈 Gửi về ID của Manager
+                "📝 Có yêu cầu thay đổi lịch mới",
+                $"Đơn '{bookingInfo.Title}' tại {bookingInfo.LabName} có yêu cầu thay đổi lịch cần duyệt.",
+                "MANAGER_NewChangeRequest", // Loại notification để FE Manager xử lý
                 new { requestId = entity.Id, bookingId = entity.BookingId }
             );
-            pushQueue.Add(pushData);
+            pushQueue.Add(mgrPush);
+
+            // 3. (Optional) Gửi xác nhận cho User tạo yêu cầu (để họ yên tâm)
+            var (_, userPush) = notificationRepo.PrepareNotification(
+                entity.RequestedById,
+                "⏳ Đã gửi yêu cầu thay đổi",
+                $"Yêu cầu đổi lịch cho đơn '{bookingInfo.Title}' đang chờ quản lý xét duyệt.",
+                "CHANGE_REQUEST_SENT",
+                new { requestId = entity.Id }
+            );
+            pushQueue.Add(userPush);
 
             // 2. Save
             await dbContext.SaveChangesAsync();

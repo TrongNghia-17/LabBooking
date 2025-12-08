@@ -49,105 +49,136 @@
     {
         var pushQueue = new List<PushNotificationData>();
 
-        // 1. TÌM CÁC SLOT BỊ ẢNH HƯỞNG
-        // Vì BookingSlot chỉ lưu Date và SlotId, ta cần join với Slot Template để biết giờ bắt đầu/kết thúc cụ thể
-
-        // A. Lấy tất cả slot active của phòng này trong khoảng ngày bảo trì
-        var candidateSlots = await dbContext.BookingSlots
-            .Include(s => s.Booking)
-            .Include(s => s.Slot) // Include Template giờ
-            .Where(s =>
-                s.Booking.LabRoomId == schedule.LabRoomId &&
-                s.Status == BookingSlotStatus.Active &&
-                s.Date >= DateOnly.FromDateTime(schedule.StartTime) &&
-                s.Date <= DateOnly.FromDateTime(schedule.EndTime)
-            )
-            .ToListAsync(cancellationToken);
-
-        // B. Lọc chính xác theo giờ (Time Overlap)
-        // Công thức trùng: (StartA < EndB) && (EndA > StartB)
-        var conflictingSlots = candidateSlots.Where(s =>
+        try
         {
-            var slotStart = s.Date.ToDateTime(s.Slot.StartTime);
-            var slotEnd = s.Date.ToDateTime(s.Slot.EndTime);
+            // =========================================================
+            // 1. XỬ LÝ TIMEZONE & QUERY DATA
+            // =========================================================
 
-            return slotStart < schedule.EndTime && slotEnd > schedule.StartTime;
-        }).ToList();
+            // Lấy múi giờ VN để tính toán ngày cho chuẩn (Tránh vụ 6h sáng thành 11h đêm hôm trước)
+            var vnTimeZone = TimeZoneInfo.FindSystemTimeZoneById("SE Asia Standard Time");
 
-        // 2. XỬ LÝ GHI ĐÈ (GROUP BY BOOKING)
-        if (conflictingSlots.Any())
-        {
-            var victimGroups = conflictingSlots.GroupBy(s => s.BookingId);
+            // Convert giờ bảo trì (UTC) sang giờ VN
+            var vnStart = TimeZoneInfo.ConvertTimeFromUtc(schedule.StartTime, vnTimeZone);
+            var vnEnd = TimeZoneInfo.ConvertTimeFromUtc(schedule.EndTime, vnTimeZone);
 
-            foreach (var group in victimGroups)
+            // Lấy ngày bắt đầu và kết thúc theo giờ VN (Để so khớp với Date trong BookingSlot)
+            var dateStart = DateOnly.FromDateTime(vnStart);
+            var dateEnd = DateOnly.FromDateTime(vnEnd);
+
+            // [FIX LỖI INCLUDE]: Chuyển điều kiện Approved xuống Where
+            var candidateSlots = await dbContext.BookingSlots
+                .Include(s => s.Booking) // Chỉ Include Booking, không filter ở đây
+                .Include(s => s.Slot)    // Include Template giờ
+                .Where(s =>
+                    s.Booking.LabRoomId == schedule.LabRoomId &&
+                    s.Status == BookingSlotStatus.Active &&
+                    // Lọc những booking đã Approved
+                    s.Booking.Status == BookingStatus.Approved &&
+                    // So sánh ngày dựa trên giờ VN đã convert
+                    s.Date >= dateStart &&
+                    s.Date <= dateEnd
+                )
+                .ToListAsync(cancellationToken);
+
+            // =========================================================
+            // 2. LỌC CHÍNH XÁC THEO GIỜ (IN MEMORY)
+            // =========================================================
+            var conflictingSlots = candidateSlots.Where(s =>
             {
-                var lostSlots = group.ToList();
-                var victimBooking = lostSlots.First().Booking;
+                // Tái tạo thời gian thực của Slot (Theo giờ VN)
+                // s.Date là ngày (VD: 10/12), s.Slot.StartTime là giờ (VD: 07:00)
+                var slotStartLocal = s.Date.ToDateTime(s.Slot.StartTime);
+                var slotEndLocal = s.Date.ToDateTime(s.Slot.EndTime);
 
-                // a. Cập nhật trạng thái slot cũ -> Overridden
-                foreach (var slot in lostSlots)
+                // Convert Slot sang UTC để so sánh với Schedule (Schedule luôn là UTC)
+                // Hoặc Convert Schedule sang Local để so sánh (Ở trên đã có vnStart, vnEnd)
+                // Cách nào cũng được, miễn là cùng hệ quy chiếu. Dưới đây dùng hệ VN (Local)
+
+                // Logic trùng: (StartA < EndB) && (EndA > StartB)
+                return slotStartLocal < vnEnd && slotEndLocal > vnStart;
+            }).ToList();
+
+            // =========================================================
+            // 3. XỬ LÝ GHI ĐÈ (NẾU CÓ TRÙNG)
+            // =========================================================
+            if (conflictingSlots.Any())
+            {
+                var victimGroups = conflictingSlots.GroupBy(s => s.BookingId);
+
+                foreach (var group in victimGroups)
                 {
-                    slot.Status = BookingSlotStatus.Overridden;
-                    // slot.OverriddenByBookingId = null; // Không phải do booking đè
-                    // slot.OverriddenByMaintainScheduleId = schedule.Id; // (Nếu bạn đã thêm cột này vào BookingSlot)
+                    var lostSlots = group.ToList();
+                    var victimBooking = lostSlots.First().Booking;
 
-                    dbContext.Entry(slot).State = EntityState.Modified;
+                    // a. Cập nhật trạng thái slot cũ -> Overridden
+                    foreach (var slot in lostSlots)
+                    {
+                        slot.Status = BookingSlotStatus.Overridden;
+                        // slot.OverriddenByMaintainScheduleId = schedule.Id; // Nếu có cột này thì gán vào
+                        dbContext.Entry(slot).State = EntityState.Modified;
+                    }
+
+                    // b. Tạo Consent Request
+                    var lostSlotsDetail = lostSlots.Select(s => new { BookingSlotId = s.Id, Date = s.Date, SlotId = s.SlotId }).ToList();
+
+                    var consentRequest = new BookingConsentRequest
+                    {
+                        Id = Guid.NewGuid(),
+                        BookingId = victimBooking.Id,
+                        CreatedById = victimBooking.CreatedById,
+                        // PriorityBookingId để null vì đây là do bảo trì
+                        OverriddenSlotIdsJson = JsonSerializer.Serialize(lostSlotsDetail),
+                        Status = ConsentStatus.Pending,
+                        CreatedAt = DateTime.UtcNow
+                    };
+                    dbContext.Set<BookingConsentRequest>().Add(consentRequest);
+
+                    // c. Tạo thông báo + Push
+                    var conflictDates = string.Join(", ", lostSlots.Select(s => s.Date.ToString("dd/MM")).Distinct());
+
+                    var overridePayload = new
+                    {
+                        type = "OVERRIDE_CONSENT",
+                        consentRequestId = consentRequest.Id,
+                        bookingTitle = victimBooking.Title,
+                        action = "resolve_override",
+                        consentStatus = "Pending",
+                        reason = "Maintenance"
+                    };
+
+                    var (_, victimPush) = notificationRepo.PrepareNotification(
+                        victimBooking.CreatedById,
+                        "🛠️ Lịch đặt phòng bị hủy do bảo trì",
+                        $"Đơn '{victimBooking.Title}' bị ảnh hưởng bởi lịch bảo trì vào ngày {conflictDates}. Vui lòng chọn lịch bù.",
+                        "OVERRIDE_CONSENT",
+                        overridePayload
+                    );
+                    pushQueue.Add(victimPush);
                 }
-
-                // b. Tạo BookingConsentRequest (Yêu cầu sự đồng ý/chọn lại)
-                var lostSlotsDetail = lostSlots.Select(s => new { BookingSlotId = s.Id, Date = s.Date, SlotId = s.SlotId }).ToList();
-
-                var consentRequest = new BookingConsentRequest
-                {
-                    Id = Guid.NewGuid(),
-                    BookingId = victimBooking.Id,
-                    CreatedById = victimBooking.CreatedById,
-
-                    // PriorityBookingId = null, // Vì đây là do bảo trì
-                    RoomMaintainScheduleId = schedule.Id, // 👈 BẠN CẦN THÊM CỘT NÀY VÀO DB NẾU MUỐN TRACKING KỸ
-
-                    OverriddenSlotIdsJson = JsonSerializer.Serialize(lostSlotsDetail),
-                    Status = ConsentStatus.Pending,
-                    CreatedAt = DateTime.UtcNow
-                };
-                dbContext.Set<BookingConsentRequest>().Add(consentRequest);
-
-                // c. [DÙNG REPO] Tạo thông báo cho Nạn Nhân
-                var conflictDates = string.Join(", ", lostSlots.Select(s => s.Date.ToString("dd/MM")).Distinct());
-
-                var overridePayload = new
-                {
-                    type = "OVERRIDE_CONSENT",
-                    consentRequestId = consentRequest.Id,
-                    bookingTitle = victimBooking.Title,
-                    action = "resolve_override",
-                    consentStatus = "Pending",
-                    reason = "Maintenance" // Đánh dấu là do bảo trì
-                };
-
-                var (_, victimPush) = notificationRepo.PrepareNotification(
-                    victimBooking.CreatedById,
-                    "🛠️ Lịch đặt phòng bị hủy do bảo trì",
-                    $"Đơn '{victimBooking.Title}' bị ảnh hưởng bởi lịch bảo trì phòng thí nghiệm vào ngày {conflictDates}. Vui lòng chọn lịch bù.",
-                    "OVERRIDE_CONSENT",
-                    overridePayload
-                );
-                pushQueue.Add(victimPush);
             }
+
+            // =========================================================
+            // 4. LƯU LỊCH BẢO TRÌ & COMMIT
+            // =========================================================
+            schedule.Id = Guid.NewGuid();
+            if (schedule.RoomMaintainStatus == null) schedule.RoomMaintainStatus = RoomMaintainStatus.NotYet;
+
+            dbContext.RoomMaintainSchedules.Add(schedule);
+
+            await dbContext.SaveChangesAsync(cancellationToken);
+
+            // 5. BẮN PUSH
+            notificationRepo.RunPushNotificationTask(pushQueue);
+
+            return schedule.Id;
         }
-
-        // 3. LƯU LỊCH BẢO TRÌ & COMMIT DB
-        schedule.Id = Guid.NewGuid(); // Đảm bảo ID mới
-        if (schedule.RoomMaintainStatus == null) schedule.RoomMaintainStatus = RoomMaintainStatus.NotYet;
-
-        dbContext.RoomMaintainSchedules.Add(schedule);
-
-        await dbContext.SaveChangesAsync(cancellationToken);
-
-        // 4. BẮN PUSH (Background)
-        notificationRepo.RunPushNotificationTask(pushQueue);
-
-        return schedule.Id;
+        catch (Exception ex)
+        {
+            // Log lỗi tại đây (Nếu có ILogger)
+            Console.WriteLine($"Error creating maintain schedule: {ex.Message}");
+            throw; // Ném lỗi ra ngoài để Controller trả về 500
+        }
     }
 
     public async Task Update(RoomMaintainSchedule entity, CancellationToken cancellationToken = default)

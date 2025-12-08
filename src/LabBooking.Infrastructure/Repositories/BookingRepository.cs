@@ -534,7 +534,7 @@ namespace LabBooking.Infrastructure.Repositories
             var (_, successPush) = notificationRepo.PrepareNotification(
                  booking.CreatedById,
                  "✅ Thành công",
-                 $"Đơn {booking.Title} đã được duyệt. Vui lòng check tại lịch sử duyệt đơn",
+                 $"Đơn '{booking.Title}' đã được duyệt. Vui lòng check tại lịch sử duyệt đơn",
                  "BOOKING_APPROVED"
             );
             pushQueue.Add(successPush);
@@ -681,5 +681,23 @@ namespace LabBooking.Infrastructure.Repositories
         //        // _logger.LogError(ex, "..."); // Nếu có Logger
         //    }
         //}        
+
+        public async Task<List<Booking>> GetApprovedHistoryByUserIdAsync(Guid userId, CancellationToken cancellationToken)
+        {
+            return await dbContext.Bookings
+                .AsNoTracking() // Read-only nên dùng NoTracking cho nhanh
+                .Include(b => b.LabRoom)
+
+                // [QUAN TRỌNG] Filtered Include: Chỉ lấy các slot đang Active
+                // Giúp giảm tải dữ liệu rác (những slot đã hủy hoặc bị đè)
+                .Include(b => b.Slots.Where(s => s.Status == BookingSlotStatus.Active))
+
+                .Where(b =>
+                    b.CreatedById == userId &&          // Của chính mình
+                    b.Status == BookingStatus.Approved  // Đã được duyệt
+                )
+                .OrderByDescending(b => b.CreatedAt)    // Mới nhất lên đầu
+                .ToListAsync(cancellationToken);
+        }
     }
 }
