@@ -5,5 +5,5 @@ public record CreateIncidentCommand(
     IncidentType Type,
     LevelOfImportance ImportanceLevel,
     string Description,
-    Guid? EquipmentId
+    List<Guid>? EquipmentIds
 ) : IRequest<Guid>;

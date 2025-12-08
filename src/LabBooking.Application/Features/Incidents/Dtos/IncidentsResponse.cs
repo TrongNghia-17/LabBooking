@@ -9,6 +9,7 @@ public class IncidentResponse
     public string ImportanceLevel { get; set; } = string.Empty;
     public string Status { get; set; } = string.Empty;
     public string? EquipmentName { get; set; } // Null nếu không hỏng máy
+    public List<EquipmentSimpleResponse> Equipments { get; set; }
 
     // --- THÔNG TIN NHẠY CẢM (Sẽ ẩn nếu là Guard) ---
     public string? ReportedByName { get; set; }
