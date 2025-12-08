@@ -10,5 +10,6 @@
 public record CreateEquipmentCommand(
     string EquipmentName,
     string? Description,
-    Guid LabRoomId
+    Guid LabRoomId,
+    Guid EquipmentCategoryId
 ) : IRequest<Guid>;
