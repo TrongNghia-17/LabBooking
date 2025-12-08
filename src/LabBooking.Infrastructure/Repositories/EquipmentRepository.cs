@@ -40,6 +40,10 @@ internal class EquipmentRepository(LabBookingDbContext dbContext) : IEquipmentRe
         // 1. Query cơ bản
         var baseQuery = dbContext
             .Equipments
+            .Include(e => e.LabRoom) // Include Phòng Lab (nếu cần)
+
+        // --- BẮT BUỘC THÊM DÒNG NÀY ---
+        .Include(e => e.EquipmentCategory)
             .Where(e => searchPhraseLower == null ||
                         (e.EquipmentName.ToLower().Contains(searchPhraseLower)) ||
                         (e.Description != null && e.Description.ToLower().Contains(searchPhraseLower)));

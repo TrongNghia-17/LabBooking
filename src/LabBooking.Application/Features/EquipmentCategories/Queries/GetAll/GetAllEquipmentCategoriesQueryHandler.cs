@@ -1,21 +1,35 @@
 ﻿using LabBooking.Application.Features.EquipmentCategories.Dtos;
-using LabBooking.Application.Services.Users;
 
 namespace LabBooking.Application.Features.EquipmentCategories.Queries.GetAll;
 
 public class GetAllEquipmentCategoriesQueryHandler(
     IEquipmentCategoryRepository repository,
-    ICurrentUserService currentUserService,
-    IMapper mapper
-    ) : IRequestHandler<GetAllEquipmentCategoriesQuery, IEnumerable<EquipmentCategoryResponse>>
+    IMapper mapper,
+    ILogger<GetAllEquipmentCategoriesQueryHandler> logger
+    ) : IRequestHandler<GetAllEquipmentCategoriesQuery, PagedResult<EquipmentCategoryResponse>>
 {
-    public async Task<IEnumerable<EquipmentCategoryResponse>> Handle(GetAllEquipmentCategoriesQuery request, CancellationToken cancellationToken)
+    public async Task<PagedResult<EquipmentCategoryResponse>> Handle(GetAllEquipmentCategoriesQuery request, CancellationToken cancellationToken)
     {
-        var userId = currentUserService.UserId
-            ?? throw new UnauthorizedAccessException("Bạn cần đăng nhập.");
+        logger.LogInformation("Getting Equipment Categories: Page {Page}, Size {Size}, Search '{Search}'",
+            request.PageNumber, request.PageSize, request.SearchPhrase);
 
-        var categories = await repository.GetByManagerIdAsync(userId, cancellationToken);
+        // Gọi Repository
+        var (categories, totalCount) = await repository.GetAllMatchingAsync(
+            request.SearchPhrase,
+            request.PageSize,
+            request.PageNumber,
+            request.SortBy,
+            request.SortDirection,
+            cancellationToken);
 
-        return mapper.Map<IEnumerable<EquipmentCategoryResponse>>(categories);
+        // Map sang DTO
+        var dtos = mapper.Map<IEnumerable<EquipmentCategoryResponse>>(categories);
+
+        // Trả về kết quả phân trang
+        return new PagedResult<EquipmentCategoryResponse>(
+            dtos,
+            totalCount,
+            request.PageSize,
+            request.PageNumber);
     }
 }
