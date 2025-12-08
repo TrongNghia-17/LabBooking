@@ -1,13 +1,44 @@
 ﻿using LabBooking.Domain.Enums;
+using LabBooking.Domain.Exceptions;
 
 namespace LabBooking.Infrastructure.Repositories;
 
-internal class IncidentRepository(LabBookingDbContext dbContext) : IIncidentRepository
+internal class IncidentRepository(LabBookingDbContext dbContext, INotificationRepository notificationRepo) : IIncidentRepository
 {
     public async Task<Guid> CreateAsync(Incident incident, CancellationToken token)
     {
+        var pushQueue = new List<PushNotificationData>();
+
+        // 1. Lấy thông tin Manager của phòng Lab liên quan
+        var labInfo = await dbContext.LabRooms
+            .Where(l => l.Id == incident.LabRoomId)
+            .Select(l => new { l.MainManagerId, l.LabName })
+            .FirstOrDefaultAsync(token);
+
+        if (labInfo == null)
+            throw new NotFoundException("LabRoom", incident.LabRoomId.ToString());
+
         await dbContext.Incidents.AddAsync(incident, token);
+
+        var notiMessage = !string.IsNullOrEmpty(incident.Description)
+                ? $"Sự cố mới tại {labInfo.LabName}: {incident.Description}"
+                : $"Có báo cáo sự cố mới tại {labInfo.LabName} cần bạn kiểm tra.";
+
+        // Cắt ngắn message nếu quá dài để hiển thị thông báo đẹp hơn
+        if (notiMessage.Length > 100) notiMessage = notiMessage.Substring(0, 97) + "...";
+
+        var (_, mgrPush) = notificationRepo.PrepareNotification(
+            labInfo.MainManagerId,
+            "🚨 Báo cáo sự cố mới",
+            notiMessage,
+            "MANAGER_NEW_INCIDENT",
+            new { incidentId = incident.Id, labRoomId = incident.LabRoomId }
+        );
+        pushQueue.Add(mgrPush);
+
         await dbContext.SaveChangesAsync(token);
+
+        notificationRepo.RunPushNotificationTask(pushQueue);
 
         return incident.Id;
     }
