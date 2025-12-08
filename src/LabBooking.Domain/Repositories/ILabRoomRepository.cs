@@ -1,4 +1,5 @@
 ﻿using LabBooking.Application.Features.LabRooms.Dtos;
+using LabBooking.Domain.NonEntities;
 
 namespace LabBooking.Domain.Repositories;
 
@@ -20,4 +21,5 @@ public interface ILabRoomRepository
     Task<IEnumerable<LabRoom>> GetUnmaintainedLabRoomsAsync(CancellationToken cancellationToken = default);
     Task<IEnumerable<LabRoom>> GetLabsByManagerWithEquipmentsAsync(Guid managerId, CancellationToken cancellationToken = default);
     Task<IEnumerable<MonthlyTopLabDto>> GetTopLabPerMonthAsync(int year, CancellationToken token);
+    Task<IEnumerable<LabStatModel>> GetRawStatisticsAsync(int year, CancellationToken cancellationToken);
 }

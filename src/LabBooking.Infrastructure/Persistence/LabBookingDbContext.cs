@@ -26,6 +26,7 @@ internal class LabBookingDbContext(DbContextOptions<LabBookingDbContext> options
     public DbSet<BookingConsentRequest> BookingConsentRequests { get; set; }
     public DbSet<EquipmentCategory> EquipmentCategories { get; set; }
     public DbSet<EquipmentMaintenance> EquipmentMaintenances { get; set; }
+    public DbSet<IncidentEquipment> IncidentEquipments { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

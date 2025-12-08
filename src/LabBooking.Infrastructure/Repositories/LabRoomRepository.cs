@@ -1,4 +1,5 @@
 ﻿using LabBooking.Application.Features.LabRooms.Dtos;
+using LabBooking.Domain.NonEntities;
 
 namespace LabBooking.Infrastructure.Repositories;
 
@@ -162,5 +163,31 @@ internal class LabRoomRepository(LabBookingDbContext dbContext) : ILabRoomReposi
             .ToList();
 
         return result;
+    }
+
+    public async Task<IEnumerable<LabStatModel>> GetRawStatisticsAsync(int year, CancellationToken cancellationToken)
+    {
+        // Query vào BookingSlot vì nó chứa ngày tháng
+        return await dbContext.Set<BookingSlot>()
+            .AsNoTracking() // Read-only nên dùng AsNoTracking cho nhẹ
+            .Include(bs => bs.Booking)
+                .ThenInclude(b => b.LabRoom)
+            // Lọc dữ liệu: Cùng năm, Slot Active, Có Booking và Phòng hợp lệ
+            .Where(bs => bs.Date.Year == year
+                         && bs.Status == BookingSlotStatus.Active
+                         && bs.Booking != null
+                         && bs.Booking.LabRoom != null)
+            // Map trực tiếp sang Domain Model
+            .Select(bs => new LabStatModel
+            {
+                LabId = bs.Booking!.LabRoomId,
+                LabName = bs.Booking.LabRoom!.LabName ?? "Unknown",
+                Month = bs.Date.Month,
+                BookingId = bs.BookingId,
+                // Logic xác định bảo trì (tùy chỉnh theo enum của bạn)
+                IsMaintenance = bs.Reason == UnavailableReason.Maintenance
+                                || bs.Priority == 0 // 0 is Maintenance
+            })
+            .ToListAsync(cancellationToken);
     }
 }

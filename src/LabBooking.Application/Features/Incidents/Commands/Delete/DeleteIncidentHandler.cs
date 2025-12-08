@@ -18,54 +18,64 @@ public class DeleteIncidentHandler(
         bool isAdmin = roles.Contains("Admin");
 
         // 2. Lấy Incident từ DB
+        // LƯU Ý: Repository cần Include(i => i.IncidentEquipments).ThenInclude(ie => ie.Equipment)
         var incident = await incidentRepository.GetByIdWithDetailsAsync(request.Id, cancellationToken)
             ?? throw new NotFoundException(nameof(Incident), request.Id.ToString());
 
-        // 3. CHECK QUYỀN (Logic cực kỳ quan trọng)
-        // Quyền 1: Chính chủ (Reporter) được xóa.
+        // 3. CHECK QUYỀN
         bool isReporter = incident.ReportedById == currentUserId;
-
-        // Quyền 2: Manager của phòng Lab đó được xóa.
         bool isManager = incident.LabRoom?.MainManagerId == currentUserId;
 
-        // Nếu không phải Admin, không phải Chủ phòng, cũng không phải Người báo -> Cấm
         if (!isAdmin && !isManager && !isReporter)
         {
             logger.LogWarning("User {User} cố xóa Incident {Id} nhưng không có quyền.", currentUserId, request.Id);
             throw new ForbidException("Bạn không có quyền xóa báo cáo sự cố này.");
         }
 
-        // --- LOGIC MỚI: CHẶN XÓA NẾU ĐANG BẢO TRÌ ---
-        if (incident.Equipment != null && incident.Equipment.Status == EquipmentStatus.Maintain)
-        {
-            throw new BadRequestException("Thiết bị này đang được bảo trì. Vui lòng hủy lịch bảo trì trước khi xóa báo cáo sự cố.");
-        }
-
-        // 4. RULE: Không được xóa sự cố đã xử lý xong (Resolved)
+        // 4. RULE: Không được xóa sự cố đã xử lý xong
         if (incident.IsResolved)
         {
             throw new BadRequestException("Sự cố này đã được xử lý xong. Không thể xóa (Cần giữ lại làm lịch sử).");
         }
 
-        // 5. RULE: Hoàn trả trạng thái Thiết bị (Nếu là báo hỏng nhầm)
-        // Nếu sự cố là 'Hư hỏng' VÀ có gắn thiết bị VÀ thiết bị đang bị set là Broken
-        if (incident.Type == IncidentType.EquipmentFailure &&
-            incident.Equipment != null &&
-            incident.Equipment.Status == EquipmentStatus.Broken)
+        // 5. [SỬA ĐỔI] RULE: Kiểm tra xem có thiết bị nào đang Bảo trì không
+        // Lặp qua danh sách IncidentEquipments để kiểm tra
+        var maintainingDevice = incident.IncidentEquipments
+            .Select(ie => ie.Equipment)
+            .FirstOrDefault(e => e.Status == EquipmentStatus.Maintain);
+
+        if (maintainingDevice != null)
         {
-            incident.Equipment.Status = EquipmentStatus.Available;
-            incident.Equipment.IsAvailable = true;
-
-            // Cập nhật lại thiết bị
-            await equipmentRepository.UpdateAsync(incident.Equipment, cancellationToken);
-
-            logger.LogInformation("Restore: Thiết bị {Name} đã được trả về Available do xóa báo cáo hỏng.", incident.Equipment.EquipmentName);
+            throw new BadRequestException($"Thiết bị '{maintainingDevice.EquipmentName}' đang được bảo trì. Vui lòng hủy lịch bảo trì trước khi xóa báo cáo.");
         }
 
-        // 6. Xóa Incident
+        // 6. [SỬA ĐỔI] RULE: Hoàn trả trạng thái thiết bị (Nếu là lỗi thiết bị)
+        if (incident.Type == IncidentType.EquipmentFailure && incident.IncidentEquipments.Any())
+        {
+            foreach (var incidentEq in incident.IncidentEquipments)
+            {
+                var equipment = incidentEq.Equipment;
+
+                // Nếu thiết bị đang bị đánh dấu là Hỏng (Broken), trả về Sẵn sàng (Available)
+                if (equipment != null && equipment.Status == EquipmentStatus.Broken)
+                {
+                    equipment.Status = EquipmentStatus.Available;
+                    equipment.IsAvailable = true;
+
+                    // Update từng thiết bị
+                    await equipmentRepository.UpdateAsync(equipment, cancellationToken);
+
+                    logger.LogInformation("Restore: Thiết bị {Name} đã được trả về Available do xóa báo cáo hỏng.", equipment.EquipmentName);
+                }
+            }
+        }
+
+        // 7. Xóa Incident
+        // EF Core sẽ tự động xóa các dòng con trong bảng IncidentEquipment (Cascade Delete)
         await incidentRepository.DeleteAsync(incident, cancellationToken);
 
         logger.LogInformation("Deleted: Incident {Id} đã bị xóa bởi {User}.", request.Id, currentUserId);
+
         return true;
     }
 }

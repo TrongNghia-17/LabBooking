@@ -10,4 +10,5 @@ public interface IEquipmentCategoryRepository
             Guid managerId,
             CancellationToken cancellationToken = default);
     Task<bool> ExistsAsync(Guid id, CancellationToken cancellationToken = default);
+    Task<IEnumerable<EquipmentCategory>> GetByLabIdAsync(Guid labId, CancellationToken cancellationToken = default);
 }

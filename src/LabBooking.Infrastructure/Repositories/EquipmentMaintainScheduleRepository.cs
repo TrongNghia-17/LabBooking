@@ -111,7 +111,8 @@ internal class EquipmentMaintainScheduleRepository(
 
                         // Tìm tất cả sự cố của máy này mà CHƯA ĐƯỢC XỬ LÝ
                         var relatedIncidents = await dbContext.Incidents
-                            .Where(i => i.EquipmentId == detail.EquipmentId && !i.IsResolved)
+                            .Where(i => !i.IsResolved &&
+                                        i.IncidentEquipments.Any(ie => ie.EquipmentId == detail.EquipmentId))
                             .ToListAsync(token);
 
                         if (relatedIncidents.Any())

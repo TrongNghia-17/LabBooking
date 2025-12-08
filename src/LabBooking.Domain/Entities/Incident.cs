@@ -16,9 +16,10 @@ public class Incident
     [ForeignKey(nameof(SlotId))]
     public Slot? Slot { get; set; }
 
-    public Guid? EquipmentId { get; set; }
-    [ForeignKey(nameof(EquipmentId))]
-    public Equipment? Equipment { get; set; }
+    //public Guid? EquipmentId { get; set; }
+    //[ForeignKey(nameof(EquipmentId))]
+    //public Equipment? Equipment { get; set; }
+    public ICollection<IncidentEquipment> IncidentEquipments { get; set; } = new List<IncidentEquipment>();
 
     public IncidentType Type { get; set; }
     public string Description { get; set; } = string.Empty;

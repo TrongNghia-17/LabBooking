@@ -3,6 +3,7 @@ using System;
 using LabBooking.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace LabBooking.Application.Migrations
 {
     [DbContext(typeof(LabBookingDbContext))]
-    partial class LabBookingDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251208164735_UpdateIncidentOneToMany")]
+    partial class UpdateIncidentOneToMany
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -199,14 +202,11 @@ namespace LabBooking.Application.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
-                    b.Property<Guid?>("PriorityBookingId")
+                    b.Property<Guid>("PriorityBookingId")
                         .HasColumnType("uuid");
 
                     b.Property<DateTime?>("ResolvedAt")
                         .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid?>("RoomMaintainScheduleId")
-                        .HasColumnType("uuid");
 
                     b.Property<int>("Status")
                         .HasColumnType("integer");
@@ -606,7 +606,7 @@ namespace LabBooking.Application.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
-                    b.Property<Guid?>("UserId")
+                    b.Property<Guid>("UserId")
                         .HasColumnType("uuid");
 
                     b.HasKey("Id");
@@ -1145,7 +1145,9 @@ namespace LabBooking.Application.Migrations
 
                     b.HasOne("LabBooking.Domain.Entities.Booking", "PriorityBooking")
                         .WithMany()
-                        .HasForeignKey("PriorityBookingId");
+                        .HasForeignKey("PriorityBookingId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
                     b.Navigation("Booking");
 
@@ -1314,7 +1316,9 @@ namespace LabBooking.Application.Migrations
                 {
                     b.HasOne("LabBooking.Domain.Entities.User", "User")
                         .WithMany("Notifications")
-                        .HasForeignKey("UserId");
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
                     b.Navigation("User");
                 });

@@ -13,59 +13,68 @@ public class CreateIncidentHandler(
 {
     public async Task<Guid> Handle(CreateIncidentCommand request, CancellationToken cancellationToken)
     {
-        // 1. Check Login
-        var reporterId = currentUserService.UserId
-            ?? throw new UnauthorizedAccessException("Bạn cần đăng nhập để báo cáo sự cố.");
-
-        // 2. Check Phòng Lab tồn tại
-        var labExists = await labRoomRepository.ExistsAsync(request.LabRoomId, cancellationToken);
-        if (!labExists)
+        // 1. Check Login & Phòng Lab (Giữ nguyên)
+        var reporterId = currentUserService.UserId ?? throw new UnauthorizedAccessException();
+        if (!await labRoomRepository.ExistsAsync(request.LabRoomId, cancellationToken))
             throw new NotFoundException(nameof(LabRoom), request.LabRoomId.ToString());
 
-        // 3. (MỚI) CHECK LOGIC TRÙNG LẶP / SPAM
-        // Logic: Nếu User này vừa báo cáo loại lỗi này ở phòng này cách đây < 1 phút -> Chặn
-        bool isSpam = await incidentRepository.IsSpamAsync(reporterId, request.LabRoomId, request.Type, cancellationToken);
-        if (isSpam)
-            throw new BadRequestException("Bạn vừa báo cáo sự cố này rồi. Vui lòng đợi một lát nếu muốn báo cáo tiếp.");
-
-        if (request.Type == IncidentType.EquipmentFailure && request.EquipmentId.HasValue)
+        // 2. Tạo Object INCIDENT (Cha)
+        var incident = new Incident
         {
-            // Lấy thiết bị ra
-            var equipment = await equipmentRepository.GetByIdAsync(request.EquipmentId.Value);
+            Id = Guid.NewGuid(),
+            LabRoomId = request.LabRoomId,
+            ReportedById = reporterId,
+            Type = request.Type,
+            ImportanceLevel = request.ImportanceLevel,
+            Description = request.Description,
+            CreatedAt = DateTime.UtcNow,
+            IsResolved = false,
+            // Khởi tạo danh sách con trống
+            IncidentEquipments = new List<IncidentEquipment>()
+        };
 
-            // Validate kỹ: Máy này có thuộc phòng Lab đang báo cáo không?
-            if (equipment == null || equipment.LabRoomId != request.LabRoomId)
+        // 3. Xử lý danh sách Thiết bị (Con)
+        if (request.Type == IncidentType.EquipmentFailure && request.EquipmentIds != null)
+        {
+            // Lọc trùng ID
+            var distinctIds = request.EquipmentIds.Distinct();
+
+            foreach (var eqId in distinctIds)
             {
-                throw new BadRequestException("Thiết bị không thuộc phòng Lab này.");
-            }
+                // Lấy thiết bị để update trạng thái
+                var equipment = await equipmentRepository.GetByIdAsync(eqId);
 
-            // Đổi trạng thái sang Hỏng (Broken)
-            if (equipment.Status != EquipmentStatus.Broken)
-            {
-                equipment.Status = EquipmentStatus.Broken;
-                equipment.IsAvailable = false;
+                // Validator đã check rồi, nhưng check lại cho an toàn logic
+                if (equipment != null && equipment.LabRoomId == request.LabRoomId)
+                {
+                    // a. Cập nhật trạng thái thiết bị -> Hỏng
+                    if (equipment.Status != EquipmentStatus.Broken)
+                    {
+                        equipment.Status = EquipmentStatus.Broken;
+                        equipment.IsAvailable = false;
+                        await equipmentRepository.UpdateAsync(equipment, cancellationToken);
+                    }
 
-                // Cần hàm Update trong EquipmentRepo
-                await equipmentRepository.UpdateAsync(equipment, cancellationToken);
+                    // b. Tạo dòng chi tiết IncidentEquipment
+                    var detail = new IncidentEquipment
+                    {
+                        Id = Guid.NewGuid(),
+                        IncidentId = incident.Id, // Link với cha
+                        EquipmentId = eqId
+                    };
+
+                    // Add vào list của cha
+                    incident.IncidentEquipments.Add(detail);
+                }
             }
         }
 
-        // 4. MAP DỮ LIỆU (Dùng AutoMapper)
-        var incident = mapper.Map<Incident>(request);
-
-        // 5. GÁN CÁC GIÁ TRỊ CÒN THIẾU (Decorate)
-        incident.Id = Guid.NewGuid();
-        incident.ReportedById = reporterId;
-        incident.CreatedAt = DateTime.UtcNow; // Luôn dùng UTC
-        incident.IsResolved = false;
-        incident.SlotId = null;
-        incident.EquipmentId = request.EquipmentId;
-
-        // 6. Lưu vào DB
+        // 4. Lưu vào Database (EF Core sẽ tự lưu cả Cha và các Con)
         await incidentRepository.CreateAsync(incident, cancellationToken);
 
-        logger.LogInformation("Incident Created: User {User} báo cáo {Type} tại phòng {Room}.", reporterId, request.Type, request.LabRoomId);
+        logger.LogInformation("Đã tạo sự cố {IncidentId} gồm {Count} thiết bị.", incident.Id, incident.IncidentEquipments.Count);
 
+        // 5. Trả về ID của Incident duy nhất này
         return incident.Id;
     }
 }

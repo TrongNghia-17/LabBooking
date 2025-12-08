@@ -1,7 +1,4 @@
-﻿using LabBooking.Application.Features.Equipments.Dtos;
-using LabBooking.Domain.Enums;
-
-namespace LabBooking.Application.Features.EquipmentCategories.Dtos;
+﻿namespace LabBooking.Application.Features.EquipmentCategories.Dtos;
 
 public class EquipmentCategoryProfile : Profile
 {
@@ -9,12 +6,13 @@ public class EquipmentCategoryProfile : Profile
     {
         CreateMap<EquipmentCategory, EquipmentCategoryResponse>()
             .ForMember(dest => dest.EquipmentCount,
-                opt => opt.MapFrom(src => src.Equipments != null ? src.Equipments.Count : 0));
+                opt => opt.MapFrom(src => src.Equipments != null ? src.Equipments.Count : 0))
+            .ForMember(dest => dest.Equipments,
+                opt => opt.MapFrom(src => src.Equipments));
 
         CreateMap<Equipment, EquipmentSimpleResponse>()
             .ForMember(dest => dest.LabRoomName,
                 opt => opt.MapFrom(src => src.LabRoom != null ? src.LabRoom.LabName : "Chưa gán phòng"))
-
             .ForMember(dest => dest.Status,
                 opt => opt.MapFrom(src => GetStatusVN(src.Status)));
     }

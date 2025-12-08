@@ -11,7 +11,7 @@ public class IncidentProfile : Profile
             .ForMember(dest => dest.IsResolved, opt => opt.Ignore())
             .ForMember(dest => dest.SlotId, opt => opt.Ignore())
             .ForMember(dest => dest.LabRoom, opt => opt.Ignore())
-            .ForMember(dest => dest.Equipment, opt => opt.Ignore())
+            .ForMember(dest => dest.IncidentEquipments, opt => opt.Ignore())
             .ForMember(dest => dest.ReportedBy, opt => opt.Ignore());
 
         CreateMap<Incident, IncidentResponse>()
@@ -25,7 +25,9 @@ public class IncidentProfile : Profile
 
             // 3. Map Thiết bị (Chỉ lấy tên nếu có thiết bị, ngược lại trả về null)
             .ForMember(dest => dest.EquipmentName, opt => opt.MapFrom(src =>
-                src.Equipment != null ? src.Equipment.EquipmentName : null))
+                src.IncidentEquipments.Any()
+                    ? string.Join(", ", src.IncidentEquipments.Select(ie => ie.Equipment.EquipmentName))
+                    : "Lỗi chung (Không có thiết bị)"))
 
             // 4. Map Người báo cáo (Xử lý null để tránh lỗi)
             .ForMember(dest => dest.ReportedByName, opt => opt.MapFrom(src =>

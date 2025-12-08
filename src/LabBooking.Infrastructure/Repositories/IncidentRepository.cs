@@ -64,7 +64,8 @@ internal class IncidentRepository(LabBookingDbContext dbContext) : IIncidentRepo
         return await dbContext.Incidents
             .Include(i => i.ReportedBy) // Lấy thông tin người báo
             .Include(i => i.LabRoom)    // Lấy thông tin phòng (để check Manager)
-            .Include(i => i.Equipment)  // Lấy thiết bị (để revert status)
+            .Include(i => i.IncidentEquipments)
+        .ThenInclude(ie => ie.Equipment)  // Lấy thiết bị (để revert status)
             .FirstOrDefaultAsync(i => i.Id == id, token);
     }
 
@@ -79,7 +80,8 @@ internal class IncidentRepository(LabBookingDbContext dbContext) : IIncidentRepo
     {
         return await dbContext.Incidents
             .Include(i => i.LabRoom)
-            .Include(i => i.Equipment)
+            .Include(i => i.IncidentEquipments)
+        .ThenInclude(ie => ie.Equipment)
             .Include(i => i.ReportedBy) // Manager cần thông tin người báo
             .Where(i => i.LabRoom.MainManagerId == managerId) // <--- Logic lọc theo quyền quản lý
             .OrderByDescending(i => i.CreatedAt)
@@ -91,7 +93,8 @@ internal class IncidentRepository(LabBookingDbContext dbContext) : IIncidentRepo
     {
         return await dbContext.Incidents
             .Include(i => i.LabRoom)
-            .Include(i => i.Equipment)
+            .Include(i => i.IncidentEquipments)
+        .ThenInclude(ie => ie.Equipment)
             // Không cần Include ReportedBy cũng được vì Guard không cần xem
             .Where(i => i.ReportedById == reporterId)
             .OrderByDescending(i => i.CreatedAt)
@@ -111,7 +114,8 @@ internal class IncidentRepository(LabBookingDbContext dbContext) : IIncidentRepo
     {
         var query = dbContext.Incidents
             .Include(i => i.LabRoom)
-            .Include(i => i.Equipment)
+            .Include(i => i.IncidentEquipments)
+        .ThenInclude(ie => ie.Equipment)
             .Include(i => i.ReportedBy)
             .AsQueryable();
 

@@ -36,6 +36,7 @@
 
   <ItemGroup>
     <Folder Include="Features\DoorRequests\Commands\" />
+    <Folder Include="Features\Incidents\" />
   </ItemGroup>
 
 </Project>
