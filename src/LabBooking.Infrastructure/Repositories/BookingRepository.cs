@@ -5,10 +5,11 @@ using LabBooking.Domain.Repositories;
 namespace LabBooking.Infrastructure.Repositories
 {
     internal class BookingRepository(LabBookingDbContext dbContext, IUserDeviceRepository userDeviceRepository,
-    INotificationService notificationService) : IBookingRepository
+    INotificationService notificationService, INotificationRepository notificationRepo) : IBookingRepository
     {
         public async Task<Booking> CreateBookingAsync(Booking newBooking)
         {
+            var pushQueue = new List<PushNotificationData>();
             if (newBooking.CreatedAt.HasValue)
             {
                 // Nếu có: Lấy giá trị ra (.Value), ép kiểu UTC, rồi gán lại
@@ -24,6 +25,12 @@ namespace LabBooking.Infrastructure.Repositories
 
             try
             {
+                var labInfo = await dbContext.LabRooms
+                    .Where(l => l.Id == newBooking.LabRoomId)
+                    .Select(l => new { l.MainManagerId, l.LabName })
+                    .FirstOrDefaultAsync();
+
+                if (labInfo.MainManagerId == null || labInfo == null) throw new NotFoundException("LabRoom", newBooking.LabRoomId.ToString());
                 // --- GIAI ĐOẠN 1: LỌC SƠ BỘ (BROAD FILTER) TẠI DATABASE ---
 
                 // Lấy danh sách các ID và Date cần check
@@ -99,6 +106,22 @@ namespace LabBooking.Infrastructure.Repositories
                 // EF Core thông minh sẽ tự lưu Booking -> tự lưu BookingSlots -> tự lưu ExternalEquipments
                 dbContext.Bookings.Add(newBooking);
 
+                // [1] THÔNG BÁO CHO MANAGER (QUAN TRỌNG NHẤT)
+                // Báo cho Manager biết có việc cần làm
+                var mgrTitle = hasConflict ? "⚡ Có đơn ưu tiên cần xử lý" : "📅 Có đơn đặt phòng mới";
+                var mgrBody = hasConflict
+                    ? $"Đơn '{newBooking.Title}' tại {labInfo.LabName} đang trùng lịch và cần quyền ưu tiên."
+                    : $"User vừa đặt '{newBooking.Title}' tại {labInfo.LabName}. Vui lòng kiểm tra và duyệt.";
+
+                var (_, mgrPush) = notificationRepo.PrepareNotification(
+                    labInfo.MainManagerId, // Gửi về Manager
+                    mgrTitle,
+                    mgrBody,
+                    "MANAGER_NEW_BOOKING",
+                    new { bookingId = newBooking.Id, isPriority = hasConflict }
+                );
+                pushQueue.Add(mgrPush);
+
                 await dbContext.SaveChangesAsync();
 
                 // Commit Transaction: Chốt đơn!
@@ -121,7 +144,7 @@ namespace LabBooking.Infrastructure.Repositories
                 }
 
                 await dbContext.Entry(newBooking).Reference(b => b.LabRoom).LoadAsync();
-
+                notificationRepo.RunPushNotificationTask(pushQueue);
                 return newBooking;
             }
             catch
@@ -290,7 +313,8 @@ namespace LabBooking.Infrastructure.Repositories
                         bs.Status == BookingSlotStatus.Active &&
                         dates.Contains(bs.Date) &&
                         slotIds.Contains(bs.SlotId) &&
-                        (excludeBookingId == null || bs.BookingId != excludeBookingId)
+                        (excludeBookingId == null || bs.BookingId != excludeBookingId) &&
+                        bs.Booking.Status == BookingStatus.Approved
                     )
                     .ToListAsync();
 
@@ -355,6 +379,7 @@ namespace LabBooking.Infrastructure.Repositories
         // --- LOGIC CỐT LÕI NẰM Ở ĐÂY ---
         public async Task ApproveBookingWithOverrideLogicAsync(Booking booking)
         {
+            var pushQueue = new List<PushNotificationData>();
             // 1. Tìm slot bị trùng
             var requestedSlots = booking.Slots.ToList();
 
@@ -366,9 +391,22 @@ namespace LabBooking.Infrastructure.Repositories
             {
                 if (dbContext.Entry(booking).State == EntityState.Detached)
                     dbContext.Bookings.Attach(booking);
-
+                
                 booking.Status = BookingStatus.Rejected;
+
+                foreach (var s in booking.Slots) s.Status = BookingSlotStatus.Cancelled;
+
+                var (_, rejectPush) = notificationRepo.PrepareNotification(
+                    booking.CreatedById,
+                    "⛔ Đơn đặt phòng bị từ chối",
+                    $"Đơn '{booking.Title}' bị hệ thống từ chối tự động vì chứa khung giờ trong quá khứ.",
+                    "BOOKING_REJECTED",
+                    new { bookingId = booking.Id, reason = "PastTime" }
+                );
+                pushQueue.Add(rejectPush);
+
                 await dbContext.SaveChangesAsync();
+                notificationRepo.RunPushNotificationTask(pushQueue);
                 throw new BadRequestException("Đơn đặt lịch đã bị TỪ CHỐI TỰ ĐỘNG vì chứa khung giờ trong quá khứ.");
             }
 
@@ -436,11 +474,6 @@ namespace LabBooking.Infrastructure.Repositories
 
                         dbContext.Set<BookingConsentRequest>().Add(consentRequest);
 
-                        // d. Tạo Notification Entity (1 cái duy nhất)
-                        var conflictDates = string.Join(", ", lostSlots.Select(s => s.Date.ToString("dd/MM")).Distinct());
-                        var notiTitle = "⚠️ Thay đổi lịch đặt phòng";
-                        var notiBody = $"Đơn '{victimBooking.Title}' bị trùng lịch ngày {conflictDates} do sự kiện ưu tiên của trường.";
-
                         var payloadData = new
                         {
                             type = "OVERRIDE_CONSENT",
@@ -449,21 +482,30 @@ namespace LabBooking.Infrastructure.Repositories
                             action = "resolve_override"
                         };
 
-                        var notification = new Notification
-                        {
-                            Id = Guid.NewGuid(),
-                            UserId = victimBooking.CreatedById,
-                            Title = notiTitle,
-                            Message = notiBody,
-                            IsRead = false,
-                            CreatedAt = DateTime.UtcNow,
-                            DataPayload = JsonSerializer.Serialize(payloadData)
-                        };
+                        // d. Tạo Notification Entity (1 cái duy nhất)
+                        var conflictDates = string.Join(", ", lostSlots.Select(s => s.Date.ToString("dd/MM")).Distinct());
+                        var notiTitle = "⚠️Cần thay đổi lịch đặt phòng";
+                        var notiBody = $"Đơn '{victimBooking.Title}' bị trùng lịch ngày {conflictDates} do sự kiện ưu tiên của trường.";
 
-                        dbContext.Notifications.Add(notification);
+                        //var payloadData = new
+                        //{
+                        //    type = "OVERRIDE_CONSENT",
+                        //    consentRequestId = consentRequest.Id,
+                        //    bookingTitle = victimBooking.Title,
+                        //    action = "resolve_override"
+                        //};
+
+                        var (_, victimPush) = notificationRepo.PrepareNotification(
+                            victimBooking.CreatedById,
+                            notiTitle,
+                            notiBody,
+                            "OVERRIDE_CONSENT",
+                            payloadData // Truyền payload custom vào đây
+                        );
+                        pushQueue.Add(victimPush);
 
                         // e. Queue Push (1 cái duy nhất)
-                        pushNotificationQueue.Add((victimBooking.CreatedById, notiTitle, notiBody, payloadData));
+                        //pushNotificationQueue.Add((victimBooking.CreatedById, notiTitle, notiBody, payloadData));
                     }
                 }
             }
@@ -490,25 +532,16 @@ namespace LabBooking.Infrastructure.Repositories
             // 3. LƯU TẤT CẢ
             await dbContext.SaveChangesAsync();
 
+            var (_, successPush) = notificationRepo.PrepareNotification(
+                 booking.CreatedById,
+                 "✅ Thành công",
+                 $"Đơn {booking.Title} đã được duyệt. Vui lòng check tại lịch sử duyệt đơn",
+                 "BOOKING_APPROVED"
+            );
+            pushQueue.Add(successPush);
+
             // 4. GỬI PUSH
-            _ = Task.Run(async () =>
-            {
-                foreach (var item in pushNotificationQueue)
-                {
-                    try
-                    {
-                        var tokens = await userDeviceRepository.GetTokensByUserIdAsync(item.UserId, default);
-                        if (tokens != null && tokens.Any())
-                        {
-                            await notificationService.SendPushNotificationAsync(tokens, item.Title, item.Body, item.Payload);
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        Console.WriteLine($"Lỗi gửi Push: {ex.Message}");
-                    }
-                }
-            });
+            notificationRepo.RunPushNotificationTask(pushQueue);
         }
 
         public async Task<List<Guid>> GetBookedLabIdsAsync(DateOnly date, Guid slotId, CancellationToken ct)
@@ -528,7 +561,7 @@ namespace LabBooking.Infrastructure.Repositories
         {
             return await dbContext.Bookings
                 .Include(b => b.LabRoom)
-                .Include(b => b.Slots)
+                .Include(b => b.Slots.Where(s => s.Status == BookingSlotStatus.Active))
                     .ThenInclude(s => s.Slot) // Để lấy tên ca (Ca 1, Ca 2...)
                 .Include(b => b.BookingPriorityDetail)
                 .Include(b => b.Project)
@@ -544,8 +577,9 @@ namespace LabBooking.Infrastructure.Repositories
                 .AnyAsync(b => b.Id == bookingId && b.LabRoom.MainManagerId == managerId);
         }
 
-        public async Task RejectBookingAsync(Guid bookingId, Guid managerId)
+        public async Task RejectBookingAsync(Guid bookingId, Guid managerId, string? reason = null)
         {
+            var pushQueue = new List<PushNotificationData>();
             // 1. Tìm Booking + Include Slots
             var booking = await dbContext.Bookings
                 .Include(b => b.Slots)
@@ -565,10 +599,28 @@ namespace LabBooking.Infrastructure.Repositories
             foreach (var slot in booking.Slots)
             {
                 slot.Status = BookingSlotStatus.Cancelled;
+                //kiểm tra chỗ này
             }
 
+            // 4. [DÙNG REPO] Tạo thông báo cho User
+            var message = $"Đơn '{booking.Title}' của bạn đã bị từ chối.";
+            if (!string.IsNullOrEmpty(reason))
+            {
+                message += $" Lý do: {reason}";
+            }
+
+            var (_, pushData) = notificationRepo.PrepareNotification(
+                booking.CreatedById,
+                "⛔ Đơn đặt phòng bị từ chối",
+                message,
+                "BOOKING_REJECTED",
+                new { bookingId = booking.Id, reason = reason }
+            );
+            pushQueue.Add(pushData);
+
             // 4. Save
-            //await dbContext.SaveChangesAsync();
+            await dbContext.SaveChangesAsync();
+            notificationRepo.RunPushNotificationTask(pushQueue);
         }
 
         //private async Task NotifyVictimAsync(Guid victimUserId, Guid consentRequestId, string bookingTitle, string customBody)

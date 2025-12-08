@@ -1,4 +1,5 @@
-﻿using System;
+﻿using LabBooking.Domain.NonEntities;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Linq;
@@ -16,5 +17,5 @@ namespace LabBooking.Application.Features.BookingConsentRequest.Commands.Resolve
         public List<NewSlotInput>? NewSlots { get; init; }
     }
 
-    public record NewSlotInput(DateOnly Date, Guid SlotId);
+    //public record NewSlotInput(DateOnly Date, Guid SlotId);
 }

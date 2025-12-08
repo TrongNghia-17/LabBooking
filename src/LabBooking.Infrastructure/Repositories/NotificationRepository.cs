@@ -1,8 +1,9 @@
 ﻿using LabBooking.Application.Features.Notifications.Dtos;
+using LabBooking.Application.Services.Notifications;
 
 namespace LabBooking.Infrastructure.Repositories;
 
-internal class NotificationRepository(LabBookingDbContext dbContext) : INotificationRepository
+internal class NotificationRepository(LabBookingDbContext dbContext, IServiceScopeFactory scopeFactory) : INotificationRepository
 {
     public async Task<Guid> CreateAsync(Notification entity, CancellationToken cancellationToken = default)
     {
@@ -85,5 +86,68 @@ internal class NotificationRepository(LabBookingDbContext dbContext) : INotifica
     {
         dbContext.Notifications.Update(entity);
         await dbContext.SaveChangesAsync(cancellationToken);
+    }
+
+    public (Notification Entity, PushNotificationData PushData) PrepareNotification(
+            Guid? userId, string title, string message, string type, object? extraData = null)
+    {
+        var payloadObj = new
+        {
+            type,
+            // Có thể thêm timestamp hoặc gì đó chung chung
+            extra = extraData
+        };
+
+        var noti = new Notification
+        {
+            Id = Guid.NewGuid(),
+            UserId = userId,
+            Title = title,
+            Message = message,
+            IsRead = false,
+            CreatedAt = DateTime.UtcNow,
+            DataPayload = JsonSerializer.Serialize(extraData ?? payloadObj) // Nếu extraData là object chuẩn thì dùng luôn
+        };
+
+        // Add vào Context hiện tại (để chờ SaveChanges chung với Booking)
+        dbContext.Notifications.Add(noti);
+
+        var pushData = new PushNotificationData(userId, title, message, extraData ?? payloadObj);
+
+        return (noti, pushData);
+    }
+
+    // Hàm 2: Bắn Push ngầm (Chạy trên Background Thread)
+    public void RunPushNotificationTask(List<PushNotificationData> queue)
+    {
+        if (queue == null || !queue.Any()) return;
+
+        // Fire-and-forget: Không await để không chặn luồng chính
+        _ = Task.Run(async () =>
+        {
+            // ⚠️ QUAN TRỌNG: Phải tạo Scope mới vì DbContext của Request chính sắp bị Dispose
+            using var scope = scopeFactory.CreateScope();
+
+            // Resolve lại các service cần thiết trong Scope mới
+            var userDeviceRepo = scope.ServiceProvider.GetRequiredService<IUserDeviceRepository>();
+            var notiService = scope.ServiceProvider.GetRequiredService<INotificationService>();
+
+            foreach (var item in queue)
+            {
+                try
+                {
+                    var tokens = await userDeviceRepo.GetTokensByUserIdAsync(item.UserId, default);
+                    if (tokens != null && tokens.Any())
+                    {
+                        await notiService.SendPushNotificationAsync(tokens, item.Title, item.Body, item.Payload);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    // Ghi log lỗi background (Console hoặc ILogger nếu inject)
+                    Console.WriteLine($"[Background Push Error] User {item.UserId}: {ex.Message}");
+                }
+            }
+        });
     }
 }

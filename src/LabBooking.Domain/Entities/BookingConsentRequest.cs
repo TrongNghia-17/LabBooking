@@ -27,12 +27,14 @@ namespace LabBooking.Domain.Entities
         public Guid CreatedById { get; set; }
 
         // Đơn Booking Priority (Thủ phạm gây ra vụ đè)
-        public Guid PriorityBookingId { get; set; }
+        public Guid? PriorityBookingId { get; set; }
         [ForeignKey(nameof(PriorityBookingId))]
-        public Booking PriorityBooking { get; set; }
+        public Booking? PriorityBooking { get; set; }
 
         // Danh sách ID các slot bị mất (Lưu dạng JSON string: ["guid1", "guid2"])
         public string OverriddenSlotIdsJson { get; set; }
+
+        public Guid? RoomMaintainScheduleId { get; set; }
 
         public ConsentStatus Status { get; set; } = ConsentStatus.Pending;
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;

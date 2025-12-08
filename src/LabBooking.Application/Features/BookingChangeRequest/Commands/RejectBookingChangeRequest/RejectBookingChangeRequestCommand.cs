@@ -8,6 +8,7 @@ namespace LabBooking.Application.Features.BookingChangeRequest.Commands.RejectBo
 {
     public record RejectBookingChangeRequestCommand(
         Guid BookingId,
-        Guid ManagerId
+        Guid ManagerId,
+        string? Reason
     ) : IRequest<bool>;
 }
