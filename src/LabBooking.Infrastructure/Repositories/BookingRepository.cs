@@ -32,6 +32,11 @@ namespace LabBooking.Infrastructure.Repositories
                 if (labInfo.MainManagerId == null || labInfo == null) throw new NotFoundException("LabRoom", newBooking.LabRoomId.ToString());
                 // --- GIAI ĐOẠN 1: LỌC SƠ BỘ (BROAD FILTER) TẠI DATABASE ---
 
+                var creatorName = await dbContext.Users
+                    .Where(u => u.Id == newBooking.CreatedById)
+                    .Select(u => u.UserName) // Hoặc u.FullName nếu có
+                    .FirstOrDefaultAsync() ?? "Người dùng";
+
                 // Lấy danh sách các ID và Date cần check
                 var reqSlotIds = newBooking.Slots!.Select(s => s.SlotId).Distinct().ToList();
                 var reqDates = newBooking.Slots!.Select(s => s.Date).Distinct().ToList();
@@ -109,8 +114,8 @@ namespace LabBooking.Infrastructure.Repositories
                 // Báo cho Manager biết có việc cần làm
                 var mgrTitle = hasConflict ? "⚡ Có đơn ưu tiên cần xử lý" : "📅 Có đơn đặt phòng mới";
                 var mgrBody = hasConflict
-                    ? $"Đơn '{newBooking.Title}' tại {labInfo.LabName} đang trùng lịch và cần quyền ưu tiên."
-                    : $"User vừa đặt '{newBooking.Title}' tại {labInfo.LabName}. Vui lòng kiểm tra và duyệt.";
+                    ? $"Đơn '{newBooking.Title}' tại '{labInfo.LabName}' đang trùng lịch và cần quyền ưu tiên."
+                    : $"{creatorName} vừa đặt '{newBooking.Title}' tại '{labInfo.LabName}'. Vui lòng kiểm tra và duyệt.";
 
                 var (_, mgrPush) = notificationRepo.PrepareNotification(
                     labInfo.MainManagerId, // Gửi về Manager
