@@ -6,6 +6,7 @@ public interface ISupportRepository
 
     Task<(IEnumerable<Support>, int)> GetAllMatchingAsync(
         string? searchPhrase,
+        SupportStatus? status,
         int pageSize,
         int pageNumber,
         string? sortBy,
