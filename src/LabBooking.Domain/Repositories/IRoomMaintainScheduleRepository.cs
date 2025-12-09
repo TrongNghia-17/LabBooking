@@ -16,6 +16,8 @@ public interface IRoomMaintainScheduleRepository
     Task<(IEnumerable<RoomMaintainSchedule>, int)> GetAllMatchingAsync(
     string? searchPhrase,
     RoomMaintainStatus? status,
+    DateTime? from,
+    DateTime? to,
     int pageSize,
     int pageNumber,
     string? sortBy,

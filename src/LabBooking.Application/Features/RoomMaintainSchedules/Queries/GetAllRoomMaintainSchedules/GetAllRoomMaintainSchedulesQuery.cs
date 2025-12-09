@@ -1,9 +1,4 @@
 ﻿using LabBooking.Application.Features.RoomMaintainSchedules.Dtos;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace LabBooking.Application.Features.RoomMaintainSchedules.Queries.GetAllRoomMaintainSchedules
 {
@@ -13,7 +8,8 @@ namespace LabBooking.Application.Features.RoomMaintainSchedules.Queries.GetAllRo
     public record GetAllRoomMaintainSchedulesQuery(
         // Tham số tìm kiếm
         string? SearchPhrase,
-
+        DateTime? From,
+        DateTime? To,
         // Bỏ LabRoomId
 
         // Tham số lọc theo trạng thái

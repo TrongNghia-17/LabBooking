@@ -48,6 +48,8 @@ public class GetAllRoomMaintainSchedulesQueryHandler(
         var (schedules, totalCount) = await repository.GetAllMatchingAsync(
             request.SearchPhrase,
             request.Status,
+            request.From,
+            request.To,
             request.PageSize,
             request.PageNumber,
             request.SortBy,
