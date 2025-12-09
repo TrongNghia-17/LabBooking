@@ -9,6 +9,7 @@
             var totalCount = await baseQuery.CountAsync();
 
             var slots = await baseQuery
+                .OrderBy(s => s.StartTime)
                 .ToListAsync(cancellationToken);
 
             return (slots, totalCount);
