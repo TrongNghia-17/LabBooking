@@ -26,11 +26,11 @@ public class RoomMaintainSchedulesController(IMediator mediator) : ControllerBas
     public async Task<ActionResult<RoomMaintainScheduleResponse>> Create([FromBody] CreateRoomMaintainScheduleCommand command)
     {
         // result bây giờ là full object data
-        var result = await mediator.Send(command);
+        var id = await mediator.Send(command);
 
         // Trả về 201 Created cùng với data
         // Hàm này sẽ tạo header Location trỏ tới hàm GetById và body là result
-        return CreatedAtAction(nameof(GetById), new { id = result.Id }, result);
+        return CreatedAtAction(nameof(GetById), new { id }, id);
     }
 
     /// <summary>

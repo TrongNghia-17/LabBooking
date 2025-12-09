@@ -36,16 +36,16 @@
         return schedules;
     }
 
-    public async Task<RoomMaintainSchedule> Create(RoomMaintainSchedule entity, CancellationToken cancellationToken = default)
-    {
-        dbContext.RoomMaintainSchedules.Add(entity);
-        await dbContext.SaveChangesAsync(cancellationToken);
+    //public async Task<RoomMaintainSchedule> Create(RoomMaintainSchedule entity, CancellationToken cancellationToken = default)
+    //{
+    //    dbContext.RoomMaintainSchedules.Add(entity);
+    //    await dbContext.SaveChangesAsync(cancellationToken);
 
-        await dbContext.Entry(entity)
-            .Reference(e => e.LabRoom)
-            .LoadAsync(cancellationToken);
-        return entity;
-    }
+    //    await dbContext.Entry(entity)
+    //        .Reference(e => e.LabRoom)
+    //        .LoadAsync(cancellationToken);
+    //    return entity;
+    //}
 
     // 👇 HÀM MỚI: TẠO BẢO TRÌ VÀ XỬ LÝ GHI ĐÈ (OVERRIDE)
     public async Task<Guid> CreateWithOverrideLogicAsync(RoomMaintainSchedule schedule, CancellationToken cancellationToken)
@@ -203,60 +203,80 @@
     }
 
     public async Task<(IEnumerable<RoomMaintainSchedule>, int)> GetAllMatchingAsync(
-        string? searchPhrase,
-        RoomMaintainStatus? status,
-        int pageSize,
-        int pageNumber,
-        string? sortBy,
-        SortDirection sortDirection,
-        Guid? managerId,
-        CancellationToken cancellationToken = default)
+    string? searchPhrase,
+    RoomMaintainStatus? status,
+    int pageSize,
+    int pageNumber,
+    string? sortBy,
+    SortDirection sortDirection,
+    Guid? managerId, // <--- Nhận tham số lọc
+    CancellationToken cancellationToken)
     {
         var searchPhraseLower = searchPhrase?.ToLower();
 
+        // 1. Khởi tạo Query & Include LabRoom để check quyền sở hữu
         var baseQuery = dbContext.RoomMaintainSchedules
             .Include(s => s.LabRoom)
+            .AsNoTracking()
             .AsQueryable();
 
+        // =========================================================
+        // 2. LOGIC PHÂN QUYỀN (QUAN TRỌNG NHẤT)
+        // =========================================================
         if (managerId.HasValue)
         {
-            baseQuery = baseQuery.Where(s => s.LabRoom != null && s.LabRoom.MainManagerId == managerId);
+            // Nếu managerId có giá trị (tức là Manager thường), chỉ lấy lịch của phòng họ quản lý
+            baseQuery = baseQuery.Where(s => s.LabRoom.MainManagerId == managerId.Value);
         }
+        // Nếu managerId == null (Admin), bỏ qua dòng trên -> Lấy tất cả.
 
-        if (!string.IsNullOrEmpty(searchPhraseLower))
+
+        // 3. Lọc theo từ khóa (Search)
+        if (!string.IsNullOrWhiteSpace(searchPhraseLower))
         {
-            baseQuery = baseQuery.Where(r =>
-                r.Description != null && r.Description.ToLower().Contains(searchPhraseLower));
+            baseQuery = baseQuery.Where(s =>
+                (s.Description != null && s.Description.ToLower().Contains(searchPhraseLower)) ||
+                s.LabRoom.LabName.ToLower().Contains(searchPhraseLower));
         }
 
+        // 4. Lọc theo trạng thái (Status)
         if (status.HasValue)
         {
-            baseQuery = baseQuery.Where(s => s.RoomMaintainStatus == status);
+            baseQuery = baseQuery.Where(s => s.RoomMaintainStatus == status.Value);
         }
 
+        // 5. Đếm tổng số (Total Count)
         var totalCount = await baseQuery.CountAsync(cancellationToken);
 
-        if (sortBy != null)
+        // 6. Sắp xếp (Sorting)
+        if (!string.IsNullOrEmpty(sortBy))
         {
             var columnsSelector = new Dictionary<string, Expression<Func<RoomMaintainSchedule, object>>>
-            {
-                { nameof(RoomMaintainSchedule.StartTime), s => s.StartTime! },
-                { nameof(RoomMaintainSchedule.EndTime), s => s.EndTime! },
-                { nameof(RoomMaintainSchedule.RoomMaintainStatus), s => s.RoomMaintainStatus! }
-            };
+        {
+            { "starttime", s => s.StartTime },
+            { "endtime", s => s.EndTime },
+            { "roommaintainstatus", s => s.RoomMaintainStatus }, // Lưu ý tên cột phải khớp validator
+            { "labroomname", s => s.LabRoom.LabName }
+        };
 
-            if (columnsSelector.TryGetValue(sortBy, out var selectedColumn))
+            if (columnsSelector.TryGetValue(sortBy.ToLower(), out var selectedColumn))
             {
                 baseQuery = sortDirection == SortDirection.Ascending
                     ? baseQuery.OrderBy(selectedColumn)
                     : baseQuery.OrderByDescending(selectedColumn);
             }
+            else
+            {
+                baseQuery = baseQuery.OrderByDescending(s => s.StartTime);
+            }
         }
         else
         {
+            // Mặc định mới nhất lên đầu
             baseQuery = baseQuery.OrderByDescending(s => s.StartTime);
         }
 
+        // 7. Phân trang
         var schedules = await baseQuery
             .Skip(pageSize * (pageNumber - 1))
             .Take(pageSize)

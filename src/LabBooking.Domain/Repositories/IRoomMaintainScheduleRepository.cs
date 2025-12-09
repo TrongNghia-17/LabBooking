@@ -8,19 +8,20 @@ public interface IRoomMaintainScheduleRepository
         DateOnly endDate,
         CancellationToken cancellationToken);
 
-    Task<Guid> Create(RoomMaintainSchedule entity, CancellationToken cancellationToken = default);
+    //Task<Guid> Create(RoomMaintainSchedule entity, CancellationToken cancellationToken = default);
     Task<Guid> CreateWithOverrideLogicAsync(RoomMaintainSchedule schedule, CancellationToken cancellationToken);
     Task Update(RoomMaintainSchedule entity, CancellationToken cancellationToken = default);
     Task DeleteAsync(RoomMaintainSchedule entity, CancellationToken cancellationToken = default);
     Task<RoomMaintainSchedule?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
     Task<(IEnumerable<RoomMaintainSchedule>, int)> GetAllMatchingAsync(
-        string? searchPhrase,
-        RoomMaintainStatus? status, // Tham số lọc mới
-        int pageSize,
-        int pageNumber,
-        string? sortBy,
-        SortDirection sortDirection,
-        CancellationToken cancellationToken = default);
+    string? searchPhrase,
+    RoomMaintainStatus? status,
+    int pageSize,
+    int pageNumber,
+    string? sortBy,
+    SortDirection sortDirection,
+    Guid? managerId, // <--- Tham số này cho phép null (Admin truyền null)
+    CancellationToken cancellationToken);
     /// <summary>
     /// Lấy danh sách lịch bảo trì đã hết thời gian (EndTime < DateTime.UtcNow) và đang ở trạng thái NotYet.
     /// </summary>
