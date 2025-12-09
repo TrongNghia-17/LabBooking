@@ -32,22 +32,38 @@ internal class EquipmentCategoryRepository(LabBookingDbContext dbContext) : IEqu
             .AnyAsync(c => c.Name.ToLower() == name.ToLower(), token);
     }
     public async Task<(IEnumerable<EquipmentCategory>, int)> GetAllMatchingAsync(
-        string? searchPhrase,
-        int pageSize,
-        int pageNumber,
-        string? sortBy,
-        SortDirection sortDirection,
-        CancellationToken cancellationToken)
+    string? searchPhrase,
+    int pageSize,
+    int pageNumber,
+    string? sortBy,
+    SortDirection sortDirection,
+    Guid? userId,
+    bool isAdmin,
+    CancellationToken cancellationToken)
     {
         var searchPhraseLower = searchPhrase?.ToLower();
 
-        // 1. Query cơ bản & Include thiết bị để đếm số lượng
+        // Khởi tạo Query
         var baseQuery = dbContext.EquipmentCategories
-            .Include(c => c.Equipments) // Include để lấy list con
+            .Include(c => c.Equipments) // Include để đếm số lượng
             .AsNoTracking()
             .AsQueryable();
 
-        // 2. Lọc theo từ khóa (Search)
+        // ---------------------------------------------------------
+        // 1. LOGIC PHÂN QUYỀN (Admin vs Manager)
+        // ---------------------------------------------------------
+        if (!isAdmin && userId.HasValue)
+        {
+            // Nếu KHÔNG phải Admin:
+            // Chỉ lấy những Category mà có ít nhất 1 thiết bị nằm trong phòng do User này quản lý
+            baseQuery = baseQuery.Where(c => c.Equipments.Any(e =>
+                e.LabRoom != null && e.LabRoom.MainManagerId == userId));
+        }
+        // Nếu là Admin thì bỏ qua đoạn if trên -> lấy tất cả.
+
+        // ---------------------------------------------------------
+        // 2. TÌM KIẾM (Search)
+        // ---------------------------------------------------------
         if (!string.IsNullOrWhiteSpace(searchPhraseLower))
         {
             baseQuery = baseQuery.Where(c =>
@@ -55,22 +71,19 @@ internal class EquipmentCategoryRepository(LabBookingDbContext dbContext) : IEqu
                 (c.Description != null && c.Description.ToLower().Contains(searchPhraseLower)));
         }
 
-        // 3. Đếm tổng số bản ghi (Total Count)
+        // 3. Đếm tổng số (Total Count) - Đếm sau khi đã lọc quyền
         var totalCount = await baseQuery.CountAsync(cancellationToken);
 
         // 4. Sắp xếp (Sorting)
         if (!string.IsNullOrEmpty(sortBy))
         {
-            // Map tên cột từ string sang biểu thức
             var columnsSelector = new Dictionary<string, Expression<Func<EquipmentCategory, object>>>
         {
             { "name", c => c.Name },
             { "description", c => c.Description ?? string.Empty },
-            // Sắp xếp theo số lượng thiết bị
-            { "equipmentCount", c => c.Equipments != null ? c.Equipments.Count : 0 }
+            { "equipmentcount", c => c.Equipments != null ? c.Equipments.Count : 0 }
         };
 
-            // Nếu cột hợp lệ thì sort, nếu không mặc định sort theo Name
             if (columnsSelector.TryGetValue(sortBy.ToLower(), out var selectedColumn))
             {
                 baseQuery = sortDirection == SortDirection.Ascending
