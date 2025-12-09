@@ -7,19 +7,9 @@ namespace LabBooking.Application.Features.RoomMaintainSchedules.Commands.UpdateR
 /// </summary>
 public record UpdateRoomMaintainScheduleCommand() : IRequest<Unit>
 {
-    /// <summary>
-    /// ID của lịch bảo trì, lấy từ route
-    /// </summary>
     [JsonIgnore]
     public Guid Id { get; set; }
-
-    // Các trường có thể cập nhật, lấy từ entity
-    public Guid LabRoomId { get; set; }
     public DateTime? StartTime { get; set; }
     public DateTime? EndTime { get; set; }
-    /// <summary>
-    /// Cho phép cập nhật trạng thái, ví dụ: từ "NotYet" sang "Done"
-    /// </summary>
-    public RoomMaintainStatus? RoomMaintainStatus { get; set; }
     public string? Description { get; set; }
 }

@@ -8,12 +8,6 @@ public class UpdateRoomMaintainScheduleCommandValidator : AbstractValidator<Upda
     {
         _labRoomRepository = labRoomRepository;
 
-        // --- LabRoomId Rules (Giống Create) ---
-        RuleFor(c => c.LabRoomId)
-            .NotEmpty().WithMessage("LabRoomId is required.")
-            .MustAsync(LabRoomMustExist)
-            .WithMessage("The specified LabRoom was not found.");
-
         // --- Date Logic (Giống Create) ---
         RuleFor(c => c.EndTime)
             .GreaterThan(c => c.StartTime)
@@ -23,11 +17,6 @@ public class UpdateRoomMaintainScheduleCommandValidator : AbstractValidator<Upda
         // --- Description Logic (Giống Create) ---
         RuleFor(c => c.Description)
             .MaximumLength(1000).WithMessage("Description must not exceed 1000 characters.");
-
-        // --- Status Logic (Rule mới) ---
-        RuleFor(c => c.RoomMaintainStatus)
-            .NotNull().WithMessage("Room Maintain Status is required.") // Yêu cầu phải có status
-            .IsInEnum().WithMessage("Invalid status value."); // Phải là giá trị hợp lệ (Done hoặc NotYet)
     }
 
     private async Task<bool> LabRoomMustExist(Guid id, CancellationToken token)

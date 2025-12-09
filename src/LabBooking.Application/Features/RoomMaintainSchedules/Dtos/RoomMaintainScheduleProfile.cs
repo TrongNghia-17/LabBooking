@@ -12,8 +12,9 @@ public class RoomMaintainScheduleProfile : Profile
         CreateMap<UpdateRoomMaintainScheduleCommand, RoomMaintainSchedule>();
 
         CreateMap<RoomMaintainSchedule, RoomMaintainScheduleResponse>()
-            // Chuyển Enum sang string cho DTO
             .ForMember(dest => dest.RoomMaintainStatus,
-                       opt => opt.MapFrom(src => src.RoomMaintainStatus.ToString()));
+                       opt => opt.MapFrom(src => src.RoomMaintainStatus.ToString()))
+            .ForMember(dest => dest.LabRoomName,
+                opt => opt.MapFrom(src => src.LabRoom != null ? src.LabRoom.LabName : string.Empty));
     }
 }
