@@ -188,42 +188,49 @@ internal class EquipmentMaintainScheduleRepository(
         return conflict;
     }
 
-    public async Task<IEnumerable<EquipmentMaintainSchedule>> GetByManagerIdAsync(
-        Guid managerId,
-        DateTime? from,
-        DateTime? to,
+    // Trong EquipmentMaintainScheduleRepository.cs
+
+    public async Task<(IEnumerable<EquipmentMaintainSchedule>, int)> GetByManagerIdAsync(
+        Guid userId,
+        DateTime? fromDate,
+        DateTime? toDate,
         MaintenanceStatus? status,
         string? sortBy,
         bool isDescending,
-        CancellationToken token = default)
+        int pageNumber,  // <--- Thêm tham số
+        int pageSize,    // <--- Thêm tham số
+        CancellationToken token)
     {
-        // 1. Khởi tạo Query (Chưa chạy xuống DB)
+        // 1. Khởi tạo Query & Include
         var query = dbContext.EquipmentMaintainSchedules
             .Include(s => s.Details)
                 .ThenInclude(d => d.Equipment)
-                    .ThenInclude(e => e.LabRoom)
-            .AsQueryable(); // Chuyển sang IQueryable để cộng dồn điều kiện
+                    .ThenInclude(e => e.LabRoom) // Include để check Manager
+            .AsNoTracking()
+            .AsQueryable();
 
-        // 2. LỌC THEO MANAGER (Bắt buộc)
+        // 2. Lọc theo Manager (Quyền hạn)
+        // Chỉ lấy lịch bảo trì có thiết bị thuộc phòng do User này quản lý
+        // (Logic này tùy thuộc vào nghiệp vụ của bạn, đây là ví dụ chuẩn)
         query = query.Where(s => s.Details.Any(d =>
-            d.Equipment != null &&
-            d.Equipment.LabRoom != null &&
-            d.Equipment.LabRoom.MainManagerId == managerId));
+            d.Equipment.LabRoom != null && d.Equipment.LabRoom.MainManagerId == userId));
 
-        // 3. LỌC THEO NGÀY (Optional)
-        if (from.HasValue)
-            query = query.Where(s => s.StartTime >= from.Value.ToUniversalTime());
+        // 3. Lọc theo Date
+        if (fromDate.HasValue)
+            query = query.Where(s => s.StartTime >= fromDate.Value.ToUniversalTime());
 
-        if (to.HasValue)
-            query = query.Where(s => s.EndTime <= to.Value.ToUniversalTime());
+        if (toDate.HasValue)
+            query = query.Where(s => s.StartTime <= toDate.Value.ToUniversalTime());
 
-        // 4. LỌC THEO STATUS (Optional)
+        // 4. Lọc theo Status
         if (status.HasValue)
             query = query.Where(s => s.Status == status.Value);
 
-        // 5. SẮP XẾP (Sorting)
-        // Mặc định sắp theo StartTime giảm dần nếu không truyền gì cả
-        if (string.IsNullOrEmpty(sortBy)) sortBy = "Date";
+        // 5. Đếm tổng số (Total Count) - Quan trọng cho phân trang
+        var totalCount = await query.CountAsync(token);
+
+        // 6. Sắp xếp (Sorting)
+        if (string.IsNullOrEmpty(sortBy)) sortBy = "date";
 
         switch (sortBy.ToLower())
         {
@@ -232,7 +239,6 @@ internal class EquipmentMaintainScheduleRepository(
                     ? query.OrderByDescending(s => s.Status)
                     : query.OrderBy(s => s.Status);
                 break;
-
             case "date":
             default:
                 query = isDescending
@@ -241,8 +247,13 @@ internal class EquipmentMaintainScheduleRepository(
                 break;
         }
 
-        // 6. Thực thi truy vấn
-        return await query.ToListAsync(token);
+        // 7. Phân trang (Pagination) - THÊM MỚI
+        var schedules = await query
+            .Skip(pageSize * (pageNumber - 1))
+            .Take(pageSize)
+            .ToListAsync(token);
+
+        return (schedules, totalCount);
     }
 
     public async Task<EquipmentMaintainSchedule?> GetByIdWithDetailsAsync(Guid id, CancellationToken token)

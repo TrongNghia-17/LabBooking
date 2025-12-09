@@ -7,22 +7,33 @@ public class GetAllMaintainSchedulesQueryHandler(
     IEquipmentMaintainScheduleRepository repository,
     ICurrentUserService currentUserService,
     IMapper mapper
-    ) : IRequestHandler<GetAllMaintainSchedulesQuery, IEnumerable<EquipmentMaintainScheduleResponse>>
+    ) : IRequestHandler<GetAllMaintainSchedulesQuery, PagedResult<EquipmentMaintainScheduleResponse>>
 {
-    public async Task<IEnumerable<EquipmentMaintainScheduleResponse>> Handle(GetAllMaintainSchedulesQuery request, CancellationToken cancellationToken)
+    public async Task<PagedResult<EquipmentMaintainScheduleResponse>> Handle(GetAllMaintainSchedulesQuery request, CancellationToken cancellationToken)
     {
         var userId = currentUserService.UserId
             ?? throw new UnauthorizedAccessException("Bạn cần đăng nhập.");
 
-        var schedules = await repository.GetByManagerIdAsync(
+        // Gọi Repository với tham số phân trang
+        var (schedules, totalCount) = await repository.GetByManagerIdAsync(
             userId,
             request.FromDate,
             request.ToDate,
             request.Status,
             request.SortBy,
             request.IsDescending,
+            request.PageNumber, // Truyền xuống
+            request.PageSize,   // Truyền xuống
             cancellationToken);
 
-        return mapper.Map<IEnumerable<EquipmentMaintainScheduleResponse>>(schedules);
+        // Map sang DTO
+        var dtos = mapper.Map<IEnumerable<EquipmentMaintainScheduleResponse>>(schedules);
+
+        // Trả về PagedResult
+        return new PagedResult<EquipmentMaintainScheduleResponse>(
+            dtos,
+            totalCount,
+            request.PageSize,
+            request.PageNumber);
     }
 }
