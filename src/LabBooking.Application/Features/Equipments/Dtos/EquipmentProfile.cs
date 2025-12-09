@@ -14,15 +14,17 @@ public class EquipmentProfile : Profile
     public EquipmentProfile()
     {
         CreateMap<CreateEquipmentCommand, Equipment>();
-            //.ForMember(dest => dest.Status, opt => opt.MapFrom(src =>
-            //    Enum.Parse<EquipmentStatus>(src.Status, true)
-            //));
+        //.ForMember(dest => dest.Status, opt => opt.MapFrom(src =>
+        //    Enum.Parse<EquipmentStatus>(src.Status, true)
+        //));
 
         CreateMap<UpdateEquipmentCommand, Equipment>()
             .ForMember(dest => dest.Status, opt => opt.MapFrom(src =>
                 Enum.Parse<EquipmentStatus>(src.Status, true)
             ));
 
-        CreateMap<Equipment, EquipmentResponse>();
+        CreateMap<Equipment, EquipmentResponse>()
+            .ForMember(dest => dest.EquipmentCategoryName,
+                opt => opt.MapFrom(src => src.EquipmentCategory != null ? src.EquipmentCategory.Name : "Chưa phân loại"));
     }
 }

@@ -1,4 +1,5 @@
 ﻿using LabBooking.Application.Features.Booking.Dtos;
+using LabBooking.Application.Features.BookingChangeRequest.Commands.CreateBookingChangeRequest;
 using LabBooking.Application.Features.BookingPriorityDetail.Dtos;
 using LabBooking.Application.Features.BookingSlots.Dtos;
 using LabBooking.Application.Features.ExternalEquipment.Dtos;
@@ -39,6 +40,11 @@ namespace LabBooking.Application.Features.BookingChangeRequest.Dtos
                     ? new List<ExternalEquipmentResponse>()
                     : JsonSerializer.Deserialize<List<ExternalEquipmentResponse>>(src.NewExternalEquipmentsJson, (JsonSerializerOptions)null)))
 
+                .ForMember(dest => dest.NewOutSideGuests, opt => opt.MapFrom(src =>
+                string.IsNullOrEmpty(src.NewOutSideGuestsJson)
+                ? new List<OutSideGuestResponse>()
+                : JsonSerializer.Deserialize<List<OutSideGuestResponse>>(src.NewOutSideGuestsJson, (JsonSerializerOptions?)null)))
+                
                 // --- MAP THÔNG TIN TỪ BOOKING GỐC ---
                 // (Để FE biết đơn này thuộc phòng nào, loại gì)
                 .ForMember(dest => dest.OriginalType, opt => opt.MapFrom(src => src.Booking.Type.ToString()))

@@ -18,6 +18,8 @@ public class CreateEquipmentCommandValidator : AbstractValidator<CreateEquipment
             .NotEmpty()
             .WithMessage("Lab Room ID is required.");
 
+        RuleFor(x => x.EquipmentCategoryId)
+            .NotEmpty().WithMessage("Vui lòng chọn loại thiết bị.");
         //RuleFor(c => c.Status)
         //    .NotEmpty()
         //    .WithMessage("'Status' is required.")

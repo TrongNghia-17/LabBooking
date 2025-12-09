@@ -121,6 +121,9 @@ namespace LabBooking.Application.Migrations
                     b.Property<int?>("NewNumberOfParticipants")
                         .HasColumnType("integer");
 
+                    b.Property<string>("NewOutSideGuestsJson")
+                        .HasColumnType("text");
+
                     b.Property<string>("NewPriorityDetailJson")
                         .HasColumnType("text");
 
@@ -196,13 +199,23 @@ namespace LabBooking.Application.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
-                    b.Property<Guid>("PriorityBookingId")
+                    b.Property<Guid?>("PriorityBookingId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("ResolvedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("RoomMaintainScheduleId")
                         .HasColumnType("uuid");
 
                     b.Property<int>("Status")
                         .HasColumnType("integer");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("BookingId");
+
+                    b.HasIndex("PriorityBookingId");
 
                     b.ToTable("BookingConsentRequests");
                 });
@@ -299,6 +312,9 @@ namespace LabBooking.Application.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<DateTime?>("AcceptedTime")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<Guid?>("BookingId")
                         .HasColumnType("uuid");
 
@@ -342,6 +358,9 @@ namespace LabBooking.Application.Migrations
                     b.Property<string>("Description")
                         .HasColumnType("text");
 
+                    b.Property<Guid>("EquipmentCategoryId")
+                        .HasColumnType("uuid");
+
                     b.Property<string>("EquipmentName")
                         .IsRequired()
                         .HasColumnType("text");
@@ -357,9 +376,29 @@ namespace LabBooking.Application.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("EquipmentCategoryId");
+
                     b.HasIndex("LabRoomId");
 
                     b.ToTable("Equipments");
+                });
+
+            modelBuilder.Entity("LabBooking.Domain.Entities.EquipmentCategory", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Description")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("EquipmentCategories");
                 });
 
             modelBuilder.Entity("LabBooking.Domain.Entities.EquipmentMaintainSchedule", b =>
@@ -369,25 +408,48 @@ namespace LabBooking.Application.Migrations
                         .HasColumnType("uuid");
 
                     b.Property<string>("Description")
+                        .IsRequired()
                         .HasColumnType("text");
 
                     b.Property<DateTime>("EndTime")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<int?>("EquimentpMaintainStatus")
+                    b.Property<DateTime>("StartTime")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("Status")
                         .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("EquipmentMaintainSchedules");
+                });
+
+            modelBuilder.Entity("LabBooking.Domain.Entities.EquipmentMaintenance", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
 
                     b.Property<Guid>("EquipmentId")
                         .HasColumnType("uuid");
 
-                    b.Property<DateTime>("StartTime")
-                        .HasColumnType("timestamp with time zone");
+                    b.Property<Guid>("EquipmentMaintainScheduleId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ResultNote")
+                        .HasColumnType("text");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
 
                     b.HasKey("Id");
 
                     b.HasIndex("EquipmentId");
 
-                    b.ToTable("EquipmentMaintainSchedules");
+                    b.HasIndex("EquipmentMaintainScheduleId");
+
+                    b.ToTable("EquipmentMaintenances");
                 });
 
             modelBuilder.Entity("LabBooking.Domain.Entities.ExternalEquipment", b =>
@@ -440,6 +502,9 @@ namespace LabBooking.Application.Migrations
                     b.Property<Guid>("ReportedById")
                         .HasColumnType("uuid");
 
+                    b.Property<DateTime?>("ResolvedAt")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<Guid?>("SlotId")
                         .HasColumnType("uuid");
 
@@ -455,6 +520,27 @@ namespace LabBooking.Application.Migrations
                     b.HasIndex("SlotId");
 
                     b.ToTable("Incidents");
+                });
+
+            modelBuilder.Entity("LabBooking.Domain.Entities.IncidentEquipment", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("EquipmentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("IncidentId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("EquipmentId");
+
+                    b.HasIndex("IncidentId");
+
+                    b.ToTable("IncidentEquipments");
                 });
 
             modelBuilder.Entity("LabBooking.Domain.Entities.LabRoom", b =>
@@ -520,7 +606,7 @@ namespace LabBooking.Application.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
-                    b.Property<Guid>("UserId")
+                    b.Property<Guid?>("UserId")
                         .HasColumnType("uuid");
 
                     b.HasKey("Id");
@@ -715,6 +801,8 @@ namespace LabBooking.Application.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("CreatedById");
+
                     b.ToTable("Supports");
                 });
 
@@ -780,6 +868,9 @@ namespace LabBooking.Application.Migrations
 
                     b.Property<bool>("EmailConfirmed")
                         .HasColumnType("boolean");
+
+                    b.Property<string>("FullName")
+                        .HasColumnType("text");
 
                     b.Property<bool>("LockoutEnabled")
                         .HasColumnType("boolean");
@@ -1044,6 +1135,23 @@ namespace LabBooking.Application.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("LabBooking.Domain.Entities.BookingConsentRequest", b =>
+                {
+                    b.HasOne("LabBooking.Domain.Entities.Booking", "Booking")
+                        .WithMany()
+                        .HasForeignKey("BookingId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("LabBooking.Domain.Entities.Booking", "PriorityBooking")
+                        .WithMany()
+                        .HasForeignKey("PriorityBookingId");
+
+                    b.Navigation("Booking");
+
+                    b.Navigation("PriorityBooking");
+                });
+
             modelBuilder.Entity("LabBooking.Domain.Entities.BookingSlot", b =>
                 {
                     b.HasOne("LabBooking.Domain.Entities.Booking", "Booking")
@@ -1096,16 +1204,24 @@ namespace LabBooking.Application.Migrations
 
             modelBuilder.Entity("LabBooking.Domain.Entities.Equipment", b =>
                 {
+                    b.HasOne("LabBooking.Domain.Entities.EquipmentCategory", "EquipmentCategory")
+                        .WithMany("Equipments")
+                        .HasForeignKey("EquipmentCategoryId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
                     b.HasOne("LabBooking.Domain.Entities.LabRoom", "LabRoom")
                         .WithMany("Equipments")
                         .HasForeignKey("LabRoomId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.Navigation("EquipmentCategory");
+
                     b.Navigation("LabRoom");
                 });
 
-            modelBuilder.Entity("LabBooking.Domain.Entities.EquipmentMaintainSchedule", b =>
+            modelBuilder.Entity("LabBooking.Domain.Entities.EquipmentMaintenance", b =>
                 {
                     b.HasOne("LabBooking.Domain.Entities.Equipment", "Equipment")
                         .WithMany()
@@ -1113,7 +1229,15 @@ namespace LabBooking.Application.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("LabBooking.Domain.Entities.EquipmentMaintainSchedule", "Schedule")
+                        .WithMany("Details")
+                        .HasForeignKey("EquipmentMaintainScheduleId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
                     b.Navigation("Equipment");
+
+                    b.Navigation("Schedule");
                 });
 
             modelBuilder.Entity("LabBooking.Domain.Entities.ExternalEquipment", b =>
@@ -1152,6 +1276,25 @@ namespace LabBooking.Application.Migrations
                     b.Navigation("Slot");
                 });
 
+            modelBuilder.Entity("LabBooking.Domain.Entities.IncidentEquipment", b =>
+                {
+                    b.HasOne("LabBooking.Domain.Entities.Equipment", "Equipment")
+                        .WithMany()
+                        .HasForeignKey("EquipmentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("LabBooking.Domain.Entities.Incident", "Incident")
+                        .WithMany("IncidentEquipments")
+                        .HasForeignKey("IncidentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Equipment");
+
+                    b.Navigation("Incident");
+                });
+
             modelBuilder.Entity("LabBooking.Domain.Entities.LabRoom", b =>
                 {
                     b.HasOne("LabBooking.Domain.Entities.User", "CreatedBy")
@@ -1171,9 +1314,7 @@ namespace LabBooking.Application.Migrations
                 {
                     b.HasOne("LabBooking.Domain.Entities.User", "User")
                         .WithMany("Notifications")
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .HasForeignKey("UserId");
 
                     b.Navigation("User");
                 });
@@ -1224,6 +1365,17 @@ namespace LabBooking.Application.Migrations
                         .IsRequired();
 
                     b.Navigation("LabRoom");
+                });
+
+            modelBuilder.Entity("LabBooking.Domain.Entities.Support", b =>
+                {
+                    b.HasOne("LabBooking.Domain.Entities.User", "CreatedBy")
+                        .WithMany()
+                        .HasForeignKey("CreatedById")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("CreatedBy");
                 });
 
             modelBuilder.Entity("LabBooking.Domain.Entities.UsagePolicy", b =>
@@ -1309,6 +1461,21 @@ namespace LabBooking.Application.Migrations
             modelBuilder.Entity("LabBooking.Domain.Entities.BookingChangeRequest", b =>
                 {
                     b.Navigation("NewSlots");
+                });
+
+            modelBuilder.Entity("LabBooking.Domain.Entities.EquipmentCategory", b =>
+                {
+                    b.Navigation("Equipments");
+                });
+
+            modelBuilder.Entity("LabBooking.Domain.Entities.EquipmentMaintainSchedule", b =>
+                {
+                    b.Navigation("Details");
+                });
+
+            modelBuilder.Entity("LabBooking.Domain.Entities.Incident", b =>
+                {
+                    b.Navigation("IncidentEquipments");
                 });
 
             modelBuilder.Entity("LabBooking.Domain.Entities.LabRoom", b =>

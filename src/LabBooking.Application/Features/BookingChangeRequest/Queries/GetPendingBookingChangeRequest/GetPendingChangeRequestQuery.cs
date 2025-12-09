@@ -7,6 +7,6 @@ using System.Threading.Tasks;
 
 namespace LabBooking.Application.Features.BookingChangeRequest.Queries.GetPendingBookingChangeRequest
 {
-    public record GetPendingChangeRequestQuery(Guid? LabId) : IRequest<List<BookingChangeRequestResponse>>;
+    public record GetPendingChangeRequestQuery(Guid? UserId) : IRequest<List<BookingChangeRequestResponse>>;
 
 }

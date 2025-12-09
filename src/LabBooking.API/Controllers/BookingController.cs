@@ -1,9 +1,11 @@
 ﻿using LabBooking.Application.Features.ApproveBooking.Commands;
 using LabBooking.Application.Features.ApproveBooking.Dtos;
+using LabBooking.Application.Features.Booking.Commands.RejectBooking;
 using LabBooking.Application.Features.Booking.Dtos;
 using LabBooking.Application.Features.Booking.Queries.GetBookingById;
 using LabBooking.Application.Features.Booking.Queries.GetChangeableBooking;
 using LabBooking.Application.Features.Booking.Queries.GetPendingBooking;
+using LabBooking.Application.Features.Booking.Queries.GetTimetable;
 using LabBooking.Application.Features.Bookings.Commands.CreateBooking;
 using LabBooking.Application.Features.Equipments.Queries.GetAllEquipments;
 using LabBooking.Application.Features.HistoryBooking.Queries.GetMyBookingHistory;
@@ -91,25 +93,53 @@ public class BookingsController(
     /// Dành cho Manager/Admin.
     /// </summary>
     [HttpGet("pending")]
+    //[Authorize(Roles = "Manager")]
     [ProducesResponseType(typeof(List<BookingResponse>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-    public async Task<ActionResult<List<BookingResponse>>> GetPending([FromQuery] Guid? labId)
+    public async Task<ActionResult<List<BookingResponse>>> GetPending()
     {
-        var query = new GetPendingBookingsQuery(labId);
+        var userIdString = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        if (!Guid.TryParse(userIdString, out var userId))
+        {
+            return Unauthorized();
+        }
+
+        var query = new GetPendingBookingsQuery(userId);
         var result = await mediator.Send(query);
         return Ok(result);
     }
 
 
     [HttpPut("approve")]
+    [Authorize(Roles = "Manager")]
     [ProducesResponseType(typeof(ApproveBookingResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> ApproveBooking([FromBody] ApproveBookingCommand command)
     {
         // Command chứa { BookingId, ManagerId }
-        await mediator.Send(command);
+        var userIdString = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        if (!Guid.TryParse(userIdString, out var userId))
+        {
+            return Unauthorized();
+        }
+        var approveBookingCommand = new ApproveBookingCommand(command.BookingId, userId);
+        await mediator.Send(approveBookingCommand);
         return Ok(new { message = "Duyệt đơn thành công." });
+    }
+
+    [HttpPut("reject")]
+    [Authorize(Roles = "Manager")]
+    public async Task<IActionResult> RejectBooking([FromBody] RejectBookingCommand command)
+    {
+        // Tự lấy ManagerId từ Token
+        var userIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? User.FindFirst("sub")?.Value;
+        if (Guid.TryParse(userIdString, out var managerId))
+        {
+            command = command with { ManagerId = managerId };
+        }
+        await mediator.Send(command);
+        return Ok(new { message = "Đã từ chối đơn đặt." });
     }
 
     [HttpGet("my-history-booking")]
@@ -127,5 +157,20 @@ public class BookingsController(
         var result = await mediator.Send(query);
 
         return Ok(result);
+    }
+
+    [HttpGet("timetable")]
+    [Authorize(Roles = "Student, Lecturer")]
+    public async Task<IActionResult> GetMyTimetable()
+    {
+        var userIdString = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        if (!Guid.TryParse(userIdString, out var userId))
+        {
+            return Unauthorized();
+        }
+        var query = new GetTimetableQuery(userId);
+        var result = await mediator.Send(query);
+        // Wrap trong object data để khớp với cách gọi API của FE: res.data.data
+        return Ok(new { data = result });
     }
 }

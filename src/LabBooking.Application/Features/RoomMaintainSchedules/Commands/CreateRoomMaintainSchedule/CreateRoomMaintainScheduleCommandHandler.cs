@@ -1,5 +1,4 @@
-﻿using LabBooking.Application.Features.RoomMaintainSchedules.Dtos;
-using LabBooking.Application.Services.Users;
+﻿using LabBooking.Application.Services.Users;
 
 namespace LabBooking.Application.Features.RoomMaintainSchedules.Commands.CreateRoomMaintainSchedule;
 
@@ -8,14 +7,23 @@ public class CreateRoomMaintainScheduleCommandHandler(
     IMapper mapper,
     IRoomMaintainScheduleRepository roomMaintainScheduleRepository,
     ILabRoomRepository labRoomRepository,
-    ICurrentUserService currentUserService
-    ) : IRequestHandler<CreateRoomMaintainScheduleCommand, RoomMaintainScheduleResponse>
+    ICurrentUserService currentUserService// Repository mới
+    ) : IRequestHandler<CreateRoomMaintainScheduleCommand, Guid>
 {
-    public async Task<RoomMaintainScheduleResponse> Handle(CreateRoomMaintainScheduleCommand request, CancellationToken cancellationToken)
+    public async Task<Guid> Handle(CreateRoomMaintainScheduleCommand request, CancellationToken cancellationToken)
     {
-        var currentUserId = currentUserService.UserId ?? throw new UnauthorizedAccessException("Bạn cần đăng nhập để thực hiện chức năng này.");
+        var currentUserId = currentUserService.UserId;
+        if (currentUserId == null)
+        {
+            throw new UnauthorizedAccessException("Bạn cần đăng nhập để thực hiện chức năng này.");
+        }
 
-        var labRoom = await labRoomRepository.GetByIdAsync(request.LabRoomId, cancellationToken) ?? throw new NotFoundException(nameof(LabRoom), request.LabRoomId.ToString());
+        var labRoom = await labRoomRepository.GetByIdAsync(request.LabRoomId, cancellationToken);
+
+        if (labRoom == null)
+        {
+            throw new NotFoundException(nameof(LabRoom), request.LabRoomId.ToString());
+        }
 
         if (labRoom.MainManagerId != currentUserId)
         {
@@ -25,16 +33,19 @@ public class CreateRoomMaintainScheduleCommandHandler(
 
         logger.LogInformation("Đang tạo một RoomMaintainSchedule mới cho LabRoom {LabRoomId} bởi Manager {ManagerId}", request.LabRoomId, currentUserId);
 
+        // 1. Map từ Command sang Entity
         var schedule = mapper.Map<RoomMaintainSchedule>(request);
 
+        // 2. Gán các giá trị mặc định
+        // Entity RoomMaintainSchedule không tự gán Id, 
+        // không giống như UsagePolicy. Vì vậy, chúng ta gán nó ở đây.
         schedule.Id = Guid.NewGuid();
-        schedule.RoomMaintainStatus = RoomMaintainStatus.NotYet;
+        schedule.RoomMaintainStatus = RoomMaintainStatus.NotYet; // Gán trạng thái mặc định
 
-        var createdSchedule = await roomMaintainScheduleRepository.Create(schedule, cancellationToken);
-        var response = mapper.Map<RoomMaintainScheduleResponse>(createdSchedule);
-
-        logger.LogInformation("Created Schedule {Id} for Lab {LabName}", createdSchedule.Id, createdSchedule.LabRoom?.LabName);
-
-        return response;
+        // 3. Lưu vào database
+        // (Giả định phương thức Create trả về Guid giống như LabRoomRepository)
+        //var scheduleId = await roomMaintainScheduleRepository.Create(schedule, cancellationToken);
+        var scheduleId = await roomMaintainScheduleRepository.CreateWithOverrideLogicAsync(schedule, cancellationToken);
+        return scheduleId;
     }
 }

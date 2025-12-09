@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace LabBooking.Application.Features.BookingChangeRequest.Commands.CreateBookingChangeRequest
 {
-    internal class CreateBookingChangeRequestCommandValidator
+    public class CreateBookingChangeRequestCommandValidator
     {
     }
 }

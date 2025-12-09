@@ -9,6 +9,8 @@ public record EquipmentResponse(
     string? Description,
     bool IsAvailable,
     Guid LabRoomId,
-    EquipmentStatus Status
+    EquipmentStatus Status,
+    Guid? EquipmentCategoryId,
+    string? EquipmentCategoryName
 );
 

@@ -14,7 +14,7 @@ namespace LabBooking.Application.Features.Booking.Queries.GetPendingBooking
     {
         public async Task<List<BookingResponse>> Handle(GetPendingBookingsQuery request, CancellationToken cancellationToken)
         {
-            var bookings = await bookingRepository.GetPendingBookingsAsync(request.LabId);
+            var bookings = await bookingRepository.GetPendingBookingsAsync(request.UserId);
             return mapper.Map<List<BookingResponse>>(bookings);
         }
     }

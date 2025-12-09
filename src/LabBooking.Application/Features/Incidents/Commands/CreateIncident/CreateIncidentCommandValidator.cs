@@ -2,43 +2,50 @@
 
 public class CreateIncidentCommandValidator : AbstractValidator<CreateIncidentCommand>
 {
-    private readonly ILabRoomRepository _labRoomRepository;
-    private readonly ISlotRepository _slotRepository; // Giả sử bạn đã có repo này từ task trước
-
-    public CreateIncidentCommandValidator(
-        ILabRoomRepository labRoomRepository,
-        ISlotRepository slotRepository)
+    public CreateIncidentCommandValidator(IEquipmentRepository equipmentRepository)
     {
-        _labRoomRepository = labRoomRepository;
-        _slotRepository = slotRepository;
+        RuleFor(x => x.LabRoomId)
+            .NotEmpty().WithMessage("Vui lòng chọn phòng Lab xảy ra sự cố.");
 
-        RuleFor(c => c.LabRoomId)
-            .NotEmpty().WithMessage("Vui lòng chọn phòng Lab.")
-            .MustAsync(LabRoomMustExist).WithMessage("Phòng Lab không tồn tại.");
-
-        RuleFor(c => c.SlotId)
-            .NotEmpty().WithMessage("Vui lòng chọn Slot (Ca).")
-            .MustAsync(SlotMustExist).WithMessage("Slot không tồn tại.");
-
-        RuleFor(c => c.Type)
+        RuleFor(x => x.Type)
             .IsInEnum().WithMessage("Loại sự cố không hợp lệ.");
 
-        RuleFor(c => c.ImportanceLevel)
-            .IsInEnum().WithMessage("Mức độ nghiêm trọng không hợp lệ.");
 
-        RuleFor(c => c.Description)
-            .NotEmpty().WithMessage("Mô tả sự cố không được để trống.")
-            .MaximumLength(1000).WithMessage("Mô tả không được quá 1000 ký tự.");
-    }
+        RuleFor(x => x.ImportanceLevel)
+            .IsInEnum().WithMessage("Mức độ quan trọng không hợp lệ.");
 
-    private async Task<bool> LabRoomMustExist(Guid labRoomId, CancellationToken token)
-    {
-        return await _labRoomRepository.ExistsAsync(labRoomId, token);
-    }
+        RuleFor(x => x.Description)
+            .NotEmpty().WithMessage("Vui lòng nhập mô tả sự cố.")
+            .MaximumLength(1000).WithMessage("Mô tả không được vượt quá 1000 ký tự.");
 
-    private async Task<bool> SlotMustExist(Guid slotId, CancellationToken token)
-    {
-        // Giả sử ISlotRepository có hàm ExistsAsync, nếu chưa có bạn dùng GetById != null
-        return await _slotRepository.GetByIdAsync(slotId, token) != null;
+        RuleFor(x => x.EquipmentIds)
+            .NotEmpty() // NotEmpty với List nghĩa là != null và Count > 0
+            .When(x => x.Type == IncidentType.EquipmentFailure)
+            .WithMessage("Vui lòng chọn ít nhất một thiết bị bị hỏng.");
+
+        // 6. Nếu KHÔNG phải lỗi thiết bị -> Danh sách PHẢI rỗng hoặc Null
+        RuleFor(x => x.EquipmentIds)
+            .Must(ids => ids == null || ids.Count == 0)
+            .When(x => x.Type != IncidentType.EquipmentFailure)
+            .WithMessage("Không được chọn thiết bị nếu loại sự cố không phải là 'Hư hỏng thiết bị'.");
+
+        // 7. Kiểm tra từng thiết bị trong danh sách có thuộc phòng Lab không
+        // Sử dụng RuleForEach để duyệt qua từng phần tử trong List
+        RuleForEach(x => x.EquipmentIds)
+            .CustomAsync(async (equipmentId, context, token) =>
+            {
+                // Lấy command gốc để biết LabRoomId
+                var command = (CreateIncidentCommand)context.InstanceToValidate;
+
+                // Gọi Repo kiểm tra xem thiết bị này có nằm trong phòng Lab đang chọn không
+                var isInLab = await equipmentRepository.IsEquipmentInLabAsync(equipmentId, command.LabRoomId, token);
+
+                if (!isInLab)
+                {
+                    // Nếu sai thì bắn lỗi kèm ID thiết bị (hoặc bạn có thể query lấy tên thiết bị để báo lỗi đẹp hơn)
+                    context.AddFailure("EquipmentIds", $"Thiết bị có ID {equipmentId} không thuộc phòng Lab này.");
+                }
+            })
+            .When(x => x.Type == IncidentType.EquipmentFailure && x.EquipmentIds != null);
     }
 }

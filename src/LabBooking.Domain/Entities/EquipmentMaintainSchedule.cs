@@ -1,25 +1,15 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using LabBooking.Domain.Enums;
 
-namespace LabBooking.Domain.Entities
+namespace LabBooking.Domain.Entities;
+
+public class EquipmentMaintainSchedule
 {
-    public class EquipmentMaintainSchedule
-    {
-        public Guid Id { get; set; }
-        public Guid EquipmentId { get; set; }
-        [ForeignKey(nameof(EquipmentId))]
-        public Equipment? Equipment { get; set; }
-        public DateTime StartTime { get; set; }
-        public DateTime EndTime { get; set; }
-        public EquimentpMaintainStatus? EquimentpMaintainStatus { get; set; }
-        public string? Description { get; set; }
-    }
-    public enum EquimentpMaintainStatus
-    {
-        Done,
-        NotYet
-    }
+    public Guid Id { get; set; } = (Guid)Uuid7.NewUuid7();
+    public DateTime StartTime { get; set; }
+    public DateTime EndTime { get; set; }
+    public string Description { get; set; } = string.Empty;
+    public MaintenanceStatus Status { get; set; } = MaintenanceStatus.NotYet;
+
+
+    public ICollection<EquipmentMaintenance> Details { get; set; } = new List<EquipmentMaintenance>();
 }

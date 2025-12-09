@@ -20,17 +20,24 @@ namespace LabBooking.Domain.Entities
 
         // Đơn Booking của "Nạn nhân" (Người bị đè)
         public Guid BookingId { get; set; }
+        [ForeignKey(nameof(BookingId))]
+        public Booking Booking { get; set; }
 
         // ID của Nạn nhân (để dễ query thông báo)
         public Guid CreatedById { get; set; }
 
         // Đơn Booking Priority (Thủ phạm gây ra vụ đè)
-        public Guid PriorityBookingId { get; set; }
+        public Guid? PriorityBookingId { get; set; }
+        [ForeignKey(nameof(PriorityBookingId))]
+        public Booking? PriorityBooking { get; set; }
 
         // Danh sách ID các slot bị mất (Lưu dạng JSON string: ["guid1", "guid2"])
         public string OverriddenSlotIdsJson { get; set; }
 
+        public Guid? RoomMaintainScheduleId { get; set; }
+
         public ConsentStatus Status { get; set; } = ConsentStatus.Pending;
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+        public DateTime? ResolvedAt { get; set; }
     }
 }

@@ -1,12 +1,46 @@
-﻿namespace LabBooking.Infrastructure.Repositories;
+﻿using LabBooking.Domain.Enums;
+using LabBooking.Domain.Exceptions;
 
-internal class IncidentRepository(LabBookingDbContext dbContext) : IIncidentRepository
+namespace LabBooking.Infrastructure.Repositories;
+
+internal class IncidentRepository(LabBookingDbContext dbContext, INotificationRepository notificationRepo) : IIncidentRepository
 {
-    public async Task<Guid> Create(Incident entity, CancellationToken cancellationToken = default)
+    public async Task<Guid> CreateAsync(Incident incident, CancellationToken token)
     {
-        dbContext.Incidents.Add(entity);
-        await dbContext.SaveChangesAsync(cancellationToken);
-        return entity.Id;
+        var pushQueue = new List<PushNotificationData>();
+
+        // 1. Lấy thông tin Manager của phòng Lab liên quan
+        var labInfo = await dbContext.LabRooms
+            .Where(l => l.Id == incident.LabRoomId)
+            .Select(l => new { l.MainManagerId, l.LabName })
+            .FirstOrDefaultAsync(token);
+
+        if (labInfo == null)
+            throw new NotFoundException("LabRoom", incident.LabRoomId.ToString());
+
+        await dbContext.Incidents.AddAsync(incident, token);
+
+        var notiMessage = !string.IsNullOrEmpty(incident.Description)
+                ? $"Sự cố mới tại {labInfo.LabName}: {incident.Description}"
+                : $"Có báo cáo sự cố mới tại {labInfo.LabName} cần bạn kiểm tra.";
+
+        // Cắt ngắn message nếu quá dài để hiển thị thông báo đẹp hơn
+        if (notiMessage.Length > 100) notiMessage = notiMessage.Substring(0, 97) + "...";
+
+        var (_, mgrPush) = notificationRepo.PrepareNotification(
+            labInfo.MainManagerId,
+            "🚨 Báo cáo sự cố mới",
+            notiMessage,
+            "MANAGER_NEW_INCIDENT",
+            new { incidentId = incident.Id, labRoomId = incident.LabRoomId }
+        );
+        pushQueue.Add(mgrPush);
+
+        await dbContext.SaveChangesAsync(token);
+
+        notificationRepo.RunPushNotificationTask(pushQueue);
+
+        return incident.Id;
     }
 
     public async Task<(IEnumerable<Incident>, int)> GetAllMatchingAsync(
@@ -46,4 +80,113 @@ internal class IncidentRepository(LabBookingDbContext dbContext) : IIncidentRepo
         return (labs, totalCount);
     }
 
+    public async Task<bool> IsSpamAsync(Guid userId, Guid labRoomId, IncidentType type, CancellationToken token)
+    {
+        var oneMinuteAgo = DateTime.UtcNow.AddMinutes(-1);
+
+        return await dbContext.Incidents
+            .AnyAsync(x => x.ReportedById == userId
+                        && x.LabRoomId == labRoomId
+                        && x.Type == type
+                        && x.CreatedAt > oneMinuteAgo, token);
+    }
+    public async Task<Incident?> GetByIdWithDetailsAsync(Guid id, CancellationToken token)
+    {
+        return await dbContext.Incidents
+            .Include(i => i.ReportedBy) // Lấy thông tin người báo
+            .Include(i => i.LabRoom)    // Lấy thông tin phòng (để check Manager)
+            .Include(i => i.IncidentEquipments)
+        .ThenInclude(ie => ie.Equipment)  // Lấy thiết bị (để revert status)
+            .FirstOrDefaultAsync(i => i.Id == id, token);
+    }
+
+    public async Task DeleteAsync(Incident incident, CancellationToken token)
+    {
+        dbContext.Incidents.Remove(incident);
+        await dbContext.SaveChangesAsync(token);
+    }
+
+    // 1. Hàm lấy cho Manager (Lấy tất cả sự cố trong các phòng Manager này quản lý)
+    public async Task<IEnumerable<Incident>> GetByManagerIdAsync(Guid managerId, CancellationToken token)
+    {
+        return await dbContext.Incidents
+            .Include(i => i.LabRoom)
+            .Include(i => i.IncidentEquipments)
+        .ThenInclude(ie => ie.Equipment)
+            .Include(i => i.ReportedBy) // Manager cần thông tin người báo
+            .Where(i => i.LabRoom.MainManagerId == managerId) // <--- Logic lọc theo quyền quản lý
+            .OrderByDescending(i => i.CreatedAt)
+            .ToListAsync(token);
+    }
+
+    // 2. Hàm lấy cho Cá nhân (Đã có từ trước)
+    public async Task<IEnumerable<Incident>> GetByReporterIdAsync(Guid reporterId, CancellationToken token)
+    {
+        return await dbContext.Incidents
+            .Include(i => i.LabRoom)
+            .Include(i => i.IncidentEquipments)
+        .ThenInclude(ie => ie.Equipment)
+            // Không cần Include ReportedBy cũng được vì Guard không cần xem
+            .Where(i => i.ReportedById == reporterId)
+            .OrderByDescending(i => i.CreatedAt)
+            .ToListAsync(token);
+    }
+
+    public async Task<IEnumerable<Incident>> GetFilteredAsync(
+    Guid? managerId,   // Nếu != null -> Chỉ lấy phòng do ông này quản lý
+    Guid? reporterId,  // Nếu != null -> Chỉ lấy incident do ông này tạo
+    Guid? labRoomId,   // Lọc theo phòng cụ thể
+    DateTime? from,
+    DateTime? to,
+    bool? isResolved,
+    LevelOfImportance? importance,
+    bool isDescending,
+    CancellationToken token)
+    {
+        var query = dbContext.Incidents
+            .Include(i => i.LabRoom)
+            .Include(i => i.IncidentEquipments)
+        .ThenInclude(ie => ie.Equipment)
+            .Include(i => i.ReportedBy)
+            .AsQueryable();
+
+        // 1. LOGIC MANAGER (Bị giới hạn quyền)
+        if (managerId.HasValue)
+        {
+            // Bắt buộc: Incident phải thuộc phòng do Manager này quản lý
+            query = query.Where(i => i.LabRoom.MainManagerId == managerId.Value);
+        }
+
+        // 2. LOGIC REPORTER (Nếu muốn xem của riêng mình - Dành cho SV/GV)
+        if (reporterId.HasValue)
+        {
+            query = query.Where(i => i.ReportedById == reporterId.Value);
+        }
+
+        // 3. LOGIC LỌC PHÒNG (Guard chọn phòng để xem)
+        if (labRoomId.HasValue)
+        {
+            query = query.Where(i => i.LabRoomId == labRoomId.Value);
+        }
+
+        // 4. CÁC BỘ LỌC KHÁC (Chung cho tất cả)
+        if (from.HasValue)
+            query = query.Where(i => i.CreatedAt >= from.Value.ToUniversalTime());
+
+        if (to.HasValue)
+            query = query.Where(i => i.CreatedAt <= to.Value.ToUniversalTime());
+
+        if (isResolved.HasValue)
+            query = query.Where(i => i.IsResolved == isResolved.Value);
+
+        if (importance.HasValue)
+            query = query.Where(i => i.ImportanceLevel == importance.Value);
+
+        // 5. SẮP XẾP
+        query = isDescending
+            ? query.OrderByDescending(i => i.CreatedAt)
+            : query.OrderBy(i => i.CreatedAt);
+
+        return await query.ToListAsync(token);
+    }
 }

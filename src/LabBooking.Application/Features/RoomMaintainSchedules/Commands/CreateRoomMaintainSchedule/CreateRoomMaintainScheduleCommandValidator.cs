@@ -14,6 +14,13 @@ public class CreateRoomMaintainScheduleCommandValidator : AbstractValidator<Crea
             .MustAsync(LabRoomMustExist)
             .WithMessage("The specified LabRoom was not found.");
 
+        // --- Start Time Logic (MỚI THÊM) ---
+        RuleFor(c => c.StartTime)
+            .NotEmpty().WithMessage("Start Time is required.") // Bắt buộc nhập
+            .GreaterThan(DateTime.UtcNow)
+            .WithMessage("Thời gian bắt đầu bảo trì phải sau thời điểm hiện tại.")
+            .When(c => c.StartTime.HasValue);
+
         // --- Date Logic (Tương tự UsagePolicy) ---
         RuleFor(c => c.EndTime)
             .GreaterThan(c => c.StartTime)

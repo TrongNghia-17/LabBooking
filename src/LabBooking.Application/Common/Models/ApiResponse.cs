@@ -7,19 +7,11 @@ public class ApiResponse<T>
     public T? Data { get; set; }
     public object? Errors { get; set; }
 
-    // Constructor cho trường hợp thành công
-    public ApiResponse(int statusCode, string message, T? data)
+    public ApiResponse(int statusCode, string message, T? data = default, object? errors = null)
     {
         StatusCode = statusCode;
         Message = message;
         Data = data;
-    }
-
-    // Constructor cho trường hợp lỗi (Data null)
-    public ApiResponse(int statusCode, string message)
-    {
-        StatusCode = statusCode;
-        Message = message;
-        Data = default;
+        Errors = errors;
     }
 }

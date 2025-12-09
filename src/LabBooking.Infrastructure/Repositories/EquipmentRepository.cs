@@ -21,10 +21,11 @@ internal class EquipmentRepository(LabBookingDbContext dbContext) : IEquipmentRe
         return equipment;
     }
 
-    public async Task Update(Equipment entity)
+    public async Task UpdateAsync(Equipment equipment, CancellationToken token = default)
     {
-        dbContext.Entry(entity).State = EntityState.Modified;
-        await dbContext.SaveChangesAsync();
+        dbContext.Equipments.Update(equipment);
+
+        await dbContext.SaveChangesAsync(token);
     }
 
     public async Task<(IEnumerable<Equipment>, int)> GetAllMatchingAsync(
@@ -39,6 +40,10 @@ internal class EquipmentRepository(LabBookingDbContext dbContext) : IEquipmentRe
         // 1. Query cơ bản
         var baseQuery = dbContext
             .Equipments
+            .Include(e => e.LabRoom) // Include Phòng Lab (nếu cần)
+
+        // --- BẮT BUỘC THÊM DÒNG NÀY ---
+        .Include(e => e.EquipmentCategory)
             .Where(e => searchPhraseLower == null ||
                         (e.EquipmentName.ToLower().Contains(searchPhraseLower)) ||
                         (e.Description != null && e.Description.ToLower().Contains(searchPhraseLower)));
@@ -83,5 +88,12 @@ internal class EquipmentRepository(LabBookingDbContext dbContext) : IEquipmentRe
     public async Task<bool> ExistsAsync(Guid id, CancellationToken cancellationToken = default)
     {
         return await dbContext.Equipments.AnyAsync(e => e.Id == id, cancellationToken);
+    }
+
+    public async Task<bool> IsEquipmentInLabAsync(Guid equipmentId, Guid labRoomId, CancellationToken token = default)
+    {
+        // Check xem có thiết bị nào ID như thế VÀ LabRoomId khớp không
+        return await dbContext.Equipments
+            .AnyAsync(e => e.Id == equipmentId && e.LabRoomId == labRoomId, token);
     }
 }

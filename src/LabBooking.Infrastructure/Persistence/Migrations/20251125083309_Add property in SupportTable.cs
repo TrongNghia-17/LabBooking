@@ -51,10 +51,10 @@ namespace LabBooking.Application.Migrations
                 oldClrType: typeof(Guid),
                 oldType: "uuid");
 
-            migrationBuilder.CreateIndex(
-                name: "IX_OutSideGuests_BookingId",
-                table: "OutSideGuests",
-                column: "BookingId");
+            //migrationBuilder.CreateIndex(
+            //    name: "IX_OutSideGuests_BookingId",
+            //    table: "OutSideGuests",
+            //    column: "BookingId");
 
             migrationBuilder.AddForeignKey(
                 name: "FK_Incidents_Slots_SlotId",
@@ -63,13 +63,13 @@ namespace LabBooking.Application.Migrations
                 principalTable: "Slots",
                 principalColumn: "Id");
 
-            migrationBuilder.AddForeignKey(
-                name: "FK_OutSideGuests_Bookings_BookingId",
-                table: "OutSideGuests",
-                column: "BookingId",
-                principalTable: "Bookings",
-                principalColumn: "Id",
-                onDelete: ReferentialAction.Cascade);
+            //migrationBuilder.AddForeignKey(
+            //    name: "FK_OutSideGuests_Bookings_BookingId",
+            //    table: "OutSideGuests",
+            //    column: "BookingId",
+            //    principalTable: "Bookings",
+            //    principalColumn: "Id",
+            //    onDelete: ReferentialAction.Cascade);
         }
 
         /// <inheritdoc />
@@ -79,13 +79,13 @@ namespace LabBooking.Application.Migrations
                 name: "FK_Incidents_Slots_SlotId",
                 table: "Incidents");
 
-            migrationBuilder.DropForeignKey(
-                name: "FK_OutSideGuests_Bookings_BookingId",
-                table: "OutSideGuests");
+            //migrationBuilder.DropForeignKey(
+            //    name: "FK_OutSideGuests_Bookings_BookingId",
+            //    table: "OutSideGuests");
 
-            migrationBuilder.DropIndex(
-                name: "IX_OutSideGuests_BookingId",
-                table: "OutSideGuests");
+            //migrationBuilder.DropIndex(
+            //    name: "IX_OutSideGuests_BookingId",
+            //    table: "OutSideGuests");
 
             migrationBuilder.DropColumn(
                 name: "CreatedAt",

@@ -1,4 +1,7 @@
-﻿namespace LabBooking.Infrastructure.Repositories;
+﻿using LabBooking.Application.Features.LabRooms.Dtos;
+using LabBooking.Domain.NonEntities;
+
+namespace LabBooking.Infrastructure.Repositories;
 
 internal class LabRoomRepository(LabBookingDbContext dbContext) : ILabRoomRepository
 {
@@ -109,11 +112,82 @@ internal class LabRoomRepository(LabBookingDbContext dbContext) : ILabRoomReposi
         return !isDuplicate;
     }
 
-    public async Task<IEnumerable<LabRoom>> GetByManagerIdAsync(Guid managerId, CancellationToken cancellationToken = default)
+    public async Task<IEnumerable<LabRoom>> GetLabsByManagerWithEquipmentsAsync(Guid managerId, CancellationToken cancellationToken = default)
     {
         return await dbContext.LabRooms
-            .Where(r => r.MainManagerId == managerId && r.IsActive) // Chỉ lấy phòng đang hoạt động
+            .Where(r => r.MainManagerId == managerId && r.IsActive)
+            .Include(r => r.Equipments)
+                .ThenInclude(e => e.EquipmentCategory)
             .OrderBy(r => r.LabName)
+            .ToListAsync(cancellationToken);
+    }
+
+    public async Task<IEnumerable<MonthlyTopLabDto>> GetTopLabPerMonthAsync(int year, CancellationToken token)
+    {
+        // Bước 1: Query Database để lấy thống kê thô
+        // Gom nhóm theo (Tháng, Phòng) và đếm số lượng
+        var rawStats = await dbContext.Bookings
+            .AsNoTracking()
+            .Where(b => b.Status == BookingStatus.Approved) // Chỉ tính đơn đã duyệt
+            .Where(b => b.CreatedAt.HasValue && b.CreatedAt.Value.Year == year) // Lọc theo năm user chọn
+            .GroupBy(b => new
+            {
+                Month = b.CreatedAt.Value.Month,
+                LabId = b.LabRoomId,
+                LabName = b.LabRoom.LabName
+            })
+            .Select(g => new
+            {
+                Month = g.Key.Month,
+                LabName = g.Key.LabName ?? "Unknown",
+                Count = g.Count()
+            })
+            .ToListAsync(token);
+
+        // Bước 2: Xử lý Logic tìm Top 1 mỗi tháng (Làm trên RAM cho dễ)
+        var result = rawStats
+            .GroupBy(x => x.Month) // Gom lại theo tháng
+            .Select(g =>
+            {
+                // Trong mỗi tháng, tìm phòng có Count cao nhất
+                var topRoom = g.OrderByDescending(x => x.Count).First();
+
+                return new MonthlyTopLabDto
+                {
+                    MonthYear = $"{topRoom.Month}/{year}",
+                    LabName = topRoom.LabName,
+                    TotalBookings = topRoom.Count
+                };
+            })
+            .OrderBy(x => x.MonthYear) // Sắp xếp thời gian
+            .ToList();
+
+        return result;
+    }
+
+    public async Task<IEnumerable<LabStatModel>> GetRawStatisticsAsync(int year, CancellationToken cancellationToken)
+    {
+        // Query vào BookingSlot vì nó chứa ngày tháng
+        return await dbContext.Set<BookingSlot>()
+            .AsNoTracking() // Read-only nên dùng AsNoTracking cho nhẹ
+            .Include(bs => bs.Booking)
+                .ThenInclude(b => b.LabRoom)
+            // Lọc dữ liệu: Cùng năm, Slot Active, Có Booking và Phòng hợp lệ
+            .Where(bs => bs.Date.Year == year
+                         && bs.Status == BookingSlotStatus.Active
+                         && bs.Booking != null
+                         && bs.Booking.LabRoom != null)
+            // Map trực tiếp sang Domain Model
+            .Select(bs => new LabStatModel
+            {
+                LabId = bs.Booking!.LabRoomId,
+                LabName = bs.Booking.LabRoom!.LabName ?? "Unknown",
+                Month = bs.Date.Month,
+                BookingId = bs.BookingId,
+                // Logic xác định bảo trì (tùy chỉnh theo enum của bạn)
+                IsMaintenance = bs.Reason == UnavailableReason.Maintenance
+                                || bs.Priority == 0 // 0 is Maintenance
+            })
             .ToListAsync(cancellationToken);
     }
 }

@@ -28,6 +28,7 @@ namespace LabBooking.Application.Features.BookingChangeRequest.Dtos
 
         // Thay vì string NewExternalEquipmentsJson -> Trả về List Object
         public List<ExternalEquipmentResponse>? NewExternalEquipments { get; set; }
+        public List<OutSideGuestResponse>? NewOutSideGuests { get; set; }
 
         // --- NHÓM 3: SLOTS ---
         public List<BookingChangeRequestSlot> NewSlots { get; set; }

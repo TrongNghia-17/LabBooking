@@ -20,4 +20,15 @@ public class CurrentUserService(IHttpContextAccessor httpContextAccessor) : ICur
             return null;
         }
     }
+
+    public IEnumerable<string> Roles
+    {
+        get
+        {
+            var user = httpContextAccessor.HttpContext?.User;
+            if (user == null) return [];
+
+            return user.FindAll(ClaimTypes.Role).Select(c => c.Value);
+        }
+    }
 }

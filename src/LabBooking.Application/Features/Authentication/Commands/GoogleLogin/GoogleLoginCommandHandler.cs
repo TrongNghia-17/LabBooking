@@ -31,13 +31,15 @@ public class GoogleLoginCommandHandler(
             userRole = "Student";
         else if (googlePayload.Email.EndsWith("@fe.edu.vn", StringComparison.OrdinalIgnoreCase))
             userRole = "Lecturer";
+        else if (googlePayload.Email.EndsWith("@gmail.com", StringComparison.OrdinalIgnoreCase))
+            userRole = "Manager";
         else
             throw new ForbidException("Email domain is not allowed.");
 
         // 3. Check the campus
-        var campusInfo = googlePayload.FamilyName;
-        if (string.IsNullOrWhiteSpace(campusInfo) || !campusInfo.Contains("HCM", StringComparison.OrdinalIgnoreCase))
-            throw new ForbidException("Account does not belong to HCM facility.");
+        //var campusInfo = googlePayload.FamilyName;
+        //if (string.IsNullOrWhiteSpace(campusInfo) || !campusInfo.Contains("HCM", StringComparison.OrdinalIgnoreCase))
+        //    throw new ForbidException("Account does not belong to HCM facility.");
 
         // 4. Find the user in the database
         var user = await userManager.FindByEmailAsync(googlePayload.Email);

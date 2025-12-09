@@ -7,5 +7,5 @@ using System.Threading.Tasks;
 
 namespace LabBooking.Application.Features.Booking.Queries.GetPendingBooking
 {
-    public record GetPendingBookingsQuery(Guid? LabId) : IRequest<List<BookingResponse>>;
+    public record GetPendingBookingsQuery(Guid? UserId) : IRequest<List<BookingResponse>>;
 }

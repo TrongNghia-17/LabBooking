@@ -1,4 +1,6 @@
 ﻿using LabBooking.Application.Features.LabRooms.Commands.DeleteLabRoom;
+using LabBooking.Application.Features.LabRooms.Queries.GetLabStatistics;
+using LabBooking.Application.Features.LabRooms.Queries.GetTopLabs;
 using LabBooking.Application.Features.LabRooms.Queries.GetUnmaintainedLabRooms;
 
 namespace LabBooking.API.Controllers;
@@ -78,7 +80,7 @@ public class LabRoomsController(
     /// <param name="query">Query parameters for filtering lab rooms</param>
     /// <returns>List of lab rooms</returns>
     [HttpGet]
-    [Authorize(Roles = "Admin")]
+    [Authorize(Roles = "Admin, Student, Lecturer, Manager, SecurityGuard")]
     [ProducesResponseType(typeof(PagedResult<LabRoomResponse>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
@@ -124,5 +126,28 @@ public class LabRoomsController(
         var labRoom = await mediator.Send(query);
 
         return Ok(labRoom);
+    }
+
+    /// <summary>
+    /// Thống kê phòng Lab được đặt nhiều nhất theo từng tháng trong năm.
+    /// </summary>
+    /// <param name="year">Năm cần xem (VD: 2024). Bỏ trống sẽ lấy năm nay.</param>
+    [HttpGet("top-labs")]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> GetTopLabs([FromQuery] int year)
+    {
+        var result = await mediator.Send(new GetTopLabsQuery(year));
+        return Ok(result);
+    }
+
+    [HttpGet("labs")]
+    [Authorize(Roles = "Admin")] // Bật lại nếu cần bảo mật
+    public async Task<IActionResult> GetLabStatistics([FromQuery] int year)
+    {
+        // Nếu không truyền năm, lấy năm hiện tại
+        if (year <= 0) year = DateTime.Now.Year;
+
+        var result = await mediator.Send(new GetLabStatisticsQuery(year));
+        return Ok(result);
     }
 }

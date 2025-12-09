@@ -2,8 +2,8 @@
 
 public record CreateIncidentCommand(
     Guid LabRoomId,
-    Guid SlotId,
     IncidentType Type,
+    LevelOfImportance ImportanceLevel,
     string Description,
-    LevelOfImportance ImportanceLevel
+    List<Guid>? EquipmentIds
 ) : IRequest<Guid>;
