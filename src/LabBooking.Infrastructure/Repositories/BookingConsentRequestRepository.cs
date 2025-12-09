@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 
 namespace LabBooking.Infrastructure.Repositories
 {
-    internal class BookingConsentRequestRepository(LabBookingDbContext dbContext) : IBookingConsentRequestRepository
+    internal class BookingConsentRequestRepository(LabBookingDbContext dbContext, INotificationRepository notificationRepo) : IBookingConsentRequestRepository
     {
         public async Task<BookingConsentRequest?> GetByIdWithBookingAndSlotsAsync(Guid id, CancellationToken cancellationToken)
         {
@@ -24,6 +24,7 @@ namespace LabBooking.Infrastructure.Repositories
         // --- LOGIC MỚI ĐƯỢC CHUYỂN XUỐNG ĐÂY ---
         public async Task ConfirmConsentCancelAsync(Guid consentId, CancellationToken cancellationToken)
         {
+            var pushQueue = new List<PushNotificationData>();
             // 1. Tìm kiếm dữ liệu (Re-use logic query nếu cần hoặc viết trực tiếp)
             var consentRequest = await GetByIdWithBookingAndSlotsAsync(consentId, cancellationToken);
 
@@ -33,6 +34,13 @@ namespace LabBooking.Infrastructure.Repositories
 
             if (consentRequest.Status != ConsentStatus.Pending)
                 throw new BadRequestException("Yêu cầu này đã được xử lý trước đó.");
+
+            // 2. Load thông tin Phòng Lab để lấy ManagerId
+            await dbContext.Entry(consentRequest.Booking)
+                .Reference(b => b.LabRoom)
+                .LoadAsync(cancellationToken);
+            var managerId = consentRequest.Booking.LabRoom.MainManagerId;
+            var bookingTitle = consentRequest.Booking.Title;
 
             // 3. Xử lý logic: Cập nhật Consent
             consentRequest.Status = ConsentStatus.AcceptedCancel;
@@ -50,17 +58,36 @@ namespace LabBooking.Infrastructure.Repositories
                 // consentRequest.Booking.CancelReason = "Người dùng đồng ý hủy do bị chiếm lịch.";
             }
 
+            var (_, mgrPush) = notificationRepo.PrepareNotification(
+                managerId,
+                "❌ User đã chấp nhận hủy lịch",
+                $"User đã đồng ý hủy các slot bị trùng của đơn '{bookingTitle}'. Vui lòng kiểm tra.",
+                "MANAGER_CONSENT_RESOLVED",
+                new { bookingId = consentRequest.BookingId, result = "Cancelled" }
+            );
+            pushQueue.Add(mgrPush);
+
             // 5. Save Changes
             await dbContext.SaveChangesAsync(cancellationToken);
+            notificationRepo.RunPushNotificationTask(pushQueue);
         }
 
         public async Task CreateRescheduleRequestAsync(Guid consentId, List<NewSlotInput> newSlots, CancellationToken cancellationToken)
         {
+            var pushQueue = new List<PushNotificationData>();
             // 1. Lấy thông tin Consent hiện tại
             var consentRequest = await GetByIdWithBookingAndSlotsAsync(consentId, cancellationToken);
 
             if (consentRequest == null)
                 throw new KeyNotFoundException("Không tìm thấy yêu cầu xác nhận.");
+
+            // 2. Load thông tin Phòng Lab để lấy ManagerId
+            await dbContext.Entry(consentRequest.Booking)
+                .Reference(b => b.LabRoom)
+                .LoadAsync(cancellationToken);
+
+            var managerId = consentRequest.Booking.LabRoom.MainManagerId;
+            var bookingTitle = consentRequest.Booking.Title;
 
             // 2. Tạo BookingChangeRequest (Yêu cầu thay đổi - Chờ Manager duyệt)
             var changeRequest = new BookingChangeRequest
@@ -91,9 +118,19 @@ namespace LabBooking.Infrastructure.Repositories
             consentRequest.Status = ConsentStatus.Rescheduled;
             consentRequest.ResolvedAt = DateTime.UtcNow;
 
+            var (_, mgrPush) = notificationRepo.PrepareNotification(
+                managerId,
+                "🔄 User đã gửi lịch bù",
+                $"User đã chọn lịch mới cho đơn '{bookingTitle}' bị trùng. Vui lòng vào duyệt yêu cầu thay đổi.",
+                "MANAGER_NEW_CHANGE_REQUEST", // Loại này sẽ dẫn Manager vào màn hình duyệt ChangeRequest
+                new { requestId = changeRequest.Id, bookingId = consentRequest.BookingId }
+            );
+            pushQueue.Add(mgrPush);
+
             // 5. Lưu tất cả vào DB (ChangeRequest + NewSlots + Update Consent)
             dbContext.BookingChangeRequests.Add(changeRequest);
             await dbContext.SaveChangesAsync(cancellationToken);
+            notificationRepo.RunPushNotificationTask(pushQueue);
         }
 
         public async Task<Dictionary<Guid, string>> GetStatusesAsync(List<Guid> consentIds, CancellationToken cancellationToken)

@@ -384,29 +384,23 @@ namespace LabBooking.Infrastructure.Repositories
         public async Task ApproveBookingWithOverrideLogicAsync(Booking booking)
         {
             var pushQueue = new List<PushNotificationData>();
+
             // 1. Tìm slot bị trùng
             var requestedSlots = booking.Slots.ToList();
 
-            // Hàm này BẮT BUỘC phải có .Include(s => s.Booking)
+            // Đảm bảo Include Booking để check Priority
             var conflicts = await GetConflictingSlotsAsync(booking.LabRoomId, requestedSlots, booking.Id);
 
             // [CHECK 1] Chặn slot quá khứ
             if (conflicts.Any(c => c.Reason == UnavailableReason.PastTime))
             {
-                if (dbContext.Entry(booking).State == EntityState.Detached)
-                    dbContext.Bookings.Attach(booking);
-                
+                if (dbContext.Entry(booking).State == EntityState.Detached) dbContext.Bookings.Attach(booking);
                 booking.Status = BookingStatus.Rejected;
-
                 foreach (var s in booking.Slots) s.Status = BookingSlotStatus.Cancelled;
 
                 var (_, rejectPush) = notificationRepo.PrepareNotification(
-                    booking.CreatedById,
-                    "⛔ Đơn đặt phòng bị từ chối",
-                    $"Đơn '{booking.Title}' bị hệ thống từ chối tự động vì chứa khung giờ trong quá khứ.",
-                    "BOOKING_REJECTED",
-                    new { bookingId = booking.Id, reason = "PastTime" }
-                );
+                    booking.CreatedById, "⛔ Đơn bị từ chối", "Lý do: Quá khứ...", "BOOKING_REJECTED",
+                    new { bookingId = booking.Id, reason = "PastTime" });
                 pushQueue.Add(rejectPush);
 
                 await dbContext.SaveChangesAsync();
@@ -416,9 +410,21 @@ namespace LabBooking.Infrastructure.Repositories
 
             // Loại bỏ chính nó
             conflicts = conflicts.Where(c => c.BookingId != booking.Id).ToList();
+            string BuildConflictMessage(List<BookingSlot> conflictSlots)
+            {
+                var details = conflictSlots
+                    .GroupBy(c => c.Date)
+                    .OrderBy(g => g.Key)
+                    .Select(g =>
+                    {
+                        var dateStr = g.Key.ToString("dd/MM");
+                        // Lấy tên slot (ví dụ: Slot 1, Slot 2). Nếu null thì lấy giờ bắt đầu.
+                        var slotNames = string.Join(", ", g.Select(s => s.Slot?.Label ?? s.SlotId.ToString().Substring(0, 4)).Distinct());
+                        return $"{dateStr} ({slotNames})";
+                    });
 
-            var pushNotificationQueue = new List<(Guid UserId, string Title, string Body, object Payload)>();
-
+                return string.Join("; ", details);
+            }
             // =====================================================================
             // CASE A: PRIORITY (GHI ĐÈ)
             // =====================================================================
@@ -426,95 +432,86 @@ namespace LabBooking.Infrastructure.Repositories
             {
                 if (conflicts.Any())
                 {
-                    // 🔥 [FIX QUAN TRỌNG]: Group theo ID để gom đúng nhóm
-                    var victimGroups = conflicts.GroupBy(c => c.BookingId);
+                    // --- [LOGIC MỚI] PHÂN LOẠI PRIORITY ---
 
-                    foreach (var group in victimGroups)
+                    // 1. Check xem có đụng "Hàng cứng" không (Priority <= Mình)
+                    // Ví dụ: Mình là 1. Gặp thằng 0 (Bảo trì) hoặc 1 (Event khác) -> CHẶN
+                    var blockingConflicts = conflicts
+                        .Where(c => c.Booking != null && (int)c.Booking.Priority <= (int)booking.Priority)
+                        .ToList();
+
+                    if (blockingConflicts.Any())
                     {
-                        var lostSlots = group.ToList();
+                        // 👇 BÁO LỖI CHI TIẾT TẠI ĐÂY
+                        var msg = BuildConflictMessage(blockingConflicts);
+                        throw new BadRequestException($"Không thể duyệt vì vướng lịch Ưu tiên/Bảo trì tại: {msg}.");
+                    }
 
-                        // Lấy thông tin Booking từ phần tử đầu tiên trong nhóm
-                        // (Vì đã Include Booking nên property này không null)
-                        var victimBooking = lostSlots.First().Booking;
+                    // 2. Lọc ra những "Nạn nhân" (Priority > Mình)
+                    // Ví dụ: Mình là 1. Gặp thằng 2 (Học/Dự án) -> GHI ĐÈ
+                    var victimConflicts = conflicts
+                        .Where(c => c.Booking != null && (int)c.Booking.Priority > (int)booking.Priority)
+                        .ToList();
 
-                        if (victimBooking == null) continue; // Safety check
+                    if (victimConflicts.Any())
+                    {
+                        var victimGroups = victimConflicts.GroupBy(c => c.BookingId);
 
-                        // a. Đánh dấu slot cũ là Overridden
-                        foreach (var slot in lostSlots)
+                        foreach (var group in victimGroups)
                         {
-                            // [FIX] Ngắt quan hệ Booking để tránh lỗi trùng lặp Tracking khi Attach
-                            slot.Booking = null;
+                            var lostSlots = group.ToList();
+                            var victimBooking = lostSlots.First().Booking;
+                            if (victimBooking == null) continue;
 
-                            // Attach slot vào context để update
-                            if (dbContext.Entry(slot).State == EntityState.Detached)
-                                dbContext.BookingSlots.Attach(slot);
+                            // a. Đánh dấu slot cũ là Overridden
+                            foreach (var slot in lostSlots)
+                            {
+                                slot.Booking = null;
+                                if (dbContext.Entry(slot).State == EntityState.Detached) dbContext.BookingSlots.Attach(slot);
 
-                            slot.Status = BookingSlotStatus.Overridden;
-                            slot.OverriddenByBookingId = booking.Id;
+                                slot.Status = BookingSlotStatus.Overridden;
+                                slot.OverriddenByBookingId = booking.Id;
+                                dbContext.Entry(slot).State = EntityState.Modified;
+                            }
 
-                            // Đánh dấu là đã sửa đổi
-                            dbContext.Entry(slot).State = EntityState.Modified;
+                            // b. Tạo Consent Request
+                            var lostSlotsDetail = lostSlots.Select(s => new { BookingSlotId = s.Id, Date = s.Date, SlotId = s.SlotId }).ToList();
+                            var consentRequest = new BookingConsentRequest
+                            {
+                                Id = Guid.NewGuid(),
+                                BookingId = victimBooking.Id,
+                                CreatedById = victimBooking.CreatedById,
+                                PriorityBookingId = booking.Id,
+                                OverriddenSlotIdsJson = JsonSerializer.Serialize(lostSlotsDetail),
+                                Status = ConsentStatus.Pending,
+                                CreatedAt = DateTime.UtcNow
+                            };
+                            dbContext.Set<BookingConsentRequest>().Add(consentRequest);
+
+                            // c. Thông báo Nạn nhân
+                            var conflictDates = string.Join(", ", lostSlots.Select(s => s.Date.ToString("dd/MM")).Distinct());
+                            var overridePayload = new
+                            {
+                                type = "OVERRIDE_CONSENT",
+                                consentRequestId = consentRequest.Id,
+                                bookingTitle = victimBooking.Title,
+                                action = "resolve_override",
+                                consentStatus = "Pending"
+                            };
+                            var (_, victimPush) = notificationRepo.PrepareNotification(
+                                victimBooking.CreatedById,
+                                "⚠️ Thay đổi lịch đặt phòng",
+                                $"Đơn '{victimBooking.Title}' bị trùng lịch ngày {conflictDates} do sự kiện ưu tiên.",
+                                "OVERRIDE_CONSENT",
+                                overridePayload
+                            );
+                            pushQueue.Add(victimPush);
                         }
-
-                        // b. Chuẩn bị JSON chi tiết
-                        var lostSlotsDetail = lostSlots.Select(s => new
-                        {
-                            BookingSlotId = s.Id,
-                            Date = s.Date,
-                            SlotId = s.SlotId
-                        }).ToList();
-
-                        // c. Tạo Consent Request (1 cái duy nhất cho cả nhóm)
-                        var consentRequest = new BookingConsentRequest
-                        {
-                            Id = Guid.NewGuid(),
-                            BookingId = victimBooking.Id,
-                            CreatedById = victimBooking.CreatedById,
-                            PriorityBookingId = booking.Id,
-                            OverriddenSlotIdsJson = JsonSerializer.Serialize(lostSlotsDetail),
-                            Status = ConsentStatus.Pending,
-                            CreatedAt = DateTime.UtcNow
-                        };
-
-                        dbContext.Set<BookingConsentRequest>().Add(consentRequest);
-
-                        var payloadData = new
-                        {
-                            type = "OVERRIDE_CONSENT",
-                            consentRequestId = consentRequest.Id,
-                            bookingTitle = victimBooking.Title,
-                            action = "resolve_override"
-                        };
-
-                        // d. Tạo Notification Entity (1 cái duy nhất)
-                        var conflictDates = string.Join(", ", lostSlots.Select(s => s.Date.ToString("dd/MM")).Distinct());
-                        var notiTitle = "⚠️Cần thay đổi lịch đặt phòng";
-                        var notiBody = $"Đơn '{victimBooking.Title}' bị trùng lịch ngày {conflictDates} do sự kiện ưu tiên của trường.";
-
-                        //var payloadData = new
-                        //{
-                        //    type = "OVERRIDE_CONSENT",
-                        //    consentRequestId = consentRequest.Id,
-                        //    bookingTitle = victimBooking.Title,
-                        //    action = "resolve_override"
-                        //};
-
-                        var (_, victimPush) = notificationRepo.PrepareNotification(
-                            victimBooking.CreatedById,
-                            notiTitle,
-                            notiBody,
-                            "OVERRIDE_CONSENT",
-                            payloadData // Truyền payload custom vào đây
-                        );
-                        pushQueue.Add(victimPush);
-
-                        // e. Queue Push (1 cái duy nhất)
-                        //pushNotificationQueue.Add((victimBooking.CreatedById, notiTitle, notiBody, payloadData));
                     }
                 }
             }
             // =====================================================================
-            // CASE B: NORMAL (CHẶN)
+            // CASE B: NORMAL (CHẶN HẾT)
             // =====================================================================
             else
             {
@@ -523,42 +520,66 @@ namespace LabBooking.Infrastructure.Repositories
             }
 
             // 2. DUYỆT ĐƠN MỚI
-            if (dbContext.Entry(booking).State == EntityState.Detached)
-                dbContext.Bookings.Attach(booking);
-
+            if (dbContext.Entry(booking).State == EntityState.Detached) dbContext.Bookings.Attach(booking);
             booking.Status = BookingStatus.Approved;
+            foreach (var slot in booking.Slots) slot.Status = BookingSlotStatus.Active;
 
-            foreach (var slot in booking.Slots)
-            {
-                slot.Status = BookingSlotStatus.Active;
-            }
-
-            // 3. LƯU TẤT CẢ
-            await dbContext.SaveChangesAsync();
-
+            // 3. THÔNG BÁO CHỦ ĐƠN
             var (_, successPush) = notificationRepo.PrepareNotification(
-                 booking.CreatedById,
-                 "✅ Thành công",
-                 $"Đơn '{booking.Title}' đã được duyệt. Vui lòng check tại lịch sử duyệt đơn",
-                 "BOOKING_APPROVED"
+                booking.CreatedById,
+                "✅ Đơn đặt phòng đã được duyệt",
+                $"Đơn '{booking.Title}' của bạn đã được quản lý chấp thuận.",
+                "BOOKING_APPROVED",
+                new { bookingId = booking.Id }
             );
             pushQueue.Add(successPush);
 
-            // 4. GỬI PUSH
+            // 4. LƯU & PUSH
+            await dbContext.SaveChangesAsync();
             notificationRepo.RunPushNotificationTask(pushQueue);
         }
 
         public async Task<List<Guid>> GetBookedLabIdsAsync(DateOnly date, Guid slotId, CancellationToken ct)
-        {
-            return await dbContext.BookingSlots
-                .Include(bs => bs.Booking)
+        {// 1. Lấy ID phòng có Booking Active
+            try
+            {
+                var bookedLabs = await dbContext.BookingSlots
+                .AsNoTracking()
                 .Where(bs => bs.Date == date
                           && bs.SlotId == slotId
-                          && bs.Booking.Status != BookingStatus.Cancelled
-                          && bs.Booking.Status != BookingStatus.Rejected)
+                          && bs.Status == BookingSlotStatus.Active
+                          && bs.Booking.Status == BookingStatus.Approved)
                 .Select(bs => bs.Booking.LabRoomId)
-                .Distinct()
                 .ToListAsync(ct);
+
+                // 2. Lấy ID phòng có Lịch bảo trì (Maintenance)
+                var slotTemplate = await dbContext.Slots.FindAsync(new object[] { slotId }, ct);
+
+                // Nếu không tìm thấy slot template thì coi như chỉ có booking bận
+                if (slotTemplate == null) return bookedLabs.Distinct().ToList();
+
+                var checkStart = DateTime.SpecifyKind(date.ToDateTime(slotTemplate.StartTime), DateTimeKind.Utc);
+                var checkEnd = DateTime.SpecifyKind(date.ToDateTime(slotTemplate.EndTime), DateTimeKind.Utc);
+
+                var maintenanceLabs = await dbContext.RoomMaintainSchedules
+                    .AsNoTracking()
+                    .Where(m =>
+                        m.StartTime < checkEnd &&
+                        m.EndTime > checkStart &&
+                        m.RoomMaintainStatus == RoomMaintainStatus.NotYet
+                    )
+                    .Select(m => m.LabRoomId)
+                    .ToListAsync(ct);
+
+                // 3. Gộp lại và loại bỏ trùng lặp
+                return bookedLabs.Concat(maintenanceLabs).Distinct().ToList();
+            }
+            catch (Exception ex)
+            {
+                // Ghi log nếu bạn có logger
+                // _logger.LogError(ex, "Error at GetBookedLabIdsAsync");
+                throw; // Quan trọng: giữ stack trace
+            }
         }
 
         public async Task<List<Booking>> GetHistoryByUserIdAsync(Guid userId)
