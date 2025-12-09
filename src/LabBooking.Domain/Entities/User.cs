@@ -5,6 +5,7 @@ public class User : IdentityUser<Guid>
     public string? Major { get; set; } // Chỉ cho sinh viên
     public DateTime RegistrationDate { get; set; } = DateTime.UtcNow;
     public string? FullName { get; set; } = string.Empty;
+    public string? AvatarUrl { get; set; }
 
     // Quan hệ
     public ICollection<Notification>? Notifications { get; set; }

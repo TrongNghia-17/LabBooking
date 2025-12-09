@@ -44,10 +44,28 @@ public class GoogleLoginCommandHandler(
         // 4. Find the user in the database
         var user = await userManager.FindByEmailAsync(googlePayload.Email);
 
-        if (user == null)
+        if (user != null)
         {
-            // 5. If user doesn't exist -> Create a new user
+            // A. Nếu user ĐÃ TỒN TẠI: Kiểm tra xem link ảnh có mới không?
+            // googlePayload.Picture chứa link ảnh từ Google
+            if (user.AvatarUrl != googlePayload.Picture)
+            {
+                user.AvatarUrl = googlePayload.Picture;
+                await userManager.UpdateAsync(user);
+            }
+        }
+        else
+        {
+            // B. Nếu user CHƯA TỒN TẠI (Tạo mới)
+
+            // Bạn đang dùng userFactory.CreateUserFromGooglePayload(googlePayload)
+            // ==> Bạn cần vào file UserFactory.cs để gán: user.AvatarUrl = payload.Picture;
+
+            // HOẶC: Gán thủ công ngay tại đây sau khi Factory tạo xong object
             user = userFactory.CreateUserFromGooglePayload(googlePayload);
+
+            // Gán thêm ảnh vào
+            user.AvatarUrl = googlePayload.Picture;
 
             var createResult = await userManager.CreateAsync(user);
             if (!createResult.Succeeded)
