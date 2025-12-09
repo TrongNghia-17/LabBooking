@@ -36,5 +36,10 @@ public class GetAllRoomMaintainSchedulesQueryValidator : AbstractValidator<GetAl
             .IsInEnum()
             .When(r => r.Status.HasValue)
             .WithMessage("Invalid status value.");
+
+        RuleFor(x => x.From)
+            .LessThanOrEqualTo(x => x.To)
+            .When(x => x.From.HasValue && x.To.HasValue)
+            .WithMessage("'Từ ngày' phải nhỏ hơn hoặc bằng 'Đến ngày'.");
     }
 }

@@ -1,5 +1,4 @@
-﻿using LabBooking.Domain.Enums;
-using LabBooking.Domain.NonEntities;
+﻿using LabBooking.Domain.NonEntities;
 
 namespace LabBooking.Domain.Repositories;
 
@@ -9,14 +8,16 @@ public interface IEquipmentMaintainScheduleRepository
     Task<bool> IsOverlapAsync(Guid equipmentId, DateTime start, DateTime end, CancellationToken token);
     Task<string> ProcessAutomatedMaintenanceAsync(CancellationToken token);
     Task<ScheduleConflictInfo?> GetConflictInfoAsync(Guid equipmentId, DateTime start, DateTime end, CancellationToken token);
-    Task<IEnumerable<EquipmentMaintainSchedule>> GetByManagerIdAsync(
-        Guid managerId,
-        DateTime? from,
-        DateTime? to,
+    Task<(IEnumerable<EquipmentMaintainSchedule>, int)> GetByManagerIdAsync(
+        Guid userId,
+        DateTime? fromDate,
+        DateTime? toDate,
         MaintenanceStatus? status,
         string? sortBy,
         bool isDescending,
-        CancellationToken token = default);
+        int pageNumber,  // <--- Thêm tham số
+        int pageSize,    // <--- Thêm tham số
+        CancellationToken token);
     Task<EquipmentMaintainSchedule?> GetByIdWithDetailsAsync(Guid id, CancellationToken token);
     Task DeleteAsync(EquipmentMaintainSchedule schedule, CancellationToken token);
 }

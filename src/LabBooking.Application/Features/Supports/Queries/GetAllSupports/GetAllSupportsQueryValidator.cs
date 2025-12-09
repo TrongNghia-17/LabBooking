@@ -30,5 +30,10 @@ public class GetAllSupportsQueryValidator : AbstractValidator<GetAllSupportsQuer
             .Must(value => allowedSortByColumnNames.Contains(value))
             .When(q => q.SortBy != null)
             .WithMessage($"Sort by is optional, or must be in [{string.Join(",", allowedSortByColumnNames)}]");
+
+        RuleFor(x => x.Status)
+                .IsInEnum()
+                .When(x => x.Status.HasValue)
+                .WithMessage("Trạng thái hỗ trợ không hợp lệ.");
     }
 }

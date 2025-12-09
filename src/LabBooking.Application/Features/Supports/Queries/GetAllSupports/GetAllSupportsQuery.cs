@@ -15,6 +15,7 @@ namespace LabBooking.Application.Features.Supports.Queries.GetAllSupports;
 /// </remarks>
 public record GetAllSupportsQuery(
     string? SearchPhrase,
+    SupportStatus? Status,
     int PageNumber,
     int PageSize,
     string? SortBy,

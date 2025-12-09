@@ -205,33 +205,33 @@
     public async Task<(IEnumerable<RoomMaintainSchedule>, int)> GetAllMatchingAsync(
     string? searchPhrase,
     RoomMaintainStatus? status,
+
+    // --- THÊM THAM SỐ VÀO HÀM ---
+    DateTime? from,
+    DateTime? to,
+    // ----------------------------
+
     int pageSize,
     int pageNumber,
     string? sortBy,
     SortDirection sortDirection,
-    Guid? managerId, // <--- Nhận tham số lọc
+    Guid? managerId,
     CancellationToken cancellationToken)
     {
         var searchPhraseLower = searchPhrase?.ToLower();
 
-        // 1. Khởi tạo Query & Include LabRoom để check quyền sở hữu
         var baseQuery = dbContext.RoomMaintainSchedules
             .Include(s => s.LabRoom)
             .AsNoTracking()
             .AsQueryable();
 
-        // =========================================================
-        // 2. LOGIC PHÂN QUYỀN (QUAN TRỌNG NHẤT)
-        // =========================================================
+        // Logic phân quyền (Giữ nguyên)
         if (managerId.HasValue)
         {
-            // Nếu managerId có giá trị (tức là Manager thường), chỉ lấy lịch của phòng họ quản lý
             baseQuery = baseQuery.Where(s => s.LabRoom.MainManagerId == managerId.Value);
         }
-        // Nếu managerId == null (Admin), bỏ qua dòng trên -> Lấy tất cả.
 
-
-        // 3. Lọc theo từ khóa (Search)
+        // Logic SearchPhrase & Status (Giữ nguyên)
         if (!string.IsNullOrWhiteSpace(searchPhraseLower))
         {
             baseQuery = baseQuery.Where(s =>
@@ -239,23 +239,37 @@
                 s.LabRoom.LabName.ToLower().Contains(searchPhraseLower));
         }
 
-        // 4. Lọc theo trạng thái (Status)
         if (status.HasValue)
         {
             baseQuery = baseQuery.Where(s => s.RoomMaintainStatus == status.Value);
         }
 
-        // 5. Đếm tổng số (Total Count)
+        // --- [MỚI] LOGIC LỌC THEO NGÀY ---
+        // So sánh dựa trên StartTime của lịch bảo trì
+        if (from.HasValue)
+        {
+            // Chuyển về UTC để so sánh chuẩn xác với DB
+            var fromUtc = from.Value.ToUniversalTime();
+            baseQuery = baseQuery.Where(s => s.StartTime >= fromUtc);
+        }
+
+        if (to.HasValue)
+        {
+            var toUtc = to.Value.ToUniversalTime();
+            baseQuery = baseQuery.Where(s => s.StartTime <= toUtc);
+        }
+        // ---------------------------------
+
+        // Logic Sort & Pagination (Giữ nguyên)
         var totalCount = await baseQuery.CountAsync(cancellationToken);
 
-        // 6. Sắp xếp (Sorting)
         if (!string.IsNullOrEmpty(sortBy))
         {
             var columnsSelector = new Dictionary<string, Expression<Func<RoomMaintainSchedule, object>>>
         {
             { "starttime", s => s.StartTime },
             { "endtime", s => s.EndTime },
-            { "roommaintainstatus", s => s.RoomMaintainStatus }, // Lưu ý tên cột phải khớp validator
+            { "roommaintainstatus", s => s.RoomMaintainStatus },
             { "labroomname", s => s.LabRoom.LabName }
         };
 
@@ -272,11 +286,9 @@
         }
         else
         {
-            // Mặc định mới nhất lên đầu
             baseQuery = baseQuery.OrderByDescending(s => s.StartTime);
         }
 
-        // 7. Phân trang
         var schedules = await baseQuery
             .Skip(pageSize * (pageNumber - 1))
             .Take(pageSize)

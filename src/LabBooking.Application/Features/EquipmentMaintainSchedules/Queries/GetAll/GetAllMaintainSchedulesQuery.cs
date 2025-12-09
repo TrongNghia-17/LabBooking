@@ -2,14 +2,18 @@
 
 namespace LabBooking.Application.Features.EquipmentMaintainSchedules.Queries.GetAll;
 
-public class GetAllMaintainSchedulesQuery : IRequest<IEnumerable<EquipmentMaintainScheduleResponse>>
+public class GetAllMaintainSchedulesQuery : IRequest<PagedResult<EquipmentMaintainScheduleResponse>>
 {
     // 1. Filter (Lọc)
-    public DateTime? FromDate { get; set; } // Từ ngày
-    public DateTime? ToDate { get; set; }   // Đến ngày
-    public MaintenanceStatus? Status { get; set; } // Trạng thái (NotYet/Done)
+    public DateTime? FromDate { get; set; }
+    public DateTime? ToDate { get; set; }
+    public MaintenanceStatus? Status { get; set; }
 
-    // 2. Sort (Sắp xếp)
-    public string? SortBy { get; set; } // "Date" hoặc "Status"
-    public bool IsDescending { get; set; } = true; // Mặc định là giảm dần (Mới nhất lên đầu)
+    // 2. Pagination (Phân trang) - THÊM MỚI
+    public int PageNumber { get; set; }
+    public int PageSize { get; set; }
+
+    // 3. Sort (Sắp xếp)
+    public string? SortBy { get; set; }
+    public bool IsDescending { get; set; } = true;
 }

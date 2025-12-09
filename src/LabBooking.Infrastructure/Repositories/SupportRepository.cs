@@ -9,8 +9,15 @@ internal class SupportRepository(LabBookingDbContext dbContext) : ISupportReposi
         return entity.Id;
     }
 
+    // Trong file SupportRepository.cs
+
     public async Task<(IEnumerable<Support>, int)> GetAllMatchingAsync(
         string? searchPhrase,
+
+        // --- THÊM THAM SỐ NÀY ---
+        SupportStatus? status,
+        // ------------------------
+
         int pageSize,
         int pageNumber,
         string? sortBy,
@@ -22,27 +29,56 @@ internal class SupportRepository(LabBookingDbContext dbContext) : ISupportReposi
         var baseQuery = dbContext
             .Supports
             .Include(s => s.CreatedBy)
-            .Where(r => searchPhraseLower == null ||
-                        r.Title.ToLower().Contains(searchPhraseLower) ||
-                        r.Content.ToLower().Contains(searchPhraseLower));
+            .AsNoTracking() // Nên thêm AsNoTracking cho query dạng GET để tối ưu
+            .AsQueryable();
 
-        var totalCount = await baseQuery.CountAsync();
-
-        if (sortBy != null)
+        // 1. Lọc theo Search Phrase
+        if (!string.IsNullOrWhiteSpace(searchPhraseLower))
         {
-            var columnsSelector = new Dictionary<string, Expression<Func<Support, object>>>
-            {
-                { nameof(Support.Title), r => r.Title },
-                { nameof(Support.Content), r => r.Content },
-            };
-
-            var selectedColumn = columnsSelector[sortBy];
-
-            baseQuery = sortDirection == SortDirection.Ascending
-                ? baseQuery.OrderBy(selectedColumn)
-                : baseQuery.OrderByDescending(selectedColumn);
+            baseQuery = baseQuery.Where(r =>
+                r.Title.ToLower().Contains(searchPhraseLower) ||
+                r.Content.ToLower().Contains(searchPhraseLower));
         }
 
+        // 2. [MỚI] Lọc theo Status
+        if (status.HasValue)
+        {
+            baseQuery = baseQuery.Where(s => s.Status == status.Value);
+        }
+
+        // 3. Đếm tổng số (Total Count)
+        var totalCount = await baseQuery.CountAsync(cancellationToken);
+
+        // 4. Sắp xếp (Sorting)
+        if (!string.IsNullOrEmpty(sortBy))
+        {
+            var columnsSelector = new Dictionary<string, Expression<Func<Support, object>>>
+        {
+            { nameof(Support.Title).ToLower(), r => r.Title },
+            { nameof(Support.Content).ToLower(), r => r.Content },
+            // Thêm sort theo Status luôn nếu muốn
+            { "status", r => r.Status }
+        };
+
+            // Chuyển key về chữ thường để so sánh an toàn
+            if (columnsSelector.TryGetValue(sortBy.ToLower(), out var selectedColumn))
+            {
+                baseQuery = sortDirection == SortDirection.Ascending
+                    ? baseQuery.OrderBy(selectedColumn)
+                    : baseQuery.OrderByDescending(selectedColumn);
+            }
+            else
+            {
+                // Mặc định sắp xếp ngày tạo mới nhất
+                baseQuery = baseQuery.OrderByDescending(s => s.CreatedAt);
+            }
+        }
+        else
+        {
+            baseQuery = baseQuery.OrderByDescending(s => s.CreatedAt);
+        }
+
+        // 5. Phân trang (Pagination)
         var supports = await baseQuery
             .Skip(pageSize * (pageNumber - 1))
             .Take(pageSize)

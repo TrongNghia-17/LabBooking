@@ -23,19 +23,20 @@ public class GetAllSupportsQueryHandler(
     public async Task<PagedResult<SupportsResponse>> Handle(GetAllSupportsQuery request, CancellationToken cancellationToken)
     {
         logger.LogInformation(
-            "Processing GetAllSupportsQuery: PageSize={PageSize}, PageNumber={PageNumber}, SortBy={SortBy}, SortDirection={SortDirection}, SearchPhrase={SearchPhrase}",
+        "Processing GetAllSupportsQuery: PageSize={PageSize}, PageNumber={PageNumber}, Status={Status}, SearchPhrase={SearchPhrase}",
+        request.PageSize,
+        request.PageNumber,
+        request.Status, // Log thêm status
+        request.SearchPhrase);
+
+        var (supports, totalCount) = await supportRepository.GetAllMatchingAsync(
+            request.SearchPhrase,
+            request.Status,
             request.PageSize,
             request.PageNumber,
             request.SortBy,
             request.SortDirection,
-            request.SearchPhrase);
-
-        var (supports, totalCount) = await supportRepository.GetAllMatchingAsync(
-            request.SearchPhrase,
-            request.PageSize,
-            request.PageNumber,
-            request.SortBy,
-            request.SortDirection);
+            cancellationToken);
 
         var supportsResponse = mapper.Map<IEnumerable<SupportsResponse>>(supports);
 
