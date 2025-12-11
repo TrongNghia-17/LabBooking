@@ -1,5 +1,9 @@
+using Hangfire;
+using Hangfire.PostgreSql;
+using LabBooking.Application.Services;
 using LabBooking.Application.Services.Notifications;
 using LabBooking.Application.Services.Users;
+using LabBooking.Infrastructure.Services;
 using LabBooking.Infrastructure.Services.Notifications;
 using LabBooking.Infrastructure.Services.Users;
 
@@ -38,6 +42,14 @@ public static class ServiceCollectionExtensions
             options.Configuration = configuration.GetConnectionString("Redis");
         });
 
+        services.AddHangfire(config => config
+            .SetDataCompatibilityLevel(CompatibilityLevel.Version_170)
+            .UseSimpleAssemblyNameTypeSerializer()
+            .UseRecommendedSerializerSettings()
+            .UsePostgreSqlStorage(options =>
+                options.UseNpgsqlConnection(configuration.GetConnectionString("LabBookingDb"))));
+        services.AddHangfireServer();
+
         services.AddScoped<ILabBookingSeeder, LabBookingSeeder>();
         services.AddScoped<IIncidentRepository, IncidentRepository>();
         services.AddScoped<ISupportRepository, SupportRepository>();
@@ -65,6 +77,9 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IJwtService, JwtService>();
         services.AddScoped<IGoogleAuthService, GoogleAuthService>();
         services.AddScoped<INotificationService, NotificationService>();
+        services.AddScoped<IExcelService, ExcelService>();
+        services.AddScoped<IEmailService, GmailService>();
+        services.AddScoped<IBackgroundJobService, HangfireService>();
 
         services.AddScoped<IUserFactory, UserFactory>();
         services.AddScoped<IRefreshTokenFactory, RefreshTokenFactory>();

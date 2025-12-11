@@ -1,5 +1,9 @@
+using Hangfire;
+using OfficeOpenXml;
+
 var builder = WebApplication.CreateBuilder(args);
 
+ExcelPackage.License.SetNonCommercialPersonal("FLMS");
 var configuration = builder.Configuration;
 var isDevelopment = builder.Environment.IsDevelopment();
 
@@ -33,6 +37,8 @@ app.UseCors("AllowAll");
 
 app.UseAuthentication();
 app.UseAuthorization();
+
+app.UseHangfireDashboard();
 
 app.MapControllers();
 
