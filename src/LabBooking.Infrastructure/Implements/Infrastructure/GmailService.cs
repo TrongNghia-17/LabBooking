@@ -1,47 +1,69 @@
 ﻿using LabBooking.Application.Features.Emails.Dtos;
 using LabBooking.Application.Interfaces.Infrastructure;
-using System.Net;
-using System.Net.Mail;
+using MailKit.Net.Smtp;                   // Dùng của MailKit
+using MailKit.Security;                   // Dùng Security của MailKit
+using MimeKit;                            // Dùng MimeKit để tạo nội dung mail
 
-namespace LabBooking.Infrastructure.Implements.Infrastructure;
-
-public class GmailService(
-    ILogger<GmailService> logger,
-    IConfiguration config) : IEmailService
+namespace LabBooking.Infrastructure.Implements.Infrastructure
 {
-    public async Task SendEmailAsync(string to, string subject, string body, EmailAttachmentDto attachment = null)
+    public class GmailService : IEmailService
     {
-        if (string.IsNullOrWhiteSpace(to)) return;
+        private readonly IConfiguration _config;
 
-        try
+        public GmailService(IConfiguration config)
         {
-            var settings = config.GetSection("MailSettings");
-            var client = new SmtpClient(settings["Host"], int.Parse(settings["Port"]))
+            _config = config;
+        }
+
+        public async Task SendEmailAsync(string to, string subject, string body, EmailAttachmentDto attachment = null)
+        {
+            var settings = _config.GetSection("MailSettings");
+
+            // 1. Tạo message bằng MimeKit (Hiện đại hơn)
+            var message = new MimeMessage();
+            message.From.Add(new MailboxAddress(settings["DisplayName"] ?? "LabBooking System", settings["Mail"]));
+            message.To.Add(MailboxAddress.Parse(to));
+            message.Subject = subject;
+
+            // 2. Tạo Body Builder (Hỗ trợ HTML và File đính kèm dễ dàng)
+            var builder = new BodyBuilder
             {
-                Credentials = new NetworkCredential(settings["Mail"], settings["Password"]),
-                EnableSsl = true
+                HtmlBody = body
             };
 
-            var message = new MailMessage(settings["Mail"], to, subject, body) { IsBodyHtml = true };
-
+            // Đính kèm file nếu có
             if (attachment != null && attachment.FileContent != null)
             {
-                var ms = new MemoryStream(attachment.FileContent);
-                message.Attachments.Add(new Attachment(ms, attachment.FileName, attachment.ContentType));
+                builder.Attachments.Add(attachment.FileName, attachment.FileContent, ContentType.Parse(attachment.ContentType));
             }
 
-            await client.SendMailAsync(message);
-        }
-        catch (FormatException ex)
-        {
-            // Bắt lỗi định dạng email: Ghi log và BỎ QUA, không ném lỗi ra ngoài
-            // Để Hangfire coi như job này đã xong (dù gửi thất bại), không retry nữa.
-            logger.LogError($"[Lỗi Email] Bỏ qua email '{to}' vì sai định dạng: {ex.Message}");
-        }
-        catch (Exception ex)
-        {
-            // Các lỗi khác (như mất mạng, sai pass) thì ném ra để Hangfire retry
-            throw;
+            message.Body = builder.ToMessageBody();
+
+            // 3. Sử dụng SmtpClient của MailKit (Không phải System.Net.Mail)
+            using var client = new SmtpClient();
+
+            try
+            {
+                // Connect: Dùng Port 587 và SecureSocketOptions.StartTls
+                // Quan trọng: smtp.gmail.com đôi khi trả về IPv6 gây lỗi trên Render, 
+                // MailKit tự động xử lý tốt hơn, nhưng nếu vẫn lỗi có thể thử hardcode IP (ít khi cần).
+                await client.ConnectAsync(settings["Host"], int.Parse(settings["Port"]), SecureSocketOptions.StartTls);
+
+                // Authenticate
+                await client.AuthenticateAsync(settings["Mail"], settings["Password"]);
+
+                // Gửi
+                await client.SendAsync(message);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[MailKit Error] {ex.Message}");
+                throw; // Ném lỗi để Hangfire biết mà retry hoặc log lại
+            }
+            finally
+            {
+                await client.DisconnectAsync(true);
+            }
         }
     }
 }
