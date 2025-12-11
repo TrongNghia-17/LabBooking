@@ -1,4 +1,4 @@
-﻿using LabBooking.Application.Services.Users;
+﻿using LabBooking.Application.Common.Interfaces;
 
 namespace LabBooking.Application.Features.DoorRequests.Commands.AcceptDoorRequest;
 

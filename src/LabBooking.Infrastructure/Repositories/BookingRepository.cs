@@ -1,4 +1,4 @@
-﻿using LabBooking.Application.Services.Notifications;
+﻿using LabBooking.Application.Interfaces.Notifications;
 using LabBooking.Domain.Exceptions;
 
 namespace LabBooking.Infrastructure.Repositories

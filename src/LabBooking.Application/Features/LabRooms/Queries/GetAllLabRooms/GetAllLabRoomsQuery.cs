@@ -1,4 +1,5 @@
-﻿using LabBooking.Application.Features.LabRooms.Dtos;
+﻿using LabBooking.Application.Common.Wrappers;
+using LabBooking.Application.Features.LabRooms.Dtos;
 
 namespace LabBooking.Application.Features.LabRooms.Queries.GetAllLabRooms;
 

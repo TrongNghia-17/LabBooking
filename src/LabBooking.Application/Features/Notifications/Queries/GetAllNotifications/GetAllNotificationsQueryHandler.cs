@@ -1,5 +1,6 @@
-﻿using LabBooking.Application.Features.Notifications.Dtos;
-using LabBooking.Application.Services.Users;
+﻿using LabBooking.Application.Common.Interfaces;
+using LabBooking.Application.Common.Wrappers;
+using LabBooking.Application.Features.Notifications.Dtos;
 using System.Text.Json;
 
 namespace LabBooking.Application.Features.Notifications.Queries.GetAllNotifications;

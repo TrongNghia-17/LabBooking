@@ -1,4 +1,5 @@
-﻿using LabBooking.Application.Features.Courses.Commands.CreateCourse;
+﻿using LabBooking.Application.Common.Wrappers;
+using LabBooking.Application.Features.Courses.Commands.CreateCourse;
 using LabBooking.Application.Features.Courses.Commands.DeleteCourse;
 using LabBooking.Application.Features.Courses.Commands.UpdateCourse;
 using LabBooking.Application.Features.Courses.Dtos;

@@ -1,4 +1,5 @@
-﻿using LabBooking.Application.Features.Users.Dtos;
+﻿using LabBooking.Application.Common.Wrappers;
+using LabBooking.Application.Features.Users.Dtos;
 
 namespace LabBooking.Application.Features.Users.Queries.GetAllUsers;
 

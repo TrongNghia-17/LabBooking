@@ -1,4 +1,4 @@
-﻿using LabBooking.Application.Common.Dtos;
+﻿using LabBooking.Application.Features.Emails.Dtos;
 
 namespace LabBooking.Application.Features.Emails.Commands;
 

@@ -1,4 +1,5 @@
-﻿using LabBooking.Application.Features.Supports.Dtos;
+﻿using LabBooking.Application.Common.Wrappers;
+using LabBooking.Application.Features.Supports.Dtos;
 
 namespace LabBooking.Application.Features.Supports.Queries.GetAllSupports;
 

@@ -1,4 +1,5 @@
 ﻿using LabBooking.Application.Features.Authentication.Dtos;
+using LabBooking.Application.Interfaces.Authentication.Token;
 using System.Security.Authentication;
 
 namespace LabBooking.Application.Features.Authentication.Commands.RefreshTokens;

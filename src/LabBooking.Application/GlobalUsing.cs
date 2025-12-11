@@ -1,12 +1,9 @@
 ﻿global using AutoMapper;
 global using FluentValidation;
 global using Google.Apis.Auth;
-global using LabBooking.Application.Common;
 global using LabBooking.Application.Features.Equipments.Dtos;
 global using LabBooking.Application.Features.Incidents.Commands.CreateIncident;
 global using LabBooking.Application.Features.Incidents.Dtos;
-global using LabBooking.Application.Services.Authentication.External;
-global using LabBooking.Application.Services.Authentication.Token;
 global using LabBooking.Application.Services.Authentication.Users;
 global using LabBooking.Domain.Constants;
 global using LabBooking.Domain.Entities;

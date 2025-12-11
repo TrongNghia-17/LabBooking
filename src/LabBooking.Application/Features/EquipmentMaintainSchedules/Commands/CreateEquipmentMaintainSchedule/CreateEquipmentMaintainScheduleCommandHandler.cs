@@ -1,6 +1,6 @@
-﻿using LabBooking.Application.Features.EquipmentMaintainSchedules.Dtos;
+﻿using LabBooking.Application.Common.Interfaces;
+using LabBooking.Application.Features.EquipmentMaintainSchedules.Dtos;
 using LabBooking.Application.Features.Jobs.AutoUpdateEquipmentStatus;
-using LabBooking.Application.Services.Users;
 
 namespace LabBooking.Application.Features.EquipmentMaintainSchedules.Commands.CreateEquipmentMaintainSchedule;
 

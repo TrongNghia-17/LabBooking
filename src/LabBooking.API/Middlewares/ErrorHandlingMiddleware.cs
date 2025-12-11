@@ -1,5 +1,5 @@
 ﻿using FluentValidation;
-using LabBooking.Application.Common.Models;
+using LabBooking.Application.Common.Wrappers;
 using System.Text.Json;
 
 namespace LabBooking.API.Middlewares;

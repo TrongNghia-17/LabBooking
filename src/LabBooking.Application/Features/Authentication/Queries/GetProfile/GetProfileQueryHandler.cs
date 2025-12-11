@@ -1,5 +1,5 @@
-﻿using LabBooking.Application.Features.Authentication.Dtos;
-using LabBooking.Application.Services.Users;
+﻿using LabBooking.Application.Common.Interfaces;
+using LabBooking.Application.Features.Authentication.Dtos;
 
 namespace LabBooking.Application.Features.Authentication.Queries.GetProfile;
 

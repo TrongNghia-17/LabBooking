@@ -1,4 +1,5 @@
-﻿using LabBooking.Application.Features.RoomMaintainSchedules.Commands.CreateRoomMaintainSchedule;
+﻿using LabBooking.Application.Common.Wrappers;
+using LabBooking.Application.Features.RoomMaintainSchedules.Commands.CreateRoomMaintainSchedule;
 using LabBooking.Application.Features.RoomMaintainSchedules.Commands.DeleteRoomMaintainSchedule;
 using LabBooking.Application.Features.RoomMaintainSchedules.Commands.UpdateRoomMaintainSchedule;
 using LabBooking.Application.Features.RoomMaintainSchedules.Commands.UpdateStatus;

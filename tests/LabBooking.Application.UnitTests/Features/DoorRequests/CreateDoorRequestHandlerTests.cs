@@ -1,6 +1,6 @@
-﻿using LabBooking.Application.Features.DoorRequests.Commands.Create;
+﻿using LabBooking.Application.Common.Interfaces;
+using LabBooking.Application.Features.DoorRequests.Commands.Create;
 using LabBooking.Application.Features.DoorRequests.Commands.CreateDoorRequest;
-using LabBooking.Application.Services.Users;
 using LabBooking.Domain.Exceptions;
 using Microsoft.Extensions.Logging;
 

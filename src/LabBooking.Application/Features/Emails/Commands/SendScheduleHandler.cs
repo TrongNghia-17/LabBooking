@@ -1,4 +1,4 @@
-﻿using LabBooking.Application.Services;
+﻿using LabBooking.Application.Interfaces.Infrastructure;
 
 namespace LabBooking.Application.Features.Emails.Commands;
 

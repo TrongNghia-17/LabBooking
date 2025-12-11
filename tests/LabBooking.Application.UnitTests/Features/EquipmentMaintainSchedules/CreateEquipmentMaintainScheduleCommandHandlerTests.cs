@@ -1,6 +1,6 @@
-﻿using LabBooking.Application.Features.EquipmentMaintainSchedules.Commands.CreateEquipmentMaintainSchedule;
+﻿using LabBooking.Application.Common.Interfaces;
+using LabBooking.Application.Features.EquipmentMaintainSchedules.Commands.CreateEquipmentMaintainSchedule;
 using LabBooking.Application.Features.Jobs.AutoUpdateEquipmentStatus;
-using LabBooking.Application.Services.Users;
 using LabBooking.Domain.Exceptions; // Giả sử namespace exception
 using MediatR;
 using Microsoft.Extensions.Logging;

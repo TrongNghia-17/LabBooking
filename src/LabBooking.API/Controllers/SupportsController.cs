@@ -1,4 +1,5 @@
-﻿using LabBooking.Application.Features.Supports.Commands.DeleteSupport;
+﻿using LabBooking.Application.Common.Wrappers;
+using LabBooking.Application.Features.Supports.Commands.DeleteSupport;
 
 namespace LabBooking.API.Controllers;
 

@@ -1,5 +1,5 @@
-﻿using LabBooking.Application.Services.Notifications;
-using LabBooking.Application.Services.Users;
+﻿using LabBooking.Application.Common.Interfaces;
+using LabBooking.Application.Interfaces.Notifications;
 using System.Text.Json;
 
 namespace LabBooking.Application.Features.Incidents.Commands.CreateIncident;

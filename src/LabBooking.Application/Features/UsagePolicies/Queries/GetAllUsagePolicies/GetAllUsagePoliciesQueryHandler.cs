@@ -1,4 +1,5 @@
-﻿using LabBooking.Application.Features.UsagePolicies.Dtos;
+﻿using LabBooking.Application.Common.Wrappers;
+using LabBooking.Application.Features.UsagePolicies.Dtos;
 
 namespace LabBooking.Application.Features.UsagePolicies.Queries.GetAllUsagePolicies;
 

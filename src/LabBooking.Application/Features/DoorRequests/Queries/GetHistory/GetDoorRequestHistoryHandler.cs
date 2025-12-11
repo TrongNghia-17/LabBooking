@@ -1,5 +1,5 @@
-﻿using LabBooking.Application.Features.DoorRequests.Dtos;
-using LabBooking.Application.Services.Users;
+﻿using LabBooking.Application.Common.Interfaces;
+using LabBooking.Application.Features.DoorRequests.Dtos;
 
 namespace LabBooking.Application.Features.DoorRequests.Queries.GetHistory;
 

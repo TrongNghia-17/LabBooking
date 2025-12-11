@@ -1,4 +1,5 @@
-﻿using LabBooking.Application.Features.UsagePolicies.Commands.CreateUsagePolicy;
+﻿using LabBooking.Application.Common.Wrappers;
+using LabBooking.Application.Features.UsagePolicies.Commands.CreateUsagePolicy;
 using LabBooking.Application.Features.UsagePolicies.Commands.DeleteUsagePolicy;
 using LabBooking.Application.Features.UsagePolicies.Commands.UpdateUsagePolicy;
 using LabBooking.Application.Features.UsagePolicies.Dtos;

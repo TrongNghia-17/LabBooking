@@ -1,4 +1,5 @@
-﻿using LabBooking.Application.Features.LabRooms.Commands.DeleteLabRoom;
+﻿using LabBooking.Application.Common.Wrappers;
+using LabBooking.Application.Features.LabRooms.Commands.DeleteLabRoom;
 using LabBooking.Application.Features.LabRooms.Queries.GetLabStatistics;
 using LabBooking.Application.Features.LabRooms.Queries.GetTopLabs;
 using LabBooking.Application.Features.LabRooms.Queries.GetUnmaintainedLabRooms;

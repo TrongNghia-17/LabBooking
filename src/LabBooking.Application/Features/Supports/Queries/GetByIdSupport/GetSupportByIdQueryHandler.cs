@@ -1,6 +1,6 @@
-﻿using LabBooking.Application.Features.Supports.Dtos;
+﻿using LabBooking.Application.Common.Interfaces;
+using LabBooking.Application.Features.Supports.Dtos;
 using LabBooking.Application.Features.Supports.Queries.GetByIdSupport;
-using LabBooking.Application.Services.Users; // Cần thêm dòng này
 
 namespace LabBooking.Application.Features.Supports.Queries.GetMySupports;
 

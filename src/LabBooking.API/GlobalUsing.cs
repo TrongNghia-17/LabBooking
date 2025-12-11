@@ -1,7 +1,6 @@
 ﻿global using Google.Apis.Auth.OAuth2.Requests;
 global using LabBooking.API.Extensions;
 global using LabBooking.API.Middlewares;
-global using LabBooking.Application.Common;
 global using LabBooking.Application.Extensions;
 global using LabBooking.Application.Features.Authentication.Commands.GoogleLogin;
 global using LabBooking.Application.Features.Authentication.Commands.Login;
@@ -24,7 +23,6 @@ global using LabBooking.Application.Features.Supports.Commands.UpdateSupport;
 global using LabBooking.Application.Features.Supports.Dtos;
 global using LabBooking.Application.Features.Supports.Queries.GetAllSupports;
 global using LabBooking.Application.Features.Supports.Queries.GetByIdSupport;
-global using LabBooking.Application.Services.Caching;
 global using LabBooking.Domain.Entities;
 global using LabBooking.Domain.Exceptions;
 global using LabBooking.Infrastructure.Extensions;

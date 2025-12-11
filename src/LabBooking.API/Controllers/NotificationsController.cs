@@ -1,4 +1,5 @@
-﻿using LabBooking.Application.Features.Notifications.Commands.MarkNotificationAsRead;
+﻿using LabBooking.Application.Common.Wrappers;
+using LabBooking.Application.Features.Notifications.Commands.MarkNotificationAsRead;
 using LabBooking.Application.Features.Notifications.Commands.SendNotificationToSelf;
 using LabBooking.Application.Features.Notifications.Dtos;
 using LabBooking.Application.Features.Notifications.Queries.GetAllNotifications;

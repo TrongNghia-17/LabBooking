@@ -1,4 +1,5 @@
-﻿using LabBooking.Application.Features.Courses.Dtos;
+﻿using LabBooking.Application.Common.Wrappers;
+using LabBooking.Application.Features.Courses.Dtos;
 using System;
 using System.Collections.Generic;
 using System.Linq;

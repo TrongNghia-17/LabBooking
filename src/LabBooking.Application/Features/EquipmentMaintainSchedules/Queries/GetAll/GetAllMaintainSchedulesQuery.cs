@@ -1,4 +1,5 @@
-﻿using LabBooking.Application.Features.EquipmentMaintainSchedules.Dtos;
+﻿using LabBooking.Application.Common.Wrappers;
+using LabBooking.Application.Features.EquipmentMaintainSchedules.Dtos;
 
 namespace LabBooking.Application.Features.EquipmentMaintainSchedules.Queries.GetAll;
 

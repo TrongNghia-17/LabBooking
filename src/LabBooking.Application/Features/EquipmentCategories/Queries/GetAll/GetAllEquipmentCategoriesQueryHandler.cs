@@ -1,5 +1,6 @@
-﻿using LabBooking.Application.Features.EquipmentCategories.Dtos;
-using LabBooking.Application.Services.Users;
+﻿using LabBooking.Application.Common.Interfaces;
+using LabBooking.Application.Common.Wrappers;
+using LabBooking.Application.Features.EquipmentCategories.Dtos;
 
 namespace LabBooking.Application.Features.EquipmentCategories.Queries.GetAll;
 

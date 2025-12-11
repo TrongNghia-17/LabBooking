@@ -1,4 +1,4 @@
-﻿using LabBooking.Application.Common.Models;
+﻿using LabBooking.Application.Common.Wrappers;
 using Microsoft.AspNetCore.Mvc.Filters;
 
 namespace LabBooking.API.Filters;

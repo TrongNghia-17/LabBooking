@@ -1,4 +1,5 @@
-﻿using LabBooking.Application.Features.Equipments.Commands.DeleteEquipment;
+﻿using LabBooking.Application.Common.Wrappers;
+using LabBooking.Application.Features.Equipments.Commands.DeleteEquipment;
 using LabBooking.Application.Features.Equipments.Queries.GetAllEquipments;
 
 namespace LabBooking.API.Controllers;

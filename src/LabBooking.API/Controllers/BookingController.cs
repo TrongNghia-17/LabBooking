@@ -7,18 +7,14 @@ using LabBooking.Application.Features.Booking.Queries.GetChangeableBooking;
 using LabBooking.Application.Features.Booking.Queries.GetPendingBooking;
 using LabBooking.Application.Features.Booking.Queries.GetTimetable;
 using LabBooking.Application.Features.Bookings.Commands.CreateBooking;
-using LabBooking.Application.Features.Equipments.Queries.GetAllEquipments;
 using LabBooking.Application.Features.HistoryBooking.Queries.GetMyBookingHistory;
-using LabBooking.Application.Features.Slots.Dtos;
-using LabBooking.Application.Features.Slots.Queries.GetAllSlots;
 
 namespace LabBooking.API.Controllers;
 
 [Route("api/[controller]")]
 [ApiController]
 public class BookingsController(
-    IMediator mediator,
-    ICachingService cachingService) : ControllerBase
+    IMediator mediator) : ControllerBase
 {
 
     /// <summary>

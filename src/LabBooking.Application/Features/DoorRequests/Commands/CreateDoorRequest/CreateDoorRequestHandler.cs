@@ -1,5 +1,5 @@
-﻿using LabBooking.Application.Features.DoorRequests.Commands.Create;
-using LabBooking.Application.Services.Users;
+﻿using LabBooking.Application.Common.Interfaces;
+using LabBooking.Application.Features.DoorRequests.Commands.Create;
 
 namespace LabBooking.Application.Features.DoorRequests.Commands.CreateDoorRequest;
 

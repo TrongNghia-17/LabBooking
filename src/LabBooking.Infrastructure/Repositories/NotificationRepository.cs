@@ -1,5 +1,5 @@
 ﻿using LabBooking.Application.Features.Notifications.Dtos;
-using LabBooking.Application.Services.Notifications;
+using LabBooking.Application.Interfaces.Notifications;
 
 namespace LabBooking.Infrastructure.Repositories;
 

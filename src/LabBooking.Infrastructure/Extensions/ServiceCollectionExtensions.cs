@@ -1,11 +1,16 @@
 using Hangfire;
 using Hangfire.PostgreSql;
-using LabBooking.Application.Services;
-using LabBooking.Application.Services.Notifications;
-using LabBooking.Application.Services.Users;
-using LabBooking.Infrastructure.Services;
-using LabBooking.Infrastructure.Services.Notifications;
-using LabBooking.Infrastructure.Services.Users;
+using LabBooking.Application.Common.Interfaces;
+using LabBooking.Application.Interfaces.Authentication.External;
+using LabBooking.Application.Interfaces.Authentication.Token;
+using LabBooking.Application.Interfaces.Infrastructure;
+using LabBooking.Application.Interfaces.Notifications;
+using LabBooking.Infrastructure.Implements.Authentication.External;
+using LabBooking.Infrastructure.Implements.Authentication.Token;
+using LabBooking.Infrastructure.Implements.Authentication.Users;
+using LabBooking.Infrastructure.Implements.Common;
+using LabBooking.Infrastructure.Implements.Infrastructure;
+using LabBooking.Infrastructure.Implements.Notifications;
 
 
 namespace LabBooking.Infrastructure.Extensions;
@@ -73,7 +78,6 @@ public static class ServiceCollectionExtensions
 
         services.AddScoped<IUsagePolicyRepository, UsagePolicyRepository>();
 
-        services.AddScoped<ICachingService, CachingService>();
         services.AddScoped<IJwtService, JwtService>();
         services.AddScoped<IGoogleAuthService, GoogleAuthService>();
         services.AddScoped<INotificationService, NotificationService>();
