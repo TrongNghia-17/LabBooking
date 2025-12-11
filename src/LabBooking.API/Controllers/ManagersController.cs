@@ -21,36 +21,40 @@ public class ManagersController(IMediator mediator) : ControllerBase
         return Ok(result);
     }
 
-    [HttpPost("send-schedule")]
-    public async Task<IActionResult> SendSchedule(IFormFile studentFile, IFormFile scheduleFile)
+    [HttpPost("send-custom-email")]
+    public async Task<IActionResult> SendCustomEmail([FromForm] SendEmailRequestDto request)
     {
-        if (studentFile == null || scheduleFile == null)
-            return BadRequest("Thiếu file!");
+        // Validate cơ bản
+        if (request.StudentFile == null || request.StudentFile.Length == 0)
+            return BadRequest("Vui lòng upload file danh sách sinh viên.");
 
-        // 1. Chuyển file đính kèm sang Byte Array (Để lưu trữ được)
-        using var msSchedule = new MemoryStream();
-        await scheduleFile.CopyToAsync(msSchedule);
-
-        var attachmentDto = new EmailAttachmentDto
+        // 1. Xử lý Attachment (nếu có)
+        EmailAttachmentDto attachmentDto = null;
+        if (request.AttachmentFile != null)
         {
-            FileName = scheduleFile.FileName,
-            ContentType = scheduleFile.ContentType,
-            FileContent = msSchedule.ToArray()
-        };
+            using var ms = new MemoryStream();
+            await request.AttachmentFile.CopyToAsync(ms);
+            attachmentDto = new EmailAttachmentDto
+            {
+                FileName = request.AttachmentFile.FileName,
+                ContentType = request.AttachmentFile.ContentType,
+                FileContent = ms.ToArray()
+            };
+        }
 
-        // 2. Mở stream file danh sách (để đọc ngay)
-        using var msStudents = studentFile.OpenReadStream();
+        // 2. Xử lý file danh sách (StudentFile)
+        using var studentStream = request.StudentFile.OpenReadStream();
 
-        // 3. Tạo Command
+        // 3. Tạo Command (Mapping từ DTO sang Command)
         var command = new SendScheduleCommand
         {
-            StudentListStream = msStudents,
-            Attachment = attachmentDto
+            StudentListStream = studentStream,
+            Attachment = attachmentDto,
+            Subject = request.Subject,
+            BodyTemplate = request.Body
         };
 
-        // 4. Gửi cho MediatR xử lý
         var result = await mediator.Send(command);
-
         return Ok(new { Message = result });
     }
 }

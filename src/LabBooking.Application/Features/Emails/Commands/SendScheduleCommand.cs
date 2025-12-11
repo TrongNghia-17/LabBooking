@@ -7,4 +7,6 @@ public class SendScheduleCommand : IRequest<string>
 {
     public Stream StudentListStream { get; set; }
     public EmailAttachmentDto Attachment { get; set; }
+    public string Subject { get; set; } // Tiêu đề mail
+    public string BodyTemplate { get; set; } // Nội dung chứa {{FullName}}
 }

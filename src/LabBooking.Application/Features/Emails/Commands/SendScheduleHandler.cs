@@ -7,15 +7,18 @@ public class SendScheduleHandler : IRequestHandler<SendScheduleCommand, string>
     private readonly IExcelService _excelService;
     private readonly IEmailService _emailService;
     private readonly IBackgroundJobService _jobService;
+    private readonly IEmailTemplateService _templateService;
 
     public SendScheduleHandler(
         IExcelService excelService,
         IEmailService emailService,
-        IBackgroundJobService jobService)
+        IBackgroundJobService jobService,
+        IEmailTemplateService templateService)
     {
         _excelService = excelService;
         _emailService = emailService;
         _jobService = jobService;
+        _templateService = templateService;
     }
 
     public async Task<string> Handle(SendScheduleCommand request, CancellationToken cancellationToken)
@@ -28,13 +31,18 @@ public class SendScheduleHandler : IRequestHandler<SendScheduleCommand, string>
         // 2. Đẩy job vào hàng đợi (Không gửi ngay lập tức để tránh treo server)
         foreach (var student in students)
         {
-            // Enqueue: Lưu job vào Database, Worker sẽ xử lý sau
+            // -- BƯỚC QUAN TRỌNG: TẠO NỘI DUNG DYNAMIC --
+            // Thay thế {{FullName}} thành tên thật
+            string personalizedBody = _templateService.GenerateContent(request.BodyTemplate, student);
+            // -------------------------------------------
+
+            // 3. Enqueue
             _jobService.Enqueue(() =>
                 _emailService.SendEmailAsync(
                     student.Email,
-                    "Thông báo Thời Khóa Biểu Mới",
-                    $"<h3>Xin chào {student.FullName}</h3><p>Gửi bạn lịch học mới.</p>",
-                    request.Attachment
+                    request.Subject,     // Dùng subject từ Admin nhập
+                    personalizedBody,    // Dùng body đã được cá nhân hóa
+                    request.Attachment   // File đính kèm (nếu có)
                 ));
         }
 

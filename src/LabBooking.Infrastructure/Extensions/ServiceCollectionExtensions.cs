@@ -80,6 +80,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IExcelService, ExcelService>();
         services.AddScoped<IEmailService, GmailService>();
         services.AddScoped<IBackgroundJobService, HangfireService>();
+        services.AddScoped<IEmailTemplateService, EmailTemplateService>();
 
         services.AddScoped<IUserFactory, UserFactory>();
         services.AddScoped<IRefreshTokenFactory, RefreshTokenFactory>();
