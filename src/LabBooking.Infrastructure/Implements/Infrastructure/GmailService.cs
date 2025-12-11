@@ -1,8 +1,10 @@
 ﻿using LabBooking.Application.Features.Emails.Dtos;
 using LabBooking.Application.Interfaces.Infrastructure;
-using MailKit.Net.Smtp;                   // Dùng của MailKit
-using MailKit.Security;                   // Dùng Security của MailKit
-using MimeKit;                            // Dùng MimeKit để tạo nội dung mail
+using MailKit.Net.Smtp;
+using MailKit.Security;
+using MimeKit;
+using System.Net;
+using System.Net.Sockets;
 
 namespace LabBooking.Infrastructure.Implements.Infrastructure
 {
@@ -18,20 +20,18 @@ namespace LabBooking.Infrastructure.Implements.Infrastructure
         public async Task SendEmailAsync(string to, string subject, string body, EmailAttachmentDto attachment = null)
         {
             var settings = _config.GetSection("MailSettings");
+            var host = settings["Host"];
+            var port = int.Parse(settings["Port"]);
+            var mail = settings["Mail"];
+            var password = settings["Password"];
 
-            // 1. Tạo message bằng MimeKit (Hiện đại hơn)
             var message = new MimeMessage();
-            message.From.Add(new MailboxAddress(settings["DisplayName"] ?? "LabBooking System", settings["Mail"]));
+            message.From.Add(new MailboxAddress(settings["DisplayName"] ?? "LabBooking System", mail));
             message.To.Add(MailboxAddress.Parse(to));
             message.Subject = subject;
 
-            // 2. Tạo Body Builder (Hỗ trợ HTML và File đính kèm dễ dàng)
-            var builder = new BodyBuilder
-            {
-                HtmlBody = body
-            };
+            var builder = new BodyBuilder { HtmlBody = body };
 
-            // Đính kèm file nếu có
             if (attachment != null && attachment.FileContent != null)
             {
                 builder.Attachments.Add(attachment.FileName, attachment.FileContent, ContentType.Parse(attachment.ContentType));
@@ -39,26 +39,41 @@ namespace LabBooking.Infrastructure.Implements.Infrastructure
 
             message.Body = builder.ToMessageBody();
 
-            // 3. Sử dụng SmtpClient của MailKit (Không phải System.Net.Mail)
             using var client = new SmtpClient();
+            client.Timeout = 30000; // 30s timeout
+
+            // --- BƯỚC FIX LỖI SSL HANDSHAKE ---
+            // Chấp nhận mọi chứng chỉ (Vì ta đang kết nối bằng IP nên chứng chỉ sẽ không khớp domain)
+            client.CheckCertificateRevocation = false;
+            client.ServerCertificateValidationCallback = (s, c, h, e) => true;
+            // ----------------------------------
 
             try
             {
-                // Connect: Dùng Port 587 và SecureSocketOptions.StartTls
-                // Quan trọng: smtp.gmail.com đôi khi trả về IPv6 gây lỗi trên Render, 
-                // MailKit tự động xử lý tốt hơn, nhưng nếu vẫn lỗi có thể thử hardcode IP (ít khi cần).
-                await client.ConnectAsync(settings["Host"], int.Parse(settings["Port"]), SecureSocketOptions.StartTls);
+                // Logic tìm IPv4 để né lỗi trên Render
+                var ipAddresses = await Dns.GetHostAddressesAsync(host);
+                var ipV4 = ipAddresses.FirstOrDefault(x => x.AddressFamily == AddressFamily.InterNetwork);
 
-                // Authenticate
-                await client.AuthenticateAsync(settings["Mail"], settings["Password"]);
+                var socketOptions = port == 465 ? SecureSocketOptions.SslOnConnect : SecureSocketOptions.StartTls;
 
-                // Gửi
+                if (ipV4 != null)
+                {
+                    // Kết nối bằng IP v4
+                    await client.ConnectAsync(ipV4.ToString(), port, socketOptions);
+                }
+                else
+                {
+                    // Fallback về Hostname
+                    await client.ConnectAsync(host, port, socketOptions);
+                }
+
+                await client.AuthenticateAsync(mail, password);
                 await client.SendAsync(message);
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"[MailKit Error] {ex.Message}");
-                throw; // Ném lỗi để Hangfire biết mà retry hoặc log lại
+                throw;
             }
             finally
             {
