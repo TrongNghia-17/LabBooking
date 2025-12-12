@@ -82,9 +82,10 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IGoogleAuthService, GoogleAuthService>();
         services.AddScoped<INotificationService, NotificationService>();
         services.AddScoped<IExcelService, ExcelService>();
-        services.AddScoped<IEmailService, GmailService>();
+        //services.AddScoped<IEmailService, GmailService>();
         services.AddScoped<IBackgroundJobService, HangfireService>();
         services.AddScoped<IEmailTemplateService, EmailTemplateService>();
+        services.AddScoped<IEmailService, SendGridEmailService>();
 
         services.AddScoped<IUserFactory, UserFactory>();
         services.AddScoped<IRefreshTokenFactory, RefreshTokenFactory>();

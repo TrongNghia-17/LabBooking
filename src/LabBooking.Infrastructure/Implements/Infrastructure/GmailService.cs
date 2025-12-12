@@ -1,5 +1,6 @@
 ﻿using LabBooking.Application.Features.Emails.Dtos;
 using LabBooking.Application.Interfaces.Infrastructure;
+using MailKit; // Nhớ thêm dòng này để dùng IProtocolLogger
 using MailKit.Net.Smtp;
 using MailKit.Security;
 using MimeKit;
@@ -15,7 +16,6 @@ namespace LabBooking.Infrastructure.Implements.Infrastructure
         public async Task SendEmailAsync(string to, string subject, string body, EmailAttachmentDto attachment = null)
         {
             var settings = _config.GetSection("MailSettings");
-
             var host = settings["Host"];
             var port = int.Parse(settings["Port"]);
             var mailAddress = settings["Mail"];
@@ -34,53 +34,31 @@ namespace LabBooking.Infrastructure.Implements.Infrastructure
             }
             message.Body = builder.ToMessageBody();
 
-            using var client = new SmtpClient();
+            // SỬ DỤNG PROTOCOL LOGGER ĐỂ IN LOG CHI TIẾT RA CONSOLE
+            using var client = new SmtpClient(new ProtocolLogger(Console.OpenStandardOutput()));
 
-            // QUAN TRỌNG: Tắt kiểm tra thu hồi chứng chỉ
-            // Trên môi trường Container/Render, việc này hay gây ra Timeout do network restrictions
             client.CheckCertificateRevocation = false;
-
-            // Timeout kết nối
-            client.Timeout = 30000; // 30s
+            client.Timeout = 10000; // Giảm xuống 10s cho nhanh thấy lỗi
 
             try
             {
-                // Logic chọn Port và SSL
-                SecureSocketOptions socketOptions;
+                Console.WriteLine($"[Debug] Bắt đầu kết nối đến {host}:{port}...");
 
-                if (port == 465)
-                {
-                    socketOptions = SecureSocketOptions.SslOnConnect;
-                }
-                else if (port == 587)
-                {
-                    socketOptions = SecureSocketOptions.StartTls;
-                }
-                else
-                {
-                    // Trường hợp dự phòng nếu cấu hình sai port
-                    socketOptions = SecureSocketOptions.Auto;
-                }
-
-                Console.WriteLine($"[Mail Info] Connecting to {host}:{port} using {socketOptions}...");
-
-                await client.ConnectAsync(host, port, socketOptions);
-                Console.WriteLine("[Mail Info] Connected. Authenticating...");
+                // Kết nối
+                await client.ConnectAsync(host, port, SecureSocketOptions.StartTls);
+                Console.WriteLine("[Debug] Kết nối thành công.");
 
                 // Đăng nhập
                 await client.AuthenticateAsync(mailAddress, password);
-                Console.WriteLine("[Mail Info] Authenticated. Sending...");
+                Console.WriteLine("[Debug] Đăng nhập thành công.");
 
                 // Gửi
                 await client.SendAsync(message);
-                Console.WriteLine($"[Success] Email sent to {to} via Gmail");
+                Console.WriteLine($"[Success] Đã gửi mail cho {to}");
             }
             catch (Exception ex)
             {
-                // Log chi tiết lỗi để debug dễ hơn
-                Console.WriteLine($"[Mail Error] Host: {host} | Port: {port} | Error: {ex.Message}");
-                Console.WriteLine($"[Stack Trace] {ex.StackTrace}");
-                throw;
+                Console.WriteLine($"[ERROR] Lỗi: {ex.Message}");
             }
             finally
             {
