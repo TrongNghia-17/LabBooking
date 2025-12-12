@@ -6,6 +6,7 @@ namespace LabBooking.Infrastructure.Implements.Infrastructure;
 public class HangfireService : IBackgroundJobService
 {
     private readonly IBackgroundJobClient _backgroundJobClient;
+
     public HangfireService(IBackgroundJobClient backgroundJobClient)
     {
         _backgroundJobClient = backgroundJobClient;
@@ -14,5 +15,10 @@ public class HangfireService : IBackgroundJobService
     public void Enqueue(Expression<Action> methodCall)
     {
         _backgroundJobClient.Enqueue(methodCall);
+    }
+
+    public void Schedule(Expression<Action> methodCall, TimeSpan delay)
+    {
+        _backgroundJobClient.Schedule(methodCall, delay);
     }
 }

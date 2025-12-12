@@ -4,74 +4,57 @@ using MailKit.Net.Smtp;
 using MailKit.Security;
 using MimeKit;
 
-namespace LabBooking.Infrastructure.Implements.Infrastructure;
-
-public class GmailService : IEmailService
+namespace LabBooking.Infrastructure.Implements.Infrastructure
 {
-    private readonly IConfiguration _config;
-
-    public GmailService(IConfiguration config) => _config = config;
-
-    public async Task SendEmailAsync(string to, string subject, string body, EmailAttachmentDto attachment = null)
+    public class GmailService : IEmailService
     {
-        var settings = _config.GetSection("MailSettings");
+        private readonly IConfiguration _config;
 
-        // Lấy thông tin từ cấu hình
-        var host = settings["Host"];
-        var port = int.Parse(settings["Port"]);
-        var mail = settings["Mail"];
-        var password = settings["Password"];
-        var displayName = settings["DisplayName"] ?? "LabBooking System";
+        public GmailService(IConfiguration config) => _config = config;
 
-        var message = new MimeMessage();
-        message.From.Add(new MailboxAddress(displayName, mail));
-        message.To.Add(MailboxAddress.Parse(to));
-        message.Subject = subject;
-
-        var builder = new BodyBuilder { HtmlBody = body };
-        if (attachment != null && attachment.FileContent != null)
+        public async Task SendEmailAsync(string to, string subject, string body, EmailAttachmentDto attachment = null)
         {
-            builder.Attachments.Add(attachment.FileName, attachment.FileContent, ContentType.Parse(attachment.ContentType));
-        }
-        message.Body = builder.ToMessageBody();
+            var settings = _config.GetSection("MailSettings");
+            var host = settings["Host"];        // smtp.gmail.com
+            var port = int.Parse(settings["Port"]); // Bắt buộc là 465
+            var mail = settings["Mail"];        // Gmail của bạn
+            var password = settings["Password"]; // App Password 16 ký tự
 
-        using var client = new SmtpClient();
+            var message = new MimeMessage();
+            message.From.Add(new MailboxAddress(settings["DisplayName"] ?? "LabBooking", mail));
+            message.To.Add(MailboxAddress.Parse(to));
+            message.Subject = subject;
 
-        // Timeout 30s là đủ, đừng để quá lâu gây treo request
-        client.Timeout = 30000;
-
-        try
-        {
-            // --- ĐOẠN SỬA QUAN TRỌNG ---
-            // Tự động chọn SslOnConnect nếu port là 465, ngược lại dùng StartTls (cho 587 hoặc 2525)
-            var socketOptions = port == 465 ? SecureSocketOptions.SslOnConnect : SecureSocketOptions.StartTls;
-
-            // Kết nối
-            Console.WriteLine($"[Email] Connecting to {host}:{port}...");
-            await client.ConnectAsync(host, port, socketOptions);
-
-            // Đăng nhập
-            Console.WriteLine("[Email] Authenticating...");
-            await client.AuthenticateAsync(mail, password);
-
-            // Gửi
-            Console.WriteLine($"[Email] Sending to {to}...");
-            await client.SendAsync(message);
-
-            Console.WriteLine($"[Success] Email sent to {to}");
-        }
-        catch (Exception ex)
-        {
-            // Log rõ lỗi để debug trên Render Console
-            Console.WriteLine($"[Mail Error] Host: {host}, Port: {port}");
-            Console.WriteLine($"[Mail Error] Exception: {ex.Message}");
-            throw; // Ném lỗi ra để Hangfire biết là Job fail
-        }
-        finally
-        {
-            if (client.IsConnected)
+            var builder = new BodyBuilder { HtmlBody = body };
+            if (attachment != null && attachment.FileContent != null)
             {
-                await client.DisconnectAsync(true);
+                builder.Attachments.Add(attachment.FileName, attachment.FileContent, ContentType.Parse(attachment.ContentType));
+            }
+            message.Body = builder.ToMessageBody();
+
+            using var client = new SmtpClient();
+            client.Timeout = 30000; // 30s
+
+            try
+            {
+                // --- ĐOẠN QUAN TRỌNG NHẤT VỚI GMAIL TRÊN RENDER ---
+                // Port 465 BẮT BUỘC dùng SslOnConnect
+                await client.ConnectAsync(host, port, SecureSocketOptions.SslOnConnect);
+
+                // Đăng nhập
+                await client.AuthenticateAsync(mail, password);
+
+                await client.SendAsync(message);
+                Console.WriteLine($"[Success] Sent to {to} via Gmail");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[Gmail Error] {ex.Message}");
+                throw;
+            }
+            finally
+            {
+                if (client.IsConnected) await client.DisconnectAsync(true);
             }
         }
     }
