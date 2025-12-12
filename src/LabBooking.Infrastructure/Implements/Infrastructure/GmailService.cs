@@ -35,25 +35,41 @@ namespace LabBooking.Infrastructure.Implements.Infrastructure
             message.Body = builder.ToMessageBody();
 
             using var client = new SmtpClient();
-            // Tăng timeout lên 60s để tránh lỗi mạng trên Render
-            client.Timeout = 60000;
+
+            // QUAN TRỌNG: Tắt kiểm tra thu hồi chứng chỉ
+            // Trên môi trường Container/Render, việc này hay gây ra Timeout do network restrictions
+            client.CheckCertificateRevocation = false;
+
+            // Timeout kết nối
+            client.Timeout = 30000; // 30s
 
             try
             {
-                // CẤU HÌNH CHO GMAIL
-                // Port 587: Dùng SecureSocketOptions.StartTls
-                // Port 465: Dùng SecureSocketOptions.SslOnConnect
-
+                // Logic chọn Port và SSL
                 SecureSocketOptions socketOptions;
+
                 if (port == 465)
+                {
                     socketOptions = SecureSocketOptions.SslOnConnect;
-                else
+                }
+                else if (port == 587)
+                {
                     socketOptions = SecureSocketOptions.StartTls;
+                }
+                else
+                {
+                    // Trường hợp dự phòng nếu cấu hình sai port
+                    socketOptions = SecureSocketOptions.Auto;
+                }
+
+                Console.WriteLine($"[Mail Info] Connecting to {host}:{port} using {socketOptions}...");
 
                 await client.ConnectAsync(host, port, socketOptions);
+                Console.WriteLine("[Mail Info] Connected. Authenticating...");
 
                 // Đăng nhập
                 await client.AuthenticateAsync(mailAddress, password);
+                Console.WriteLine("[Mail Info] Authenticated. Sending...");
 
                 // Gửi
                 await client.SendAsync(message);
@@ -61,7 +77,9 @@ namespace LabBooking.Infrastructure.Implements.Infrastructure
             }
             catch (Exception ex)
             {
+                // Log chi tiết lỗi để debug dễ hơn
                 Console.WriteLine($"[Mail Error] Host: {host} | Port: {port} | Error: {ex.Message}");
+                Console.WriteLine($"[Stack Trace] {ex.StackTrace}");
                 throw;
             }
             finally
