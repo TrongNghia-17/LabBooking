@@ -16,4 +16,6 @@ public interface IDoorRequestRepository
     DateTime? from,
     DateTime? to,
     CancellationToken token);
+
+    Task<List<BookingSlot>> GetBookingsEligibleForDoorOpenAsync(Guid userId);
 }

@@ -1,14 +1,18 @@
-﻿using LabBooking.Application.Features.DoorRequests.Commands.AcceptDoorRequest;
+﻿using LabBooking.Application.Common.Interfaces;
+using LabBooking.Application.Features.DoorRequests.Commands.AcceptDoorRequest;
 using LabBooking.Application.Features.DoorRequests.Commands.CancelDoorRequest;
 using LabBooking.Application.Features.DoorRequests.Commands.Create;
+using LabBooking.Application.Features.DoorRequests.Dtos;
 using LabBooking.Application.Features.DoorRequests.Queries.GetGuardPendingRequests;
 using LabBooking.Application.Features.DoorRequests.Queries.GetHistory;
+using LabBooking.Application.Features.DoorRequests.Queries.GetOpenableBooking;
 
 namespace LabBooking.API.Controllers;
 
 [Route("api/[controller]")]
 [ApiController]
-public class DoorRequestsController(IMediator mediator) : ControllerBase
+public class DoorRequestsController(IMediator mediator,
+    ICurrentUserService currentUserService) : ControllerBase
 {
     [HttpPost]
     [Authorize(Roles = "Manager, Lecturer, Student")]
@@ -52,5 +56,19 @@ public class DoorRequestsController(IMediator mediator) : ControllerBase
 
         // 2. Thông báo rõ là đã xóa
         return Ok(new { Message = "Đã xóa yêu cầu thành công." });
+    }
+
+    [HttpGet("openable")]
+    [Authorize(Roles = "Lecturer, Student")]
+    [ProducesResponseType(typeof(List<BookingForDoorOpenDto>), StatusCodes.Status200OK)]
+    public async Task<ActionResult<List<BookingForDoorOpenDto>>> GetOpenableBookings()
+    {
+        var userId = currentUserService.UserId;
+        if (userId == null) return Unauthorized();
+
+        // Đóng gói ID vào Query và ném cho Handler xử lý
+        var result = await mediator.Send(new GetOpenableBookingsQuery(userId.Value));
+
+        return Ok(result);
     }
 }

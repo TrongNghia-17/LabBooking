@@ -131,4 +131,47 @@ internal class DoorRequestRepository(LabBookingDbContext dbContext, INotificatio
         dbContext.DoorOpeningRequests.Remove(request);
         await dbContext.SaveChangesAsync(token);
     }
+
+    // Trong class BookingRepository
+
+    public async Task<List<BookingSlot>> GetBookingsEligibleForDoorOpenAsync(Guid userId)
+    {
+        // 1. Xác định thời gian hiện tại ở Việt Nam
+        var vnTimeZone = TimeZoneInfo.FindSystemTimeZoneById("SE Asia Standard Time");
+        var nowUtc = DateTime.UtcNow;
+        var nowVn = TimeZoneInfo.ConvertTimeFromUtc(nowUtc, vnTimeZone);
+
+        var today = DateOnly.FromDateTime(nowVn);
+        var currentTime = TimeOnly.FromDateTime(nowVn);
+
+        // 2. Lấy danh sách các slot đã book của user trong HÔM NAY
+        // Chỉ lấy Active slot và Approved booking
+        var userSlotsToday = await dbContext.BookingSlots
+            .AsNoTracking()
+            .Include(bs => bs.Booking)
+                .ThenInclude(b => b.LabRoom)
+            .Include(bs => bs.Slot)
+            .Where(bs =>
+                bs.Date == today &&
+                bs.Status == BookingSlotStatus.Active &&
+                bs.Booking.CreatedById == userId &&
+                bs.Booking.Status == BookingStatus.Approved
+            )
+            .ToListAsync();
+
+        // 3. Lọc theo Business Rule: Chỉ hiển thị trước 1 tiếng so với giờ bắt đầu
+        // VÀ vẫn hiển thị trong lúc đang diễn ra slot (để lỡ user ra ngoài cần vào lại)
+
+        var eligibleSlots = userSlotsToday.Where(bs =>
+        {
+            // Ví dụ: Slot bắt đầu 07:00.
+            // allowTime = 06:00
+            var allowTime = bs.Slot.StartTime.AddHours(-1);
+
+            // Điều kiện: Thời gian hiện tại >= 06:00 VÀ Thời gian hiện tại <= Giờ kết thúc slot
+            return currentTime >= allowTime && currentTime <= bs.Slot.EndTime;
+        }).ToList();
+
+        return eligibleSlots;
+    }
 }
