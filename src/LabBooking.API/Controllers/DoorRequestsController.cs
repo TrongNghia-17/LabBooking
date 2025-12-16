@@ -42,11 +42,15 @@ public class DoorRequestsController(IMediator mediator) : ControllerBase
         return Ok(result);
     }
 
-    [HttpPost("cancel/{id}")]
-    [Authorize(Roles = "Manager, Lecturer, Student")]
-    public async Task<IActionResult> CancelRequest(Guid id)
+    [HttpDelete("{id}")] // 1. Dùng HttpDelete
+    [Authorize(Roles = "Lecturer, Student")]
+    public async Task<IActionResult> DeleteRequest(Guid id)
     {
+        // Lưu ý: Tên Command vẫn là CancelDoorRequestCommand cũng được, 
+        // hoặc bạn có thể đổi tên class Command thành DeleteDoorRequestCommand cho đồng bộ tên gọi.
         await mediator.Send(new CancelDoorRequestCommand(id));
-        return Ok(new { Message = "Đã hủy yêu cầu thành công." });
+
+        // 2. Thông báo rõ là đã xóa
+        return Ok(new { Message = "Đã xóa yêu cầu thành công." });
     }
 }

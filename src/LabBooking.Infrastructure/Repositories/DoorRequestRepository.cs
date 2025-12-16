@@ -1,5 +1,4 @@
 ﻿using LabBooking.Domain.Enums;
-using StackExchange.Redis;
 
 namespace LabBooking.Infrastructure.Repositories;
 
@@ -125,4 +124,11 @@ internal class DoorRequestRepository(LabBookingDbContext dbContext, INotificatio
         return await query.ToListAsync(token);
     }
 
+    // Thêm method này vào file DoorRequestRepository.cs
+    public async Task DeleteAsync(DoorOpeningRequest request, CancellationToken token)
+    {
+        // Lệnh này sẽ xóa hẳn dòng dữ liệu khỏi bảng (Hard Delete)
+        dbContext.DoorOpeningRequests.Remove(request);
+        await dbContext.SaveChangesAsync(token);
+    }
 }

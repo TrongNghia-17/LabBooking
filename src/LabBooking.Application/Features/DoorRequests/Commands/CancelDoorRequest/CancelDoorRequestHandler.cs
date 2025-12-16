@@ -9,7 +9,7 @@ public class CancelDoorRequestHandler(
 {
     public async Task<bool> Handle(CancelDoorRequestCommand command, CancellationToken cancellationToken)
     {
-        // 1. Lấy ID người đang thao tác
+        // 1. Lấy ID người dùng hiện tại
         var currentUserId = currentUserService.UserId
             ?? throw new UnauthorizedAccessException("Bạn cần đăng nhập.");
 
@@ -19,33 +19,35 @@ public class CancelDoorRequestHandler(
         if (request == null)
             throw new NotFoundException(nameof(DoorOpeningRequest), command.RequestId.ToString());
 
-        // --- RULE 1: CHECK CHÍNH CHỦ ---
-        // Nếu không phải là người tạo ra yêu cầu này -> Cấm
+        // --- VALIDATION 1: CHÍNH CHỦ ---
         if (request.RequestedById != currentUserId)
         {
-            throw new ForbidException("Bạn không có quyền hủy yêu cầu của người khác.");
+            throw new ForbidException("Bạn không có quyền xóa yêu cầu của người khác.");
         }
 
-        // --- RULE 2: CHECK TRẠNG THÁI ---
-        // Chỉ được hủy khi đang PENDING (Chưa ai nhận)
+        // --- VALIDATION 2: TRẠNG THÁI (Logic bạn yêu cầu) ---
+        // Chỉ cho phép xóa khi trạng thái là PENDING (Chưa ai nhận)
         if (request.Status != DoorRequestStatus.Pending)
         {
-            // Tùy chỉnh thông báo lỗi cho thân thiện
+            // Trường hợp 1: Đã được bảo vệ chấp nhận
             if (request.Status == DoorRequestStatus.Accepted)
-                throw new BadRequestException("Bảo vệ đã tiếp nhận và đang đến, không thể hủy lúc này!");
+            {
+                throw new BadRequestException("Yêu cầu đã được Bảo vệ chấp nhận và đang xử lý. Không thể xóa lúc này!");
+            }
 
+            // Trường hợp 2: Đã hoàn thành hoặc các trạng thái khác
             if (request.Status == DoorRequestStatus.Completed)
-                throw new BadRequestException("Yêu cầu đã hoàn thành, không thể hủy.");
+            {
+                throw new BadRequestException("Yêu cầu đã hoàn thành xong, không thể xóa (nên giữ lại làm lịch sử).");
+            }
 
-            throw new BadRequestException("Không thể hủy yêu cầu này.");
+            // Chặn tất cả các trường hợp còn lại
+            throw new BadRequestException($"Không thể xóa yêu cầu đang ở trạng thái {request.Status}.");
         }
 
-        // 3. Cập nhật trạng thái -> Cancelled
-        request.Status = DoorRequestStatus.Cancelled;
-
-        // (Optional) Xóa luôn khỏi DB nếu bạn không muốn lưu rác
-        // Nhưng tốt nhất là Update Status để lưu lịch sử là "User đã từng hủy"
-        await repo.UpdateAsync(request, cancellationToken);
+        // 3. THỰC HIỆN XÓA (HARD DELETE)
+        // Nếu code chạy xuống được đến đây nghĩa là Status == Pending
+        await repo.DeleteAsync(request, cancellationToken);
 
         return true;
     }
