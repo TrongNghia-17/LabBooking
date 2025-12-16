@@ -22,4 +22,5 @@ public interface ILabRoomRepository
     Task<IEnumerable<LabRoom>> GetLabsByManagerWithEquipmentsAsync(Guid managerId, CancellationToken cancellationToken = default);
     Task<IEnumerable<MonthlyTopLabDto>> GetTopLabPerMonthAsync(int year, CancellationToken token);
     Task<IEnumerable<LabStatModel>> GetRawStatisticsAsync(int year, CancellationToken cancellationToken);
+    Task<IEnumerable<LabAvailabilityModel>> GetAvailableLabsByDateAsync(DateOnly date, CancellationToken token = default);
 }
