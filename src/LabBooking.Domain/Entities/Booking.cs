@@ -66,4 +66,5 @@ public class Booking
     public ICollection<ExternalEquipment>? ExternalEquipments { get; set; }
     public ICollection<OutSideGuest>? OutSideGuests { get; set; }
     public string? PendingSlotsJson { get; set; }
+    public string? QrCodeString { get; set; }
 }

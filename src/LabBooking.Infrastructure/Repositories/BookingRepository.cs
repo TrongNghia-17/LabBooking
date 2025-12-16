@@ -522,6 +522,8 @@ namespace LabBooking.Infrastructure.Repositories
             // 2. DUYỆT ĐƠN MỚI
             if (dbContext.Entry(booking).State == EntityState.Detached) dbContext.Bookings.Attach(booking);
             booking.Status = BookingStatus.Approved;
+            booking.ApprovedAt = DateTime.UtcNow;
+            booking.QrCodeString = GenerateBookingCode(); // Tạo mã QR mới khi duyệt
             foreach (var slot in booking.Slots) slot.Status = BookingSlotStatus.Active;
 
             // 3. THÔNG BÁO CHỦ ĐƠN
@@ -580,6 +582,15 @@ namespace LabBooking.Infrastructure.Repositories
                 // _logger.LogError(ex, "Error at GetBookedLabIdsAsync");
                 throw; // Quan trọng: giữ stack trace
             }
+        }
+        private string GenerateBookingCode(int length = 8)
+        {
+            // Tập hợp các ký tự cho phép (bỏ các ký tự dễ gây nhầm lẫn như I, O nếu muốn)
+            const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+            var random = new Random();
+
+            return new string(Enumerable.Repeat(chars, length)
+                .Select(s => s[random.Next(s.Length)]).ToArray());
         }
 
         public async Task<List<Booking>> GetHistoryByUserIdAsync(Guid userId)
