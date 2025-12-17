@@ -14,8 +14,9 @@ public class UserFactory : IUserFactory
             return new User
             {
                 Email = payload.Email,
+                FullName = payload.GivenName,
                 UserName = safeUserName, // FIX: Dùng safeUserName thay vì payload.Name
-                Major = "Manager",
+                Major = "Teaching",
                 EmailConfirmed = true,
                 RegistrationDate = DateTime.UtcNow
             };
@@ -39,16 +40,17 @@ public class UserFactory : IUserFactory
         string userName = safeUserName;
 
         // 4. Kết hợp Major (Xử lý trường hợp không có majorCode để chuỗi đẹp hơn)
-        string finalMajor = string.IsNullOrEmpty(majorCode)
-                            ? classInfo
-                            : $"{majorCode} {classInfo}";
+        string finalMajor = !string.IsNullOrEmpty(majorCode)
+                            ? majorCode
+                            : $"Student";
 
         // 5. Tạo User
         return new User
         {
             Email = email,
             UserName = userName,
-            Major = finalMajor.Trim(), // Trim lần cuối cho sạch
+            FullName = givenName,
+            Major = finalMajor.Trim(),
             EmailConfirmed = true,
             RegistrationDate = DateTime.UtcNow
         };
@@ -64,13 +66,8 @@ public class UserFactory : IUserFactory
         var usernamePart = parts[0];
 
         // Dùng Regex tìm 2 chữ cái đứng ngay trước 1 dãy số (Format sinh viên SE123456)
-        var match = Regex.Match(usernamePart, @"([A-Za-z]{2})\d+$");
+        var match = Regex.Match(usernamePart, @"([a-zA-Z]{2})\d+$");
 
-        if (match.Success)
-        {
-            return match.Groups[1].Value.ToUpper(); // "SE"
-        }
-
-        return string.Empty;
+        return match.Success ? match.Groups[1].Value.ToUpper() : string.Empty;
     }
 }
