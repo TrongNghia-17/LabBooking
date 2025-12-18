@@ -3,7 +3,7 @@ using LabBooking.Domain.Enums;
 
 namespace LabBooking.Infrastructure.Repositories;
 
-internal class DoorRequestRepository(LabBookingDbContext dbContext, INotificationRepository notificationRepo) : IDoorRequestRepository
+internal class DoorRequestRepository(LabBookingDbContext dbContext) : IDoorRequestRepository
 {
     public async Task<Guid> AddAsync(DoorOpeningRequest entity)
     {
@@ -21,8 +21,17 @@ internal class DoorRequestRepository(LabBookingDbContext dbContext, INotificatio
     public async Task<DoorOpeningRequest?> GetByIdAsync(Guid id)
     {
         return await dbContext.DoorOpeningRequests
+            .AsNoTracking()
             .FirstOrDefaultAsync(x => x.Id == id);
     }
+    public async Task<DoorOpeningRequest?> GetByIdWithUserAsync(Guid id)
+    {
+        return await dbContext.DoorOpeningRequests
+            .AsNoTracking()
+            .Include(x => x.RequestedBy) // <--- QUAN TRỌNG: Include User để lấy Email/SDT
+            .FirstOrDefaultAsync(x => x.Id == id);
+    }
+
 
     public async Task DeleteAsync(DoorOpeningRequest request)
     {

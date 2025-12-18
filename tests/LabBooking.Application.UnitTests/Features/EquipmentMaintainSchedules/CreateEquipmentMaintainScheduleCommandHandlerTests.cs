@@ -110,7 +110,7 @@ public class CreateEquipmentMaintainScheduleCommandHandlerTests
         Func<Task> act = async () => await _handler.Handle(command, CancellationToken.None);
 
         // Assert
-        await act.Should().ThrowAsync<ForbidException>();
+        await act.Should().ThrowAsync<ForbiddenAccessException>();
     }
 
     [Fact]
@@ -226,7 +226,7 @@ public class CreateEquipmentMaintainScheduleCommandHandlerTests
 
         // Assert
         // Code của bạn throw ForbidException khi labRoom null
-        await act.Should().ThrowAsync<ForbidException>()
+        await act.Should().ThrowAsync<ForbiddenAccessException>()
             .WithMessage($"Không có quyền với thiết bị {equipment.EquipmentName}.");
     }
 
@@ -272,7 +272,7 @@ public class CreateEquipmentMaintainScheduleCommandHandlerTests
         Func<Task> act = async () => await _handler.Handle(command, CancellationToken.None);
 
         // Assert
-        await act.Should().ThrowAsync<ForbidException>()
+        await act.Should().ThrowAsync<ForbiddenAccessException>()
             .WithMessage($"Không có quyền với thiết bị {equipment.EquipmentName}.");
     }
 }

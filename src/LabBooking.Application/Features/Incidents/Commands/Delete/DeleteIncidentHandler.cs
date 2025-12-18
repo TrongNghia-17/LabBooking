@@ -29,7 +29,7 @@ public class DeleteIncidentHandler(
         if (!isAdmin && !isManager && !isReporter)
         {
             logger.LogWarning("User {User} cố xóa Incident {Id} nhưng không có quyền.", currentUserId, request.Id);
-            throw new ForbidException("Bạn không có quyền xóa báo cáo sự cố này.");
+            throw new ForbiddenAccessException("Bạn không có quyền xóa báo cáo sự cố này.");
         }
 
         // 4. RULE: Không được xóa sự cố đã xử lý xong

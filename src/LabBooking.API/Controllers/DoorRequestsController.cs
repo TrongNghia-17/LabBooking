@@ -3,6 +3,7 @@ using LabBooking.Application.Features.DoorRequests.Commands.CreateDoorRequest;
 using LabBooking.Application.Features.DoorRequests.Commands.DeleteDoorRequest;
 using LabBooking.Application.Features.DoorRequests.Commands.UpdateStatus;
 using LabBooking.Application.Features.DoorRequests.Dtos;
+using LabBooking.Application.Features.DoorRequests.Queries.GetDoorRequestDetail;
 using LabBooking.Application.Features.DoorRequests.Queries.GetDoorRequests;
 
 namespace LabBooking.API.Controllers;
@@ -65,5 +66,21 @@ public class DoorRequestsController(IMediator mediator) : ControllerBase
         await mediator.Send(command);
 
         return NoContent();
+    }
+
+    /// <summary>
+    /// Xem chi tiết yêu cầu mở cửa (Dành cho Manager)
+    /// </summary>
+    /// <param name="id">ID của Door Request</param>
+    [HttpGet("{id}")]
+    [Authorize]
+    [ProducesResponseType(typeof(DoorRequestDetailDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)] // Lỗi không đủ quyền
+    [ProducesResponseType(StatusCodes.Status404NotFound)]  // Lỗi không tìm thấy
+    public async Task<ActionResult<DoorRequestDetailDto>> GetById(Guid id)
+    {
+        var query = new GetDoorRequestDetailQuery(id);
+        var result = await mediator.Send(query);
+        return Ok(result);
     }
 }

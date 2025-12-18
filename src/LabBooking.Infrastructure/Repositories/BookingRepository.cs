@@ -770,6 +770,7 @@ namespace LabBooking.Infrastructure.Repositories
             return await dbContext.Bookings
                 .AsNoTracking()
                 .Include(b => b.LabRoom)
+                    .ThenInclude(l => l.MainManager)
                 .Include(b => b.Slots)
                     .ThenInclude(bs => bs.Slot)
                 .Include(b => b.CreatedBy)

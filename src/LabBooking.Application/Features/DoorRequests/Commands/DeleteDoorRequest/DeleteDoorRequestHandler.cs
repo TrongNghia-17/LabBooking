@@ -20,7 +20,7 @@ public class DeleteDoorRequestHandler(
         if (entity.RequestedById != currentUserId)
         {
             // Báo lỗi 403 Forbidden
-            throw new ForbidException("Bạn không có quyền xóa yêu cầu của người khác.");
+            throw new ForbiddenAccessException("Bạn không có quyền xóa yêu cầu của người khác.");
         }
 
         // 3. Check trạng thái (Chỉ xóa được khi chưa ai đụng vào)

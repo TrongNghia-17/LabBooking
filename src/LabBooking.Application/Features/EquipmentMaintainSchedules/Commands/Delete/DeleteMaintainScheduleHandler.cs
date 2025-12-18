@@ -31,7 +31,7 @@ public class DeleteMaintainScheduleHandler(
         if (!isAdmin && labRoom?.MainManagerId != currentUserId)
         {
             logger.LogWarning("Security: User {User} cố xóa lịch {Sch} của phòng khác.", currentUserId, request.Id);
-            throw new ForbidException("Bạn không quản lý phòng Lab này nên không được xóa lịch.");
+            throw new ForbiddenAccessException("Bạn không quản lý phòng Lab này nên không được xóa lịch.");
         }
 
         // 4. Rule: Không được xóa lịch sử đã hoàn thành

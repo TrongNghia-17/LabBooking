@@ -17,4 +17,5 @@ public interface IDoorRequestRepository
         DoorRequestStatus? filterStatus,
         CancellationToken cancellationToken);
     Task UpdateAsync(DoorOpeningRequest request);
+    Task<DoorOpeningRequest?> GetByIdWithUserAsync(Guid id);
 }
