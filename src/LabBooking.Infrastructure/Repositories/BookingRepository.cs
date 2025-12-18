@@ -739,8 +739,6 @@ namespace LabBooking.Infrastructure.Repositories
 
         //------NghiaHT-------//
 
-        // BookingRepository.cs
-        // BookingRepository.cs
         public async Task<(bool Exists, Guid? ManagerId)> GetBookingAndManagerInfoAsync(string bookingCode)
         {
             // Tìm Booking kèm thông tin phòng Lab
@@ -765,6 +763,17 @@ namespace LabBooking.Infrastructure.Repositories
             return await dbContext.Bookings
                .AnyAsync(b => (b.QrCodeString == bookingCode || b.Id.ToString() == bookingCode)
                               && b.CreatedById == userId);
+        }
+
+        public async Task<Booking?> GetByCodeAsync(string code, CancellationToken cancellationToken)
+        {
+            return await dbContext.Bookings
+                .AsNoTracking()
+                .Include(b => b.LabRoom)
+                .Include(b => b.Slots)
+                    .ThenInclude(bs => bs.Slot)
+                .Include(b => b.CreatedBy)
+                .FirstOrDefaultAsync(b => b.QrCodeString == code, cancellationToken);
         }
     }
 }

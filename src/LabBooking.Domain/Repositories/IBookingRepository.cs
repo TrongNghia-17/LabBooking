@@ -26,6 +26,7 @@
 
         // Hoặc kiểm tra xem User hiện tại có sở hữu Booking này không (bảo mật)
         Task<bool> IsBookingOwnedByUserAsync(string bookingCode, Guid userId);
+        Task<Booking?> GetByCodeAsync(string code, CancellationToken cancellationToken);
     }
 
     public enum BookingApprovalResult

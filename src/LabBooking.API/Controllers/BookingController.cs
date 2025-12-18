@@ -2,6 +2,7 @@
 using LabBooking.Application.Features.ApproveBooking.Dtos;
 using LabBooking.Application.Features.Booking.Commands.RejectBooking;
 using LabBooking.Application.Features.Booking.Dtos;
+using LabBooking.Application.Features.Booking.Queries.GetBookingByCode;
 using LabBooking.Application.Features.Booking.Queries.GetBookingById;
 using LabBooking.Application.Features.Booking.Queries.GetChangeableBooking;
 using LabBooking.Application.Features.Booking.Queries.GetPendingBooking;
@@ -168,5 +169,16 @@ public class BookingsController(
         var result = await mediator.Send(query);
         // Wrap trong object data để khớp với cách gọi API của FE: res.data.data
         return Ok(new { data = result });
+    }
+
+    // -----Nghia------
+    [HttpGet("lookup/{code}")]
+    [Authorize(Roles = "Manager, Lecturer, Student")]
+    [ProducesResponseType(typeof(BookingLookupDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<BookingLookupDto>> GetByCode(string code)
+    {
+        var result = await mediator.Send(new GetBookingByCodeQuery(code));
+        return Ok(result);
     }
 }
