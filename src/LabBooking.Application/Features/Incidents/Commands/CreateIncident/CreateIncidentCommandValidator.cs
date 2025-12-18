@@ -2,14 +2,16 @@
 
 public class CreateIncidentCommandValidator : AbstractValidator<CreateIncidentCommand>
 {
-    public CreateIncidentCommandValidator(IEquipmentRepository equipmentRepository)
+    // Inject thêm IRoomCheckRepository để tra cứu phòng Lab
+    public CreateIncidentCommandValidator(
+        IEquipmentRepository equipmentRepository,
+        IRoomCheckRepository roomCheckRepository)
     {
-        RuleFor(x => x.LabRoomId)
-            .NotEmpty().WithMessage("Vui lòng chọn phòng Lab xảy ra sự cố.");
+        RuleFor(x => x.FromRoomCheckId)
+            .NotEmpty().WithMessage("Không xác định được đợt kiểm tra (FromRoomCheckId).");
 
         RuleFor(x => x.Type)
             .IsInEnum().WithMessage("Loại sự cố không hợp lệ.");
-
 
         RuleFor(x => x.ImportanceLevel)
             .IsInEnum().WithMessage("Mức độ quan trọng không hợp lệ.");
@@ -18,34 +20,49 @@ public class CreateIncidentCommandValidator : AbstractValidator<CreateIncidentCo
             .NotEmpty().WithMessage("Vui lòng nhập mô tả sự cố.")
             .MaximumLength(1000).WithMessage("Mô tả không được vượt quá 1000 ký tự.");
 
+        // Rule cho Thiết bị: Nếu là lỗi thiết bị thì phải chọn
         RuleFor(x => x.EquipmentIds)
-            .NotEmpty() // NotEmpty với List nghĩa là != null và Count > 0
+            .NotEmpty()
             .When(x => x.Type == IncidentType.EquipmentFailure)
             .WithMessage("Vui lòng chọn ít nhất một thiết bị bị hỏng.");
 
-        // 6. Nếu KHÔNG phải lỗi thiết bị -> Danh sách PHẢI rỗng hoặc Null
+        // Rule ngược lại: Nếu không phải lỗi thiết bị thì không được gửi list thiết bị (để tránh rác data)
         RuleFor(x => x.EquipmentIds)
             .Must(ids => ids == null || ids.Count == 0)
             .When(x => x.Type != IncidentType.EquipmentFailure)
             .WithMessage("Không được chọn thiết bị nếu loại sự cố không phải là 'Hư hỏng thiết bị'.");
 
-        // 7. Kiểm tra từng thiết bị trong danh sách có thuộc phòng Lab không
-        // Sử dụng RuleForEach để duyệt qua từng phần tử trong List
-        RuleForEach(x => x.EquipmentIds)
-            .CustomAsync(async (equipmentId, context, token) =>
+        // --- VALIDATION NÂNG CAO (LOGIC DATABASE) ---
+        // Sử dụng CustomAsync ở cấp độ Class (RuleFor(x => x)) để xử lý logic phụ thuộc lẫn nhau
+        RuleFor(x => x)
+            .CustomAsync(async (command, context, token) =>
             {
-                // Lấy command gốc để biết LabRoomId
-                var command = (CreateIncidentCommand)context.InstanceToValidate;
-
-                // Gọi Repo kiểm tra xem thiết bị này có nằm trong phòng Lab đang chọn không
-                var isInLab = await equipmentRepository.IsEquipmentInLabAsync(equipmentId, command.LabRoomId, token);
-
-                if (!isInLab)
+                // Chỉ chạy logic này nếu là lỗi thiết bị và có danh sách thiết bị
+                if (command.Type == IncidentType.EquipmentFailure && command.EquipmentIds != null && command.EquipmentIds.Any())
                 {
-                    // Nếu sai thì bắn lỗi kèm ID thiết bị (hoặc bạn có thể query lấy tên thiết bị để báo lỗi đẹp hơn)
-                    context.AddFailure("EquipmentIds", $"Thiết bị có ID {equipmentId} không thuộc phòng Lab này.");
+                    // 1. Lấy thông tin RoomCheck để biết LabRoomId là gì
+                    // (Hàm GetByIdWithLabRoomAsync chúng ta đã tạo trong Repo ở bước trước)
+                    var roomCheck = await roomCheckRepository.GetByIdWithLabRoomAsync(command.FromRoomCheckId, token);
+
+                    if (roomCheck == null)
+                    {
+                        context.AddFailure("FromRoomCheckId", "Không tìm thấy thông tin phiếu kiểm tra trong hệ thống.");
+                        return; // Dừng check tiếp nếu không thấy phiếu
+                    }
+
+                    var labId = roomCheck.LabRoomId;
+
+                    // 2. Duyệt qua từng thiết bị để kiểm tra xem có thuộc phòng Lab này không
+                    foreach (var eqId in command.EquipmentIds)
+                    {
+                        var isInLab = await equipmentRepository.IsEquipmentInLabAsync(eqId, labId, token);
+
+                        if (!isInLab)
+                        {
+                            context.AddFailure("EquipmentIds", $"Thiết bị (ID: {eqId}) không thuộc phòng {roomCheck.LabRoom?.LabName ?? "này"}.");
+                        }
+                    }
                 }
-            })
-            .When(x => x.Type == IncidentType.EquipmentFailure && x.EquipmentIds != null);
+            });
     }
 }

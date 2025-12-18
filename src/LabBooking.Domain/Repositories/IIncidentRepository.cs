@@ -24,4 +24,12 @@ public interface IIncidentRepository
     Task DeleteAsync(Incident incident, CancellationToken token);
     Task<IEnumerable<Incident>> GetByReporterIdAsync(Guid reporterId, CancellationToken token);
     Task<IEnumerable<Incident>> GetByManagerIdAsync(Guid managerId, CancellationToken token);
+
+    /// <summary>
+    /// Xóa mềm Incident và Phục hồi trạng thái thiết bị về Available (trong 1 transaction)
+    /// </summary>
+    Task SoftDeleteWithRestoreDevicesAsync(Incident incident, CancellationToken token);
+
+    // Hàm hỗ trợ cho RoomCheck: Kiểm tra xem RoomCheck này có Incident nào đang dính không
+    Task<bool> HasActiveIncidentForRoomCheckAsync(Guid roomCheckId, CancellationToken token);
 }

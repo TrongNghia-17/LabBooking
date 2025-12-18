@@ -1,10 +1,9 @@
-﻿using LabBooking.Application.Features.RoomChecks.Dtos;
-
-namespace LabBooking.Application.Features.RoomChecks.Commands.CreateRoomCheck;
+﻿namespace LabBooking.Application.Features.RoomChecks.Commands.CreateRoomCheck;
 
 public record CreateRoomCheckCommand(
     Guid LabRoomId,
-    CheckType Type,
-    string? Note,
-    List<RoomCheckItemDto> EquipmentDetails
+    Guid? SlotId,   // Bắt buộc chọn Slot để biết check ca nào
+    CheckType Type, // In hoặc Out
+    bool IsPassed,  // True/False
+    string? Note
 ) : IRequest<Guid>;
