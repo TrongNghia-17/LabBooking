@@ -10,5 +10,6 @@ public record GetDoorRequestsQuery(
     string? SortBy,
     SortDirection SortDirection,
     DateOnly? FilterDate,
-    DoorRequestStatus? FilterStatus
+    DoorRequestStatus? FilterStatus,
+    bool? IsHistory
 ) : IRequest<PagedResult<DoorRequestDto>>;

@@ -42,11 +42,14 @@ public class DoorRequestsController(IMediator mediator) : ControllerBase
     }
 
     /// <summary>
-    /// Lấy danh sách yêu cầu mở cửa (Dành cho Manager, có filter, paging)
+    /// Lấy danh sách yêu cầu mở cửa (Đa năng).
+    /// <para>- Nếu là Manager: Xem các yêu cầu gửi đến phòng Lab mình quản lý.</para>
+    /// <para>- Nếu là Student/Lecturer: Xem danh sách yêu cầu do chính mình tạo.</para>
     /// </summary>
     [HttpGet]
-    [Authorize(Roles = "Manager")]
+    [Authorize]
     [ProducesResponseType(typeof(PagedResult<DoorRequestDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<ActionResult<PagedResult<DoorRequestDto>>> GetAll([FromQuery] GetDoorRequestsQuery query)
     {
         var result = await mediator.Send(query);
