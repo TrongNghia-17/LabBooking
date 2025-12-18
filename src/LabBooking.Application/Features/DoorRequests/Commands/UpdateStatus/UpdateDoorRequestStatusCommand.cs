@@ -3,5 +3,5 @@
 public record UpdateDoorRequestStatusCommand(
     Guid Id,
     DoorRequestStatus NewStatus,
-    string Note
+    string? Note
 ) : IRequest<Unit>;

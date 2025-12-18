@@ -12,4 +12,40 @@ internal class RoomCheckRepository(LabBookingDbContext dbContext) : IRoomCheckRe
         // Nhưng nếu Repo chịu trách nhiệm lưu luôn thì gọi:
         await dbContext.SaveChangesAsync(token);
     }
+
+    public async Task AddRoomCheckTransactionAsync(
+       RoomCheck roomCheck,
+       Incident? incident,
+       List<Equipment> updatedEquipments,
+       CancellationToken token)
+    {
+        // Bắt đầu Transaction tại tầng Infrastructure
+        using var transaction = await dbContext.Database.BeginTransactionAsync(token);
+        try
+        {
+            // 1. Lưu RoomCheck (Header & Details)
+            await dbContext.RoomChecks.AddAsync(roomCheck, token);
+
+            // 2. Lưu Incident (Nếu có sự cố)
+            if (incident != null)
+            {
+                await dbContext.Incidents.AddAsync(incident, token);
+            }
+
+            // 3. Cập nhật trạng thái thiết bị (Những máy bị hỏng)
+            if (updatedEquipments != null && updatedEquipments.Any())
+            {
+                dbContext.Equipments.UpdateRange(updatedEquipments);
+            }
+
+            // 4. Commit tất cả
+            await dbContext.SaveChangesAsync(token);
+            await transaction.CommitAsync(token);
+        }
+        catch
+        {
+            await transaction.RollbackAsync(token);
+            throw; // Ném lỗi ra để Handler hoặc Middleware xử lý
+        }
+    }
 }

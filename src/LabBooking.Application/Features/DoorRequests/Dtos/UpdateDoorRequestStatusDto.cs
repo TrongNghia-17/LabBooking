@@ -2,5 +2,5 @@
 
 public record UpdateDoorRequestStatusDto(
     DoorRequestStatus NewStatus,
-    string Note
+    string? Note
 );

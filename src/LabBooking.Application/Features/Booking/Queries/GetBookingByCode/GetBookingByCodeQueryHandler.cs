@@ -11,13 +11,8 @@ public class GetBookingByCodeQueryHandler(
 {
     public async Task<BookingLookupDto> Handle(GetBookingByCodeQuery request, CancellationToken cancellationToken)
     {
-        // 1. Validate & Get Data
-        if (string.IsNullOrWhiteSpace(request.BookingCode))
-            throw new BadRequestException("Vui lòng nhập mã Booking.");
-
-        var booking = await bookingRepository.GetByCodeAsync(request.BookingCode, cancellationToken);
-
-        if (booking == null) throw new NotFoundException(nameof(Booking), request.BookingCode);
+        var booking = await bookingRepository.GetByCodeAsync(request.BookingCode, cancellationToken)
+            ?? throw new NotFoundException($"Không tìm thấy đơn đặt phòng với mã: {request.BookingCode}");
 
         // 2. Security Check cơ bản
         var currentUserId = currentUserService.UserId;
