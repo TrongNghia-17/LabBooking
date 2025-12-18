@@ -72,14 +72,19 @@ public class DoorRequestsController(IMediator mediator) : ControllerBase
     }
 
     /// <summary>
-    /// Xem chi tiết yêu cầu mở cửa (Dành cho Manager)
+    /// Xem chi tiết yêu cầu mở cửa.
+    /// <para>
+    /// API này tự động hiển thị thông tin liên hệ dựa trên người gọi:
+    /// <br/>- <b>Manager:</b> Xem thông tin người gửi yêu cầu (SV/GV).
+    /// <br/>- <b>Student/Lecturer:</b> Xem thông tin Manager quản lý phòng để liên hệ.
+    /// </para>
     /// </summary>
     /// <param name="id">ID của Door Request</param>
     [HttpGet("{id}")]
-    [Authorize]
+    [Authorize] // Đã mở cho tất cả User đã đăng nhập
     [ProducesResponseType(typeof(DoorRequestDetailDto), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status403Forbidden)] // Lỗi không đủ quyền
-    [ProducesResponseType(StatusCodes.Status404NotFound)]  // Lỗi không tìm thấy
+    [ProducesResponseType(StatusCodes.Status403Forbidden)] // Trả về nếu không phải Manager phòng đó hoặc chủ đơn
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<DoorRequestDetailDto>> GetById(Guid id)
     {
         var query = new GetDoorRequestDetailQuery(id);
