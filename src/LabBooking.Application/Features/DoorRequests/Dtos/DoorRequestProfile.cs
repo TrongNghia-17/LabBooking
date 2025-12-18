@@ -16,7 +16,7 @@ public class DoorRequestProfile : Profile
         CreateMap<DoorOpeningRequest, DoorRequestDto>()
             .ForMember(dest => dest.RequestedByEmail, opt => opt.MapFrom(src => src.RequestedBy!.Email))
             .ForMember(dest => dest.Status, opt => opt.MapFrom(src => src.Status.ToString()))
-            .ForMember(dest => dest.RequestedByName, opt => opt.MapFrom(src => src.RequestedBy!.FullName ?? "Unknown"))
+            .ForMember(dest => dest.ContactName, opt => opt.MapFrom(src => src.RequestedBy!.FullName ?? "Unknown"))
             .ForMember(dest => dest.RequestedByPhoneNumber, opt => opt.MapFrom(src => src.RequestedBy!.PhoneNumber ?? "N/A"));
     }
 }

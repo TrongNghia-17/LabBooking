@@ -21,6 +21,13 @@ internal class EquipmentRepository(LabBookingDbContext dbContext) : IEquipmentRe
         return equipment;
     }
 
+    public async Task<List<Equipment>> GetByIdsAsync(List<Guid> ids, CancellationToken token)
+    {
+        return await dbContext.Equipments
+            .Where(e => ids.Contains(e.Id))
+            .ToListAsync(token);
+    }
+
     public async Task UpdateAsync(Equipment equipment, CancellationToken token = default)
     {
         dbContext.Equipments.Update(equipment);

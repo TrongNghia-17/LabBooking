@@ -6,7 +6,7 @@ public class DoorRequestDto
     public string BookingCode { get; set; } = default!;
     public string Reason { get; set; } = default!;
 
-    public string RequestedByName { get; set; } = default!;
+    public string ContactName { get; set; } = default!;
     public string RequestedByPhoneNumber { get; set; } = default!;
 
     public string? RequestedByEmail { get; set; }
