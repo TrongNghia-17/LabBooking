@@ -1,6 +1,7 @@
 ﻿using LabBooking.Application.Common.Wrappers;
 using LabBooking.Application.Features.DoorRequests.Commands.CreateDoorRequest;
 using LabBooking.Application.Features.DoorRequests.Commands.DeleteDoorRequest;
+using LabBooking.Application.Features.DoorRequests.Commands.UpdateStatus;
 using LabBooking.Application.Features.DoorRequests.Dtos;
 using LabBooking.Application.Features.DoorRequests.Queries.GetDoorRequests;
 
@@ -49,5 +50,20 @@ public class DoorRequestsController(IMediator mediator) : ControllerBase
     {
         var result = await mediator.Send(query);
         return Ok(result);
+    }
+
+    [HttpPut("{id}/status")]
+    [Authorize(Roles = "Manager")]
+    public async Task<IActionResult> UpdateStatus(Guid id, [FromBody] UpdateDoorRequestStatusDto requestBody)
+    {
+        var command = new UpdateDoorRequestStatusCommand(
+            id,
+            requestBody.NewStatus,
+            requestBody.Note
+        );
+
+        await mediator.Send(command);
+
+        return NoContent();
     }
 }

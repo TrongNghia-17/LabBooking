@@ -96,4 +96,10 @@ internal class DoorRequestRepository(LabBookingDbContext dbContext, INotificatio
 
         return (items, totalCount);
     }
+
+    public async Task UpdateAsync(DoorOpeningRequest request)
+    {
+        dbContext.DoorOpeningRequests.Update(request);
+        await dbContext.SaveChangesAsync();
+    }
 }

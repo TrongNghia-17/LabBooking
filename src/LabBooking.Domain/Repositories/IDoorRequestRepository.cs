@@ -16,4 +16,5 @@ public interface IDoorRequestRepository
         DateOnly? filterDate,
         DoorRequestStatus? filterStatus,
         CancellationToken cancellationToken);
+    Task UpdateAsync(DoorOpeningRequest request);
 }
