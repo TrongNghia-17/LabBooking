@@ -7,5 +7,6 @@ public interface IRoomCheckRepository
     Task<RoomCheck?> GetByIdAsync(Guid id, CancellationToken token);
     Task SoftDeleteAsync(RoomCheck roomCheck, CancellationToken token);
     Task<bool> ExistsAsync(Guid labRoomId, Guid slotId, DateTime date, CancellationToken token);
+    Task<bool> ExistsAsync(Guid labRoomId, Guid slotId, CheckType type, DateTime date, CancellationToken token);
 
 }

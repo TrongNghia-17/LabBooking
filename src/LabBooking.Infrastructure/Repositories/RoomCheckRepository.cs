@@ -47,4 +47,17 @@ internal class RoomCheckRepository(LabBookingDbContext dbContext) : IRoomCheckRe
                          && !rc.IsDeleted, // Chỉ check những phiếu chưa xóa
                       token);
     }
+
+    public async Task<bool> ExistsAsync(Guid labRoomId, Guid slotId, CheckType type, DateTime date, CancellationToken token)
+    {
+        var checkDate = date.Date;
+
+        return await dbContext.RoomChecks
+            .AnyAsync(rc => rc.LabRoomId == labRoomId
+                         && rc.SlotId == slotId
+                         && rc.Type == type // <--- [QUAN TRỌNG] Phải check cả Type
+                         && rc.CheckedAt.Date == checkDate
+                         && !rc.IsDeleted,
+                      token);
+    }
 }
