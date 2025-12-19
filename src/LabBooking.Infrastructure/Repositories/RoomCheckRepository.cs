@@ -34,4 +34,17 @@ internal class RoomCheckRepository(LabBookingDbContext dbContext) : IRoomCheckRe
         dbContext.RoomChecks.Update(roomCheck);
         await dbContext.SaveChangesAsync(token);
     }
+
+    public async Task<bool> ExistsAsync(Guid labRoomId, Guid slotId, DateTime date, CancellationToken token)
+    {
+        // Lấy ngày hiện tại (bỏ phần giờ phút giây)
+        var checkDate = date.Date;
+
+        return await dbContext.RoomChecks
+            .AnyAsync(rc => rc.LabRoomId == labRoomId
+                         && rc.SlotId == slotId
+                         && rc.CheckedAt.Date == checkDate // So sánh ngày
+                         && !rc.IsDeleted, // Chỉ check những phiếu chưa xóa
+                      token);
+    }
 }
