@@ -17,77 +17,112 @@ public class CreateIncidentHandler(
 {
     public async Task<Guid> Handle(CreateIncidentCommand request, CancellationToken cancellationToken)
     {
-        var guardId = currentUserService.UserId ?? throw new UnauthorizedAccessException();
+        var reporterId = currentUserService.UserId ?? throw new UnauthorizedAccessException();
 
-        // 1. Gọi Repo lấy thông tin RoomCheck
-        var roomCheck = await roomCheckRepository.GetByIdWithLabRoomAsync(request.FromRoomCheckId, cancellationToken)
-            ?? throw new NotFoundException("RoomCheck", request.FromRoomCheckId.ToString());
+        // 1. Lấy thông tin RoomCheck & Validate Logic "Đạt"
+        var roomCheck = await roomCheckRepository.GetByIdWithLabRoomAsync(request.FromRoomCheckId, cancellationToken);
+        if (roomCheck == null) throw new NotFoundException("RoomCheck", request.FromRoomCheckId.ToString());
 
-        // ========================================================================
-        // [FIX LOGIC] CHẶN TẠO INCIDENT NẾU PHIẾU CHECK LÀ "TỐT"
-        // ========================================================================
         if (roomCheck.IsPassed)
         {
-            throw new BadRequestException(
-                "Phiếu kiểm tra này đã được đánh giá là 'Đạt' (Tốt). " +
-                "Không thể tạo sự cố từ phiếu này. " +
-                "Vui lòng xóa phiếu kiểm tra cũ và tạo lại phiếu 'Không đạt' nếu có sự nhầm lẫn.");
+            throw new BadRequestException("Không thể tạo sự cố từ phiếu kiểm tra 'Đạt'.");
         }
-        // ========================================================================
 
         var labRoomId = roomCheck.LabRoomId;
         var labName = roomCheck.LabRoom?.LabName ?? "Phòng Lab";
         var managerId = roomCheck.LabRoom?.MainManagerId;
 
-        // 2. Tạo Incident
+        // =========================================================================
+        // BƯỚC LỌC THIẾT BỊ (LOGIC QUAN TRỌNG)
+        // =========================================================================
+
+        var devicesToAdd = new List<IncidentEquipment>(); // Danh sách thiết bị sẽ đưa vào Incident này
+        var updatedEquipments = new List<Equipment>();    // Danh sách cần update DB
+
+        if (request.Type == IncidentType.EquipmentFailure && request.EquipmentIds != null)
+        {
+            var distinctIds = request.EquipmentIds.Distinct().ToList();
+            var equipmentsInDb = await equipmentRepository.GetByIdsAsync(distinctIds, cancellationToken);
+
+            foreach (var equipment in equipmentsInDb)
+            {
+                // Security Check
+                if (equipment.LabRoomId != labRoomId) continue;
+
+                // [LOGIC CHỐNG TRÙNG LẶP]
+                if (equipment.Status == EquipmentStatus.Broken)
+                {
+                    // Nếu thiết bị ĐÃ HỎNG từ trước -> Bỏ qua, không thêm vào Incident mới này.
+                    // Vì nó đã thuộc về một Incident cũ nào đó rồi.
+                    continue;
+                }
+
+                // Nếu thiết bị đang Tốt (Available) -> Giờ mới hỏng
+                // 1. Update Status -> Broken
+                equipment.Status = EquipmentStatus.Broken;
+                equipment.IsAvailable = false;
+
+                // 2. Thêm vào list update
+                updatedEquipments.Add(equipment);
+
+                // 3. Chuẩn bị data cho bảng nối IncidentEquipment
+                devicesToAdd.Add(new IncidentEquipment
+                {
+                    Id = Guid.NewGuid(),
+                    EquipmentId = equipment.Id
+                    // IncidentId sẽ gán sau khi tạo Incident object
+                });
+            }
+        }
+
+        // =========================================================================
+        // KIỂM TRA: NẾU KHÔNG CÓ THIẾT BỊ NÀO MỚI HỎNG
+        // =========================================================================
+        if (request.Type == IncidentType.EquipmentFailure && devicesToAdd.Count == 0)
+        {
+            // Trường hợp: Check-in hỏng A, B. Check-out lại chọn A, B.
+            // Hệ thống lọc ra thấy A, B đều đã Broken -> List rỗng.
+            throw new BadRequestException(
+                "Các thiết bị bạn chọn ĐÃ ĐƯỢC BÁO HỎNG trước đó rồi. " +
+                "Không cần tạo thêm báo cáo trùng lặp.");
+        }
+
+        // 2. Tạo Incident (Chỉ chứa các thiết bị MỚI hỏng)
         var incident = new Incident
         {
             Id = Guid.NewGuid(),
             LabRoomId = labRoomId,
-            ReportedById = guardId,
+            ReportedById = reporterId,
             RoomCheckId = request.FromRoomCheckId,
             Type = request.Type,
             ImportanceLevel = request.ImportanceLevel,
-            Description = request.Description,
+            Description = request.Description, // Giữ nguyên mô tả người dùng nhập
             CreatedAt = DateTime.UtcNow,
             IsResolved = false,
-            IncidentEquipments = new List<IncidentEquipment>()
+            IncidentEquipments = devicesToAdd // Gán danh sách đã lọc
         };
 
-        // 3. Xử lý thiết bị hỏng (Nếu có)
-        if (request.Type == IncidentType.EquipmentFailure && request.EquipmentIds != null)
+        // Gán IncidentId ngược lại cho các item con
+        foreach (var item in devicesToAdd)
         {
-            var distinctIds = request.EquipmentIds.Distinct().ToList();
-            var equipments = await equipmentRepository.GetByIdsAsync(distinctIds, cancellationToken);
+            item.IncidentId = incident.Id;
+        }
 
-            foreach (var equipment in equipments)
+        // 3. Update trạng thái các thiết bị mới hỏng
+        if (updatedEquipments.Any())
+        {
+            // Nếu Repo của bạn chưa có hàm UpdateRange, hãy dùng loop UpdateAsync
+            // Hoặc tốt nhất thêm hàm UpdateRange vào Repo
+            foreach (var eq in updatedEquipments)
             {
-                // Security Check: Thiết bị phải thuộc đúng phòng của cái RoomCheck kia
-                if (equipment.LabRoomId != labRoomId) continue;
-
-                // Update Status -> Broken
-                if (equipment.Status != EquipmentStatus.Broken)
-                {
-                    equipment.Status = EquipmentStatus.Broken;
-                    equipment.IsAvailable = false;
-                    await equipmentRepository.UpdateAsync(equipment, cancellationToken);
-                }
-
-                // Add to Incident
-                incident.IncidentEquipments.Add(new IncidentEquipment
-                {
-                    Id = Guid.NewGuid(),
-                    IncidentId = incident.Id,
-                    EquipmentId = equipment.Id
-                });
+                await equipmentRepository.UpdateAsync(eq, cancellationToken);
             }
         }
 
         // 4. Lưu Incident
         await incidentRepository.CreateAsync(incident, cancellationToken);
-        logger.LogInformation("Đã tạo sự cố {IncidentId} từ đợt kiểm tra {CheckId}", incident.Id, request.FromRoomCheckId);
 
-        // 5. Gửi thông báo cho Manager
+        // 5. Gửi thông báo
         if (managerId.HasValue)
         {
             await NotifyManagerAsync(managerId.Value, labName, incident, cancellationToken);
