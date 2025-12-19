@@ -1,4 +1,5 @@
 ﻿using LabBooking.Application.Features.RoomChecks.Commands.CreateRoomCheck;
+using LabBooking.Application.Features.RoomChecks.Commands.DeleteRoomCheck;
 
 namespace LabBooking.API.Controllers;
 
@@ -8,14 +9,33 @@ public class RoomChecksController(IMediator mediator) : ControllerBase
 {
     /// <summary>
     /// Bảo vệ gửi báo cáo kiểm tra phòng (Check-in/Check-out).
-    /// <para>Nếu có thiết bị hỏng, hệ thống sẽ tự động tạo Sự cố (Incident).</para>
     /// </summary>
     [HttpPost]
-    [Authorize(Roles = "SecurityGuard")] // Chỉ bảo vệ mới được làm
+    [Authorize(Roles = "SecurityGuard")]
     [ProducesResponseType(typeof(Guid), StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Create([FromBody] CreateRoomCheckCommand command)
     {
         var id = await mediator.Send(command);
-        return CreatedAtAction(nameof(Create), new { id }, id);
+
+        // FIX: Trả về 201 Created. 
+        // Frontend sẽ dùng ID này để điền vào form "Tạo sự cố" nếu cần.
+        return StatusCode(StatusCodes.Status201Created, new { id });
+    }
+
+    /// <summary>
+    /// Xóa phiếu kiểm tra (Soft Delete).
+    /// <para>Chỉ xóa được khi phiếu này KHÔNG gắn với sự cố nào.</para>
+    /// </summary>
+    [HttpDelete("{id:guid}")]
+    [Authorize(Roles = "SecurityGuard, Manager")] // Manager có thể xóa nếu thấy sai sót
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)] // Trả về nếu đang dính Incident
+    public async Task<IActionResult> Delete(Guid id)
+    {
+        await mediator.Send(new DeleteRoomCheckCommand(id));
+        return NoContent();
     }
 }

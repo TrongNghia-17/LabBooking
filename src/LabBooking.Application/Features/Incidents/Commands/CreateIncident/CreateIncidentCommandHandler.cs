@@ -6,139 +6,159 @@ namespace LabBooking.Application.Features.Incidents.Commands.CreateIncident;
 
 public class CreateIncidentHandler(
     IIncidentRepository incidentRepository,
-    ILabRoomRepository labRoomRepository,
-    ICurrentUserService currentUserService,
+    IRoomCheckRepository roomCheckRepository, // [THAY THẾ] Dùng Repo thay vì DbContext
     IEquipmentRepository equipmentRepository,
-    ILogger<CreateIncidentHandler> logger,
-    IMapper mapper,
-    // [THÊM MỚI] Inject các service liên quan đến thông báo
-    INotificationService notificationService,
+    ICurrentUserService currentUserService,
     INotificationRepository notificationRepository,
-    IUserDeviceRepository userDeviceRepository
+    INotificationService notificationService,
+    IUserDeviceRepository userDeviceRepository,
+    ILogger<CreateIncidentHandler> logger
     ) : IRequestHandler<CreateIncidentCommand, Guid>
 {
     public async Task<Guid> Handle(CreateIncidentCommand request, CancellationToken cancellationToken)
     {
-        // 1. Check Login
         var reporterId = currentUserService.UserId ?? throw new UnauthorizedAccessException();
 
-        // 2. Lấy thông tin phòng Lab (Cần lấy entity để biết ManagerId)
-        var labRoom = await labRoomRepository.GetByIdAsync(request.LabRoomId, cancellationToken);
-        if (labRoom == null)
-            throw new NotFoundException(nameof(LabRoom), request.LabRoomId.ToString());
+        // 1. Lấy thông tin RoomCheck & Validate Logic "Đạt"
+        var roomCheck = await roomCheckRepository.GetByIdWithLabRoomAsync(request.FromRoomCheckId, cancellationToken);
+        if (roomCheck == null) throw new NotFoundException("RoomCheck", request.FromRoomCheckId.ToString());
 
-        // 3. Logic tạo Incident (Code cũ giữ nguyên)
+        if (roomCheck.IsPassed)
+        {
+            throw new BadRequestException("Không thể tạo sự cố từ phiếu kiểm tra 'Đạt'.");
+        }
+
+        var labRoomId = roomCheck.LabRoomId;
+        var labName = roomCheck.LabRoom?.LabName ?? "Phòng Lab";
+        var managerId = roomCheck.LabRoom?.MainManagerId;
+
+        // =========================================================================
+        // BƯỚC LỌC THIẾT BỊ (LOGIC QUAN TRỌNG)
+        // =========================================================================
+
+        var devicesToAdd = new List<IncidentEquipment>(); // Danh sách thiết bị sẽ đưa vào Incident này
+        var updatedEquipments = new List<Equipment>();    // Danh sách cần update DB
+
+        if (request.Type == IncidentType.EquipmentFailure && request.EquipmentIds != null)
+        {
+            var distinctIds = request.EquipmentIds.Distinct().ToList();
+            var equipmentsInDb = await equipmentRepository.GetByIdsAsync(distinctIds, cancellationToken);
+
+            foreach (var equipment in equipmentsInDb)
+            {
+                // Security Check
+                if (equipment.LabRoomId != labRoomId) continue;
+
+                // [LOGIC CHỐNG TRÙNG LẶP]
+                if (equipment.Status == EquipmentStatus.Broken)
+                {
+                    // Nếu thiết bị ĐÃ HỎNG từ trước -> Bỏ qua, không thêm vào Incident mới này.
+                    // Vì nó đã thuộc về một Incident cũ nào đó rồi.
+                    continue;
+                }
+
+                // Nếu thiết bị đang Tốt (Available) -> Giờ mới hỏng
+                // 1. Update Status -> Broken
+                equipment.Status = EquipmentStatus.Broken;
+                equipment.IsAvailable = false;
+
+                // 2. Thêm vào list update
+                updatedEquipments.Add(equipment);
+
+                // 3. Chuẩn bị data cho bảng nối IncidentEquipment
+                devicesToAdd.Add(new IncidentEquipment
+                {
+                    Id = Guid.NewGuid(),
+                    EquipmentId = equipment.Id
+                    // IncidentId sẽ gán sau khi tạo Incident object
+                });
+            }
+        }
+
+        // =========================================================================
+        // KIỂM TRA: NẾU KHÔNG CÓ THIẾT BỊ NÀO MỚI HỎNG
+        // =========================================================================
+        if (request.Type == IncidentType.EquipmentFailure && devicesToAdd.Count == 0)
+        {
+            // Trường hợp: Check-in hỏng A, B. Check-out lại chọn A, B.
+            // Hệ thống lọc ra thấy A, B đều đã Broken -> List rỗng.
+            throw new BadRequestException(
+                "Các thiết bị bạn chọn ĐÃ ĐƯỢC BÁO HỎNG trước đó rồi. " +
+                "Không cần tạo thêm báo cáo trùng lặp.");
+        }
+
+        // 2. Tạo Incident (Chỉ chứa các thiết bị MỚI hỏng)
         var incident = new Incident
         {
             Id = Guid.NewGuid(),
-            LabRoomId = request.LabRoomId,
+            LabRoomId = labRoomId,
             ReportedById = reporterId,
+            RoomCheckId = request.FromRoomCheckId,
             Type = request.Type,
             ImportanceLevel = request.ImportanceLevel,
-            Description = request.Description,
+            Description = request.Description, // Giữ nguyên mô tả người dùng nhập
             CreatedAt = DateTime.UtcNow,
             IsResolved = false,
-            IncidentEquipments = new List<IncidentEquipment>()
+            IncidentEquipments = devicesToAdd // Gán danh sách đã lọc
         };
 
-        // Xử lý thiết bị (Code cũ giữ nguyên)
-        if (request.Type == IncidentType.EquipmentFailure && request.EquipmentIds != null)
+        // Gán IncidentId ngược lại cho các item con
+        foreach (var item in devicesToAdd)
         {
-            var distinctIds = request.EquipmentIds.Distinct();
-            foreach (var eqId in distinctIds)
+            item.IncidentId = incident.Id;
+        }
+
+        // 3. Update trạng thái các thiết bị mới hỏng
+        if (updatedEquipments.Any())
+        {
+            // Nếu Repo của bạn chưa có hàm UpdateRange, hãy dùng loop UpdateAsync
+            // Hoặc tốt nhất thêm hàm UpdateRange vào Repo
+            foreach (var eq in updatedEquipments)
             {
-                var equipment = await equipmentRepository.GetByIdAsync(eqId);
-                if (equipment != null && equipment.LabRoomId == request.LabRoomId)
-                {
-                    if (equipment.Status != EquipmentStatus.Broken)
-                    {
-                        equipment.Status = EquipmentStatus.Broken;
-                        equipment.IsAvailable = false;
-                        await equipmentRepository.UpdateAsync(equipment, cancellationToken);
-                    }
-                    incident.IncidentEquipments.Add(new IncidentEquipment
-                    {
-                        Id = Guid.NewGuid(),
-                        IncidentId = incident.Id,
-                        EquipmentId = eqId
-                    });
-                }
+                await equipmentRepository.UpdateAsync(eq, cancellationToken);
             }
         }
 
-        // 4. Lưu Incident vào Database
+        // 4. Lưu Incident
         await incidentRepository.CreateAsync(incident, cancellationToken);
-        logger.LogInformation("Đã tạo sự cố {IncidentId}", incident.Id);
 
-        // ========================================================================
-        // [THÊM MỚI] GỬI THÔNG BÁO CHO MANAGER
-        // ========================================================================
-        try
+        // 5. Gửi thông báo
+        if (managerId.HasValue)
         {
-            // Kiểm tra xem phòng có Manager không
-            if (labRoom.MainManagerId.HasValue)
-            {
-                var managerId = labRoom.MainManagerId.Value;
-
-                // (Tùy chọn) Không gửi thông báo nếu chính Manager là người báo cáo
-                if (managerId != reporterId)
-                {
-                    await SendNotificationToManager(managerId, labRoom.LabName, incident, cancellationToken);
-                }
-            }
+            await NotifyManagerAsync(managerId.Value, labName, incident, cancellationToken);
         }
-        catch (Exception ex)
-        {
-            // Quan trọng: Try-catch để nếu lỗi gửi thông báo thì KHÔNG làm lỗi việc tạo sự cố
-            logger.LogError(ex, "Lỗi khi gửi thông báo cho Manager phòng {Lab}", labRoom.LabName);
-        }
-        // ========================================================================
 
         return incident.Id;
     }
 
-    // Hàm tách riêng để xử lý logic gửi thông báo cho gọn
-    private async Task SendNotificationToManager(
-        Guid managerId,
-        string labName,
-        Incident incident,
-        CancellationToken token)
+    private async Task NotifyManagerAsync(Guid managerId, string labName, Incident incident, CancellationToken token)
     {
-        // A. Chuẩn bị nội dung
-        string title = "⚠️ Báo cáo sự cố mới";
-        string body = $"Phòng {labName} vừa có báo cáo sự cố: {incident.Description}";
-
-        // Dữ liệu kèm theo (để khi bấm vào thông báo thì mở màn hình chi tiết)
-        var dataPayload = new
+        try
         {
-            incidentId = incident.Id,
-            type = "incident_created",
-            labId = incident.LabRoomId
-        };
+            string title = "⚠️ Báo cáo sự cố mới";
+            string body = $"Bảo vệ vừa báo cáo sự cố tại {labName}: {incident.Description}";
 
-        // B. Lưu vào Database (Bảng Notification)
-        var notification = new Notification
+            var dataPayload = new { incidentId = incident.Id, type = "incident_created", labId = incident.LabRoomId };
+
+            // Lưu Notification
+            await notificationRepository.CreateAsync(new Notification
+            {
+                Id = Guid.NewGuid(),
+                UserId = managerId,
+                Title = title,
+                Message = body,
+                DataPayload = JsonSerializer.Serialize(dataPayload),
+                CreatedAt = DateTime.UtcNow
+            }, token);
+
+            // Gửi Push
+            var tokens = await userDeviceRepository.GetTokensByUserIdAsync(managerId, token);
+            if (tokens != null && tokens.Any())
+                await notificationService.SendPushNotificationAsync(tokens, title, body, dataPayload);
+        }
+        catch (Exception ex)
         {
-            Id = Guid.NewGuid(),
-            UserId = managerId, // Người nhận là Manager
-            Title = title,
-            Message = body,
-            DataPayload = JsonSerializer.Serialize(dataPayload),
-            IsRead = false,
-            CreatedAt = DateTime.UtcNow
-        };
-
-        await notificationRepository.CreateAsync(notification, token);
-
-        // C. Gửi Push Notification (Qua Expo/Firebase)
-        // 1. Lấy token của Manager
-        var tokens = await userDeviceRepository.GetTokensByUserIdAsync(managerId, token);
-
-        // 2. Gửi nếu có token
-        if (tokens != null && tokens.Any())
-        {
-            await notificationService.SendPushNotificationAsync(tokens, title, body, dataPayload);
-            logger.LogInformation("Đã gửi Push Notification đến Manager {ManagerId}", managerId);
+            logger.LogError(ex, "Lỗi gửi thông báo Incident");
         }
     }
 }

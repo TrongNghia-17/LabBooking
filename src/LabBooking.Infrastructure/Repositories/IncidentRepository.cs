@@ -90,15 +90,6 @@ internal class IncidentRepository(LabBookingDbContext dbContext, INotificationRe
                         && x.Type == type
                         && x.CreatedAt > oneMinuteAgo, token);
     }
-    public async Task<Incident?> GetByIdWithDetailsAsync(Guid id, CancellationToken token)
-    {
-        return await dbContext.Incidents
-            .Include(i => i.ReportedBy) // Lấy thông tin người báo
-            .Include(i => i.LabRoom)    // Lấy thông tin phòng (để check Manager)
-            .Include(i => i.IncidentEquipments)
-        .ThenInclude(ie => ie.Equipment)  // Lấy thiết bị (để revert status)
-            .FirstOrDefaultAsync(i => i.Id == id, token);
-    }
 
     public async Task DeleteAsync(Incident incident, CancellationToken token)
     {
@@ -188,5 +179,59 @@ internal class IncidentRepository(LabBookingDbContext dbContext, INotificationRe
             : query.OrderBy(i => i.CreatedAt);
 
         return await query.ToListAsync(token);
+    }
+
+    public async Task<Incident?> GetByIdWithDetailsAsync(Guid id, CancellationToken token)
+    {
+        return await dbContext.Incidents
+            .Include(i => i.ReportedBy)
+            .Include(i => i.LabRoom)
+            .Include(i => i.IncidentEquipments)
+                .ThenInclude(ie => ie.Equipment) // Include sâu để lấy trạng thái thiết bị
+            .FirstOrDefaultAsync(i => i.Id == id && !i.IsDeleted, token); // Chỉ lấy cái chưa xóa
+    }
+
+    public async Task SoftDeleteWithRestoreDevicesAsync(Incident incident, CancellationToken token)
+    {
+        using var transaction = await dbContext.Database.BeginTransactionAsync(token);
+        try
+        {
+            // 1. Phục hồi thiết bị (Nếu là lỗi thiết bị)
+            if (incident.Type == IncidentType.EquipmentFailure && incident.IncidentEquipments.Any())
+            {
+                foreach (var incidentEq in incident.IncidentEquipments)
+                {
+                    var equipment = incidentEq.Equipment;
+                    // Chỉ phục hồi nếu nó đang bị đánh dấu là Broken
+                    if (equipment != null && equipment.Status == EquipmentStatus.Broken)
+                    {
+                        equipment.Status = EquipmentStatus.Available;
+                        equipment.IsAvailable = true;
+                        // Đánh dấu update
+                        dbContext.Equipments.Update(equipment);
+                    }
+                }
+            }
+
+            // 2. Soft Delete Incident
+            incident.IsDeleted = true;
+            incident.DeletedAt = DateTime.UtcNow;
+            dbContext.Incidents.Update(incident);
+
+            // 3. Lưu tất cả
+            await dbContext.SaveChangesAsync(token);
+            await transaction.CommitAsync(token);
+        }
+        catch
+        {
+            await transaction.RollbackAsync(token);
+            throw;
+        }
+    }
+
+    public async Task<bool> HasActiveIncidentForRoomCheckAsync(Guid roomCheckId, CancellationToken token)
+    {
+        return await dbContext.Incidents
+            .AnyAsync(i => i.RoomCheckId == roomCheckId && !i.IsDeleted, token);
     }
 }

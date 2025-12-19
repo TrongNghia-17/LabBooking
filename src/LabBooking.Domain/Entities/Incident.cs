@@ -1,6 +1,8 @@
-﻿namespace LabBooking.Domain.Entities;
+﻿using LabBooking.Domain.Common;
 
-public class Incident
+namespace LabBooking.Domain.Entities;
+
+public class Incident : ISoftDelete
 {
     public Guid Id { get; set; } = (Guid)Uuid7.NewUuid7();
 
@@ -12,13 +14,10 @@ public class Incident
     [ForeignKey(nameof(ReportedById))]
     public User? ReportedBy { get; set; }
 
-    public Guid? SlotId { get; set; }
-    [ForeignKey(nameof(SlotId))]
-    public Slot? Slot { get; set; }
+    public Guid? RoomCheckId { get; set; }
+    [ForeignKey(nameof(RoomCheckId))]
+    public RoomCheck? RoomCheck { get; set; }
 
-    //public Guid? EquipmentId { get; set; }
-    //[ForeignKey(nameof(EquipmentId))]
-    //public Equipment? Equipment { get; set; }
     public ICollection<IncidentEquipment> IncidentEquipments { get; set; } = new List<IncidentEquipment>();
 
     public IncidentType Type { get; set; }
@@ -27,6 +26,8 @@ public class Incident
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime? ResolvedAt { get; set; }
     public LevelOfImportance ImportanceLevel { get; set; } = LevelOfImportance.Low;
+    public bool IsDeleted { get; set; }
+    public DateTime? DeletedAt { get; set; }
 }
 
 
