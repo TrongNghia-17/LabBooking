@@ -111,6 +111,8 @@ internal class EquipmentMaintainScheduleRepository(
 
                         // Tìm tất cả sự cố của máy này mà CHƯA ĐƯỢC XỬ LÝ
                         var relatedIncidents = await dbContext.Incidents
+                            .Include(i => i.IncidentEquipments)
+                                .ThenInclude(ie => ie.Equipment) // Include để check trạng thái các máy khác
                             .Where(i => !i.IsResolved &&
                                         i.IncidentEquipments.Any(ie => ie.EquipmentId == detail.EquipmentId))
                             .ToListAsync(token);
@@ -119,17 +121,31 @@ internal class EquipmentMaintainScheduleRepository(
                         {
                             foreach (var incident in relatedIncidents)
                             {
-                                incident.IsResolved = true;
-                                incident.ResolvedAt = DateTime.UtcNow;
+                                // 2. CHECK KỸ: Liệu TẤT CẢ thiết bị trong Incident này đã OK chưa?
+                                // (Ngoại trừ cái detail.EquipmentId này vì mình vừa set nó Available xong)
 
-                                // Force Update Incident
-                                dbContext.Entry(incident).State = EntityState.Modified;
+                                bool allFixed = incident.IncidentEquipments.All(ie =>
+                                    ie.EquipmentId == detail.EquipmentId || // Là máy đang sửa -> Coi như OK
+                                    (ie.Equipment != null && ie.Equipment.Status == EquipmentStatus.Available) // Các máy khác đã OK
+                                );
+
+                                if (allFixed)
+                                {
+                                    // Chỉ đóng khi tất cả máy trong sự cố đã ngon lành
+                                    incident.IsResolved = true;
+                                    incident.ResolvedAt = DateTime.UtcNow;
+                                    dbContext.Entry(incident).State = EntityState.Modified;
+
+                                    detail.ResultNote += $" [Auto-Close Incident #{incident.Id.ToString().Substring(0, 4)}]";
+                                }
+                                else
+                                {
+                                    // Nếu chưa sửa hết -> Vẫn để Incident mở, để Manager nhớ sửa nốt máy kia
+                                    detail.ResultNote += $" [Fix part of Incident #{incident.Id.ToString().Substring(0, 4)}]";
+                                }
                             }
-
-                            // (Optional) Ghi chú vào log của lịch bảo trì để biết nó đã fix lỗi gì
-                            detail.ResultNote += $" (Đã tự động đóng {relatedIncidents.Count} sự cố liên quan)";
                         }
-                        // ------------------------------------------------------------
+                        // ============================================================
                     }
                 }
             }
