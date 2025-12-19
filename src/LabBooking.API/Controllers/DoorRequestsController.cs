@@ -2,8 +2,10 @@
 using LabBooking.Application.Features.DoorRequests.Commands.CreateDoorRequest;
 using LabBooking.Application.Features.DoorRequests.Commands.DeleteDoorRequest;
 using LabBooking.Application.Features.DoorRequests.Commands.UpdateStatus;
+using LabBooking.Application.Features.DoorRequests.Commands.VerifyDoorAccess;
 using LabBooking.Application.Features.DoorRequests.Dtos;
 using LabBooking.Application.Features.DoorRequests.Queries.GetDoorRequestDetail;
+using LabBooking.Application.Features.DoorRequests.Queries.GetDoorRequestQr;
 using LabBooking.Application.Features.DoorRequests.Queries.GetDoorRequests;
 
 namespace LabBooking.API.Controllers;
@@ -89,6 +91,36 @@ public class DoorRequestsController(IMediator mediator) : ControllerBase
     {
         var query = new GetDoorRequestDetailQuery(id);
         var result = await mediator.Send(query);
+        return Ok(result);
+    }
+
+    /// <summary>
+    /// [APP USER] Lấy thông tin vé để tạo mã QR.
+    /// </summary>
+    [HttpGet("{id}/qr-code")]
+    [Authorize]
+    [ProducesResponseType(typeof(DoorRequestQrDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<DoorRequestQrDto>> GetQrData(Guid id)
+    {
+        // Gửi Query sang Handler xử lý
+        var result = await mediator.Send(new GetDoorRequestQrQuery(id));
+        return Ok(result);
+    }
+
+    /// <summary>
+    /// [SECURITY GUARD] Kiểm tra mã QR (Verify).
+    /// </summary>
+    [HttpPost("verify-access")]
+    [Authorize(Roles = "SecurityGuard, Manager, Admin")]
+    [ProducesResponseType(typeof(VerifyAccessResponse), StatusCodes.Status200OK)]
+    public async Task<ActionResult<VerifyAccessResponse>> VerifyAccess([FromBody] VerifyAccessRequest requestBody)
+    {
+        // Gửi Command sang Handler xử lý
+        // Lưu ý: Dùng requestBody.RequestId để tạo Command
+        var result = await mediator.Send(new VerifyDoorAccessCommand(requestBody.RequestId));
         return Ok(result);
     }
 }
