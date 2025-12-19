@@ -1,5 +1,8 @@
-﻿using LabBooking.Application.Features.RoomChecks.Commands.CreateRoomCheck;
+﻿using LabBooking.Application.Common.Wrappers;
+using LabBooking.Application.Features.RoomChecks.Commands.CreateRoomCheck;
 using LabBooking.Application.Features.RoomChecks.Commands.DeleteRoomCheck;
+using LabBooking.Application.Features.RoomChecks.Dtos;
+using LabBooking.Application.Features.RoomChecks.Queries.GetRoomChecks;
 
 namespace LabBooking.API.Controllers;
 
@@ -37,5 +40,19 @@ public class RoomChecksController(IMediator mediator) : ControllerBase
     {
         await mediator.Send(new DeleteRoomCheckCommand(id));
         return NoContent();
+    }
+
+    /// <summary>
+    /// Lấy danh sách lịch sử kiểm tra phòng.
+    /// <para>- Bảo vệ: Xem lịch sử mình đã check.</para>
+    /// <para>- Manager: Xem lịch sử các phòng mình quản lý.</para>
+    /// </summary>
+    [HttpGet]
+    [Authorize] // Cho phép cả Guard và Manager
+    [ProducesResponseType(typeof(PagedResult<RoomCheckDto>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetAll([FromQuery] GetRoomChecksQuery query)
+    {
+        var result = await mediator.Send(query);
+        return Ok(result);
     }
 }

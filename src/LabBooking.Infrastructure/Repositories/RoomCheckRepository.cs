@@ -60,4 +60,74 @@ internal class RoomCheckRepository(LabBookingDbContext dbContext) : IRoomCheckRe
                          && !rc.IsDeleted,
                       token);
     }
+
+    public async Task<(IEnumerable<RoomCheck> Items, int TotalCount)> GetPagedListAsync(
+        Guid userId,
+        bool isManager,
+        string? searchPhrase,
+        CheckType? type,
+        DateTime? fromDate,
+        DateTime? toDate,
+        int pageNumber,
+        int pageSize,
+        CancellationToken token)
+    {
+        // 1. Base Query & Include thông tin cần thiết
+        var query = dbContext.RoomChecks
+            .AsNoTracking()
+            .Include(r => r.LabRoom)
+            .Include(r => r.Guard) // Include để lấy tên bảo vệ hiển thị
+            .Include(r => r.Slot)
+            .AsQueryable();
+
+        // 2. PHÂN QUYỀN (Logic quan trọng nhất)
+        if (isManager)
+        {
+            // Manager: Chỉ xem các phiếu thuộc phòng Lab do mình quản lý
+            query = query.Where(r => r.LabRoom.MainManagerId == userId);
+        }
+        else
+        {
+            // Bảo vệ (hoặc User khác): Chỉ xem phiếu do chính mình tạo
+            query = query.Where(r => r.GuardId == userId);
+        }
+
+        // 3. Lọc theo Loại (CheckIn/CheckOut)
+        if (type.HasValue)
+        {
+            query = query.Where(r => r.Type == type.Value);
+        }
+
+        // 4. Lọc theo Ngày
+        if (fromDate.HasValue)
+            query = query.Where(r => r.CheckedAt >= fromDate.Value.ToUniversalTime());
+
+        if (toDate.HasValue)
+            query = query.Where(r => r.CheckedAt <= toDate.Value.ToUniversalTime());
+
+        // 5. Tìm kiếm (Search Phrase)
+        if (!string.IsNullOrWhiteSpace(searchPhrase))
+        {
+            var lowerPhrase = searchPhrase.ToLower();
+            query = query.Where(r =>
+                // Tìm theo tên phòng
+                r.LabRoom.LabName.ToLower().Contains(lowerPhrase) ||
+                // Tìm theo ghi chú
+                (r.Note != null && r.Note.ToLower().Contains(lowerPhrase))
+            );
+        }
+
+        // 6. Sắp xếp (Mới nhất lên đầu)
+        query = query.OrderByDescending(r => r.CheckedAt);
+
+        // 7. Phân trang
+        var totalCount = await query.CountAsync(token);
+
+        var items = await query
+            .Skip((pageNumber - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync(token);
+
+        return (items, totalCount);
+    }
 }
