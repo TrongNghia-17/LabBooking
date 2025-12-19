@@ -20,13 +20,29 @@ public class CreateIncidentHandler(
         var reporterId = currentUserService.UserId ?? throw new UnauthorizedAccessException();
 
         // 1. Lấy thông tin RoomCheck & Validate Logic "Đạt"
-        var roomCheck = await roomCheckRepository.GetByIdWithLabRoomAsync(request.FromRoomCheckId, cancellationToken);
-        if (roomCheck == null) throw new NotFoundException("RoomCheck", request.FromRoomCheckId.ToString());
+        var roomCheck = await roomCheckRepository.GetByIdWithLabRoomAsync(request.FromRoomCheckId, cancellationToken)
+            ?? throw new NotFoundException("RoomCheck", request.FromRoomCheckId.ToString());
 
         if (roomCheck.IsPassed)
         {
             throw new BadRequestException("Không thể tạo sự cố từ phiếu kiểm tra 'Đạt'.");
         }
+
+        // ========================================================================
+        // [LOGIC MỚI] VALIDATE THỜI GIAN (TIME WINDOW)
+        // ========================================================================
+
+        // Quy tắc: Chỉ được tạo sự cố trong vòng 24h kể từ lúc check
+        // Lý do: Tránh trường hợp qua ngày mới (23h59 -> 00h01) bị lỗi
+        var timeLimit = roomCheck.CheckedAt.AddHours(24);
+
+        if (DateTime.UtcNow > timeLimit)
+        {
+            throw new BadRequestException(
+                $"Phiếu kiểm tra này đã quá hạn (Tạo lúc {roomCheck.CheckedAt}). " +
+                "Vui lòng thực hiện kiểm tra mới để báo cáo sự cố.");
+        }
+        // ========================================================================
 
         var labRoomId = roomCheck.LabRoomId;
         var labName = roomCheck.LabRoom?.LabName ?? "Phòng Lab";
