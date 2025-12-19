@@ -50,7 +50,7 @@ public class GetManagerLabDetailsQueryHandler(
         return new ManagerLabDetailsResponse
         {
             Id = user.Id,
-            UserName = user.UserName ?? string.Empty,
+            UserName = user.FullName ?? string.Empty,
             Email = user.Email ?? string.Empty,
             ManagedLabs = labDtos
         };

@@ -34,19 +34,12 @@ public class GetIncidentsQueryHandler(
             filterReporterId = null;
             hideSensitiveInfo = false; // Manager cần thấy SĐT để liên hệ
         }
-        else if (roles.Contains("Guard")) // Hoặc Security
+        else if (roles.Contains("Security Guard")) // Hoặc Security
         {
             // Bảo vệ: Xem hết (để đi tuần tra), nhưng có thể lọc theo LabRoomId từ Frontend gửi lên
             filterManagerId = null;
             filterReporterId = null;
             hideSensitiveInfo = true; // Yêu cầu của bạn: Bảo vệ không cần thấy tên/sđt người báo
-        }
-        else
-        {
-            // Sinh viên/Giảng viên: Chỉ xem cái mình tạo
-            filterManagerId = null;
-            filterReporterId = currentUserId;
-            hideSensitiveInfo = false; // Xem của mình thì cứ hiện
         }
 
         // --- GỌI REPO ---
@@ -54,6 +47,7 @@ public class GetIncidentsQueryHandler(
             filterManagerId,   // Tham số quan trọng 1
             filterReporterId,  // Tham số quan trọng 2
             request.LabRoomId, // Filter từ FE
+            request.SearchPhrase,
             request.FromDate,
             request.ToDate,
             request.IsResolved,

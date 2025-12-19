@@ -46,7 +46,7 @@ public class IncidentsController(IMediator mediator) : ControllerBase
     /// Lấy danh sách sự cố (Có filter).
     /// </summary>
     [HttpGet]
-    [Authorize]
+    [Authorize(Roles = "Manager, SecurityGuard")]
     [ProducesResponseType(typeof(PagedResult<IncidentResponse>), StatusCodes.Status200OK)] // Nhớ thay IncidentDto đúng tên của bạn
     public async Task<IActionResult> GetAll([FromQuery] GetIncidentsQuery query)
     {
