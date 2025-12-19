@@ -20,10 +20,20 @@ public class CreateIncidentHandler(
         var guardId = currentUserService.UserId ?? throw new UnauthorizedAccessException();
 
         // 1. Gọi Repo lấy thông tin RoomCheck
-        var roomCheck = await roomCheckRepository.GetByIdWithLabRoomAsync(request.FromRoomCheckId, cancellationToken);
+        var roomCheck = await roomCheckRepository.GetByIdWithLabRoomAsync(request.FromRoomCheckId, cancellationToken)
+            ?? throw new NotFoundException("RoomCheck", request.FromRoomCheckId.ToString());
 
-        if (roomCheck == null)
-            throw new NotFoundException("RoomCheck", request.FromRoomCheckId.ToString());
+        // ========================================================================
+        // [FIX LOGIC] CHẶN TẠO INCIDENT NẾU PHIẾU CHECK LÀ "TỐT"
+        // ========================================================================
+        if (roomCheck.IsPassed)
+        {
+            throw new BadRequestException(
+                "Phiếu kiểm tra này đã được đánh giá là 'Đạt' (Tốt). " +
+                "Không thể tạo sự cố từ phiếu này. " +
+                "Vui lòng xóa phiếu kiểm tra cũ và tạo lại phiếu 'Không đạt' nếu có sự nhầm lẫn.");
+        }
+        // ========================================================================
 
         var labRoomId = roomCheck.LabRoomId;
         var labName = roomCheck.LabRoom?.LabName ?? "Phòng Lab";
