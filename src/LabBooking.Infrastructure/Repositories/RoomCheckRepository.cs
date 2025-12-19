@@ -78,6 +78,7 @@ internal class RoomCheckRepository(LabBookingDbContext dbContext) : IRoomCheckRe
             .Include(r => r.LabRoom)
             .Include(r => r.Guard) // Include để lấy tên bảo vệ hiển thị
             .Include(r => r.Slot)
+            .Where(r => !r.IsDeleted)
             .AsQueryable();
 
         // 2. PHÂN QUYỀN (Logic quan trọng nhất)
