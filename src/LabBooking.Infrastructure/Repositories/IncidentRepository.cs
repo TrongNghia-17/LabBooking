@@ -124,20 +124,21 @@ internal class IncidentRepository(LabBookingDbContext dbContext, INotificationRe
     }
 
     public async Task<IEnumerable<Incident>> GetFilteredAsync(
-    Guid? managerId,   // Nếu != null -> Chỉ lấy phòng do ông này quản lý
-    Guid? reporterId,  // Nếu != null -> Chỉ lấy incident do ông này tạo
-    Guid? labRoomId,   // Lọc theo phòng cụ thể
-    DateTime? from,
-    DateTime? to,
-    bool? isResolved,
-    LevelOfImportance? importance,
-    bool isDescending,
-    CancellationToken token)
+        Guid? managerId,   // Nếu != null -> Chỉ lấy phòng do ông này quản lý
+        Guid? reporterId,  // Nếu != null -> Chỉ lấy incident do ông này tạo
+        Guid? labRoomId,
+        string? searchPhrase,// Lọc theo phòng cụ thể
+        DateTime? from,
+        DateTime? to,
+        bool? isResolved,
+        LevelOfImportance? importance,
+        bool isDescending,
+        CancellationToken token)
     {
         var query = dbContext.Incidents
             .Include(i => i.LabRoom)
             .Include(i => i.IncidentEquipments)
-        .ThenInclude(ie => ie.Equipment)
+                .ThenInclude(ie => ie.Equipment)
             .Include(i => i.ReportedBy)
             .AsQueryable();
 
@@ -158,6 +159,20 @@ internal class IncidentRepository(LabBookingDbContext dbContext, INotificationRe
         if (labRoomId.HasValue)
         {
             query = query.Where(i => i.LabRoomId == labRoomId.Value);
+        }
+
+        // [THÊM MỚI] LOGIC TÌM KIẾM
+        if (!string.IsNullOrWhiteSpace(searchPhrase))
+        {
+            var lowerPhrase = searchPhrase.ToLower();
+            query = query.Where(i =>
+                // Tìm trong mô tả sự cố
+                i.Description.ToLower().Contains(lowerPhrase) ||
+                // Tìm theo tên phòng
+                (i.LabRoom != null && i.LabRoom.LabName.ToLower().Contains(lowerPhrase)) ||
+                // Tìm theo tên thiết bị hỏng (Nâng cao)
+                i.IncidentEquipments.Any(ie => ie.Equipment.EquipmentName.ToLower().Contains(lowerPhrase))
+            );
         }
 
         // 4. CÁC BỘ LỌC KHÁC (Chung cho tất cả)
