@@ -6,10 +6,11 @@ namespace LabBooking.Application.Features.Incidents.Commands.CreateIncident;
 
 public class CreateIncidentHandler(
     IIncidentRepository incidentRepository,
-    IRoomCheckRepository roomCheckRepository, // [THAY THẾ] Dùng Repo thay vì DbContext
+    IRoomCheckRepository roomCheckRepository,
     IEquipmentRepository equipmentRepository,
     ICurrentUserService currentUserService,
     INotificationRepository notificationRepository,
+    ILabRoomRepository labRoomRepository,
     INotificationService notificationService,
     IUserDeviceRepository userDeviceRepository,
     ILogger<CreateIncidentHandler> logger
@@ -19,34 +20,43 @@ public class CreateIncidentHandler(
     {
         var reporterId = currentUserService.UserId ?? throw new UnauthorizedAccessException();
 
-        // 1. Lấy thông tin RoomCheck & Validate Logic "Đạt"
-        var roomCheck = await roomCheckRepository.GetByIdWithLabRoomAsync(request.FromRoomCheckId, cancellationToken)
-            ?? throw new NotFoundException("RoomCheck", request.FromRoomCheckId.ToString());
+        Guid labRoomId;
+        string? labName;
+        Guid? managerId;
+        Guid? roomCheckId = request.FromRoomCheckId; // Giữ lại để gán vào Incident
 
-        if (roomCheck.IsPassed)
+        // --- NHÁNH LOGIC 1: SỰ CỐ TỪ PHIẾU KIỂM TRA ---
+        if (request.FromRoomCheckId.HasValue)
         {
-            throw new BadRequestException("Không thể tạo sự cố từ phiếu kiểm tra 'Đạt'.");
+            var roomCheck = await roomCheckRepository.GetByIdWithLabRoomAsync(request.FromRoomCheckId.Value, cancellationToken)
+                ?? throw new NotFoundException("RoomCheck", request.FromRoomCheckId.Value.ToString());
+
+            if (roomCheck.IsPassed)
+                throw new BadRequestException("Không thể tạo sự cố từ phiếu kiểm tra 'Đạt'.");
+
+            var timeLimit = roomCheck.CheckedAt.AddHours(24);
+            if (DateTime.UtcNow > timeLimit)
+                throw new BadRequestException($"Phiếu kiểm tra này đã quá hạn để báo cáo sự cố.");
+
+            labRoomId = roomCheck.LabRoomId;
+            labName = roomCheck.LabRoom?.LabName;
+            managerId = roomCheck.LabRoom?.MainManagerId;
         }
-
-        // ========================================================================
-        // [LOGIC MỚI] VALIDATE THỜI GIAN (TIME WINDOW)
-        // ========================================================================
-
-        // Quy tắc: Chỉ được tạo sự cố trong vòng 24h kể từ lúc check
-        // Lý do: Tránh trường hợp qua ngày mới (23h59 -> 00h01) bị lỗi
-        var timeLimit = roomCheck.CheckedAt.AddHours(24);
-
-        if (DateTime.UtcNow > timeLimit)
+        // --- NHÁNH LOGIC 2: SỰ CỐ ĐỘC LẬP ---
+        else if (request.LabRoomId.HasValue)
         {
-            throw new BadRequestException(
-                $"Phiếu kiểm tra này đã quá hạn (Tạo lúc {roomCheck.CheckedAt}). " +
-                "Vui lòng thực hiện kiểm tra mới để báo cáo sự cố.");
-        }
-        // ========================================================================
+            var labRoom = await labRoomRepository.GetByIdAsync(request.LabRoomId.Value, cancellationToken)
+                 ?? throw new NotFoundException("LabRoom", request.LabRoomId.Value.ToString());
 
-        var labRoomId = roomCheck.LabRoomId;
-        var labName = roomCheck.LabRoom?.LabName ?? "Phòng Lab";
-        var managerId = roomCheck.LabRoom?.MainManagerId;
+            labRoomId = labRoom.Id;
+            labName = labRoom.LabName;
+            managerId = labRoom.MainManagerId;
+        }
+        else
+        {
+            // Trường hợp này không nên xảy ra vì Validator đã chặn
+            throw new InvalidOperationException("Yêu cầu không hợp lệ.");
+        }
 
         // =========================================================================
         // BƯỚC LỌC THIẾT BỊ (LOGIC QUAN TRỌNG)
@@ -94,13 +104,9 @@ public class CreateIncidentHandler(
         // =========================================================================
         // KIỂM TRA: NẾU KHÔNG CÓ THIẾT BỊ NÀO MỚI HỎNG
         // =========================================================================
-        if (request.Type == IncidentType.EquipmentFailure && devicesToAdd.Count == 0)
+        if (request.Type == IncidentType.EquipmentFailure && devicesToAdd.Count == 0 && (request.EquipmentIds?.Count ?? 0) > 0)
         {
-            // Trường hợp: Check-in hỏng A, B. Check-out lại chọn A, B.
-            // Hệ thống lọc ra thấy A, B đều đã Broken -> List rỗng.
-            throw new BadRequestException(
-                "Các thiết bị bạn chọn ĐÃ ĐƯỢC BÁO HỎNG trước đó rồi. " +
-                "Không cần tạo thêm báo cáo trùng lặp.");
+            throw new BadRequestException("Các thiết bị bạn chọn đã được báo hỏng trước đó.");
         }
 
         // 2. Tạo Incident (Chỉ chứa các thiết bị MỚI hỏng)
@@ -109,7 +115,7 @@ public class CreateIncidentHandler(
             Id = Guid.NewGuid(),
             LabRoomId = labRoomId,
             ReportedById = reporterId,
-            RoomCheckId = request.FromRoomCheckId,
+            RoomCheckId = roomCheckId,
             Type = request.Type,
             ImportanceLevel = request.ImportanceLevel,
             Description = request.Description, // Giữ nguyên mô tả người dùng nhập
@@ -141,7 +147,7 @@ public class CreateIncidentHandler(
         // 5. Gửi thông báo
         if (managerId.HasValue)
         {
-            await NotifyManagerAsync(managerId.Value, labName, incident, cancellationToken);
+            await NotifyManagerAsync(managerId.Value, labName ?? "Phòng Lab", incident, cancellationToken);
         }
 
         return incident.Id;

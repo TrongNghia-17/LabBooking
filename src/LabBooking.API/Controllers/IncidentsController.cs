@@ -13,18 +13,16 @@ namespace LabBooking.API.Controllers;
 public class IncidentsController(IMediator mediator) : ControllerBase
 {
     /// <summary>
-    /// Báo cáo sự cố mới (Dành cho Bảo vệ tạo từ phiếu Check hoặc báo lẻ).
+    /// Báo cáo sự cố mới (Dành cho Bảo vệ từ phiếu Check, hoặc các vai trò khác báo cáo độc lập).
     /// </summary>
     [HttpPost]
-    [Authorize(Roles = "SecurityGuard")]
+    // THAY ĐỔI: Mở rộng quyền cho nhiều vai trò hơn
+    [Authorize(Roles = "SecurityGuard, Manager, Lecturer, Student")]
     [ProducesResponseType(typeof(Guid), StatusCodes.Status201Created)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    // ...
     public async Task<IActionResult> Create([FromBody] CreateIncidentCommand command)
     {
         var id = await mediator.Send(command);
-
-        // FIX: Trả về 201 Created kèm ID (An toàn nhất khi chưa có API GetById)
         return StatusCode(StatusCodes.Status201Created, new { id });
     }
 
