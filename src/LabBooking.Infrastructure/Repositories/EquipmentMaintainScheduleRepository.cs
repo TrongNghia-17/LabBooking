@@ -339,5 +339,56 @@ internal class EquipmentMaintainScheduleRepository(
         dbContext.EquipmentMaintainSchedules.Remove(schedule);
         await dbContext.SaveChangesAsync(token);
     }
+
+    public async Task CompleteScheduleManuallyAsync(EquipmentMaintainSchedule schedule, CancellationToken token)
+    {
+        // 1. Cập nhật trạng thái của lịch trình chính
+        schedule.Status = MaintenanceStatus.Done;
+
+        // 2. Lặp qua các chi tiết để cập nhật trạng thái thiết bị
+        foreach (var detail in schedule.Details)
+        {
+            if (detail.Status != MaintenanceStatus.Done)
+            {
+                detail.Status = MaintenanceStatus.Done;
+                detail.ResultNote = detail.ResultNote ?? $"Manually completed by Manager at {DateTime.UtcNow:HH:mm dd/MM/yyyy}";
+            }
+
+            if (detail.Equipment != null && detail.Equipment.Status == EquipmentStatus.Maintain)
+            {
+                // Trả thiết bị về trạng thái Available
+                detail.Equipment.Status = EquipmentStatus.Available;
+                detail.Equipment.IsAvailable = true;
+                dbContext.Entry(detail.Equipment).State = EntityState.Modified;
+
+                // --- TÁI SỬ DỤNG LOGIC TỰ ĐỘNG ĐÓNG SỰ CỐ ---
+                var relatedIncidents = await dbContext.Incidents
+                    .Include(i => i.IncidentEquipments).ThenInclude(ie => ie.Equipment)
+                    .Where(i => !i.IsResolved && i.IncidentEquipments.Any(ie => ie.EquipmentId == detail.EquipmentId))
+                    .ToListAsync(token);
+
+                if (relatedIncidents.Any())
+                {
+                    foreach (var incident in relatedIncidents)
+                    {
+                        bool allFixed = incident.IncidentEquipments.All(ie =>
+                            ie.EquipmentId == detail.EquipmentId || (ie.Equipment != null && ie.Equipment.Status == EquipmentStatus.Available)
+                        );
+
+                        if (allFixed)
+                        {
+                            incident.IsResolved = true;
+                            incident.ResolvedAt = DateTime.UtcNow;
+                            dbContext.Entry(incident).State = EntityState.Modified;
+                            detail.ResultNote += $" [Auto-Close Incident #{incident.Id.ToString().Substring(0, 4)}]";
+                        }
+                    }
+                }
+            }
+        }
+
+        // 3. Lưu tất cả thay đổi vào database
+        await dbContext.SaveChangesAsync(token);
+    }
 }
 
