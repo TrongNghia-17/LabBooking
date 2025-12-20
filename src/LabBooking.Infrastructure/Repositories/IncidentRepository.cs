@@ -1,5 +1,6 @@
 ﻿using LabBooking.Domain.Enums;
 using LabBooking.Domain.Exceptions;
+using LabBooking.Domain.NonEntities;
 
 namespace LabBooking.Infrastructure.Repositories;
 
@@ -248,5 +249,46 @@ internal class IncidentRepository(LabBookingDbContext dbContext, INotificationRe
     {
         return await dbContext.Incidents
             .AnyAsync(i => i.RoomCheckId == roomCheckId && !i.IsDeleted, token);
+    }
+
+    public async Task<IEnumerable<MonthlyIncidentCount>> GetMonthlyIncidentStatsAsync(int year, Guid? managerId, CancellationToken token)
+    {
+        // 1. Khởi tạo query cơ bản
+        var query = dbContext.Incidents
+            .Include(i => i.LabRoom) // Cần include để lọc theo Manager
+            .AsQueryable();
+
+        // 2. Lọc theo năm
+        query = query.Where(i => i.CreatedAt.Year == year);
+
+        // 3. Lọc theo quyền Manager (nếu có)
+        // Nếu managerId là null, có nghĩa là Admin đang xem và sẽ lấy tất cả
+        if (managerId.HasValue)
+        {
+            query = query.Where(i => i.LabRoom.MainManagerId == managerId.Value);
+        }
+
+        // 4. Thực hiện GroupBy theo tháng và Count
+        var dbResults = await query
+            .GroupBy(i => i.CreatedAt.Month) // Nhóm theo thuộc tính Month của DateTime
+            .Select(g => new MonthlyIncidentCount
+            {
+                Month = g.Key,      // Key chính là tháng (1-12)
+                Count = g.Count()   // Đếm số lượng phần tử trong mỗi nhóm
+            })
+            .ToListAsync(token);
+
+        // 5. Hoàn thiện kết quả: Đảm bảo trả về đủ 12 tháng, kể cả những tháng có count = 0
+        var allMonths = Enumerable.Range(1, 12);
+        var fullStats = from month in allMonths
+                        join dbResult in dbResults on month equals dbResult.Month into monthGroup
+                        from item in monthGroup.DefaultIfEmpty()
+                        select new MonthlyIncidentCount
+                        {
+                            Month = month,
+                            Count = item?.Count ?? 0
+                        };
+
+        return fullStats;
     }
 }

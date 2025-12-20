@@ -1,4 +1,6 @@
-﻿namespace LabBooking.Domain.Repositories;
+﻿using LabBooking.Domain.NonEntities;
+
+namespace LabBooking.Domain.Repositories;
 
 public interface IIncidentRepository
 {
@@ -33,4 +35,14 @@ public interface IIncidentRepository
 
     // Hàm hỗ trợ cho RoomCheck: Kiểm tra xem RoomCheck này có Incident nào đang dính không
     Task<bool> HasActiveIncidentForRoomCheckAsync(Guid roomCheckId, CancellationToken token);
+
+    /// <summary>
+    /// Lấy thống kê số lượng sự cố theo từng tháng trong một năm cụ thể.
+    /// </summary>
+    /// <param name="year">Năm cần thống kê.</param>
+    /// <param name="managerId">Nếu có, chỉ thống kê các sự cố trong phòng do manager này quản lý.</param>
+    /// <param name="token">Cancellation Token.</param>
+    /// <returns>Danh sách thống kê theo tháng.</returns>
+    Task<IEnumerable<MonthlyIncidentCount>> GetMonthlyIncidentStatsAsync(int year, Guid? managerId, CancellationToken token);
+
 }

@@ -3,6 +3,8 @@ using LabBooking.Application.Features.Incidents.Commands.CreateIncident;
 using LabBooking.Application.Features.Incidents.Commands.Delete;
 using LabBooking.Application.Features.Incidents.Dtos;
 using LabBooking.Application.Features.Incidents.Queries.GetAllIncidents;
+using LabBooking.Application.Features.Incidents.Queries.GetStatistics;
+using LabBooking.Domain.Constants;
 
 namespace LabBooking.API.Controllers;
 
@@ -50,6 +52,20 @@ public class IncidentsController(IMediator mediator) : ControllerBase
     [ProducesResponseType(typeof(PagedResult<IncidentResponse>), StatusCodes.Status200OK)] // Nhớ thay IncidentDto đúng tên của bạn
     public async Task<IActionResult> GetAll([FromQuery] GetIncidentsQuery query)
     {
+        var result = await mediator.Send(query);
+        return Ok(result);
+    }
+
+    [HttpGet("statistics")]
+    [Authorize(Roles = $"{Roles.Admin},{Roles.Manager}")] // Chỉ Admin và Manager được xem
+    public async Task<IActionResult> GetStatistics([FromQuery] int year)
+    {
+        if (year == 0)
+        {
+            year = DateTime.UtcNow.Year; // Mặc định lấy năm hiện tại nếu không cung cấp
+        }
+
+        var query = new GetIncidentStatisticsQuery { Year = year };
         var result = await mediator.Send(query);
         return Ok(result);
     }
