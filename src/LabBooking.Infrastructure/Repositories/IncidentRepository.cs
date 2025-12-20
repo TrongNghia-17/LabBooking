@@ -137,6 +137,7 @@ internal class IncidentRepository(LabBookingDbContext dbContext, INotificationRe
         CancellationToken token)
     {
         var query = dbContext.Incidents
+            .Where(i => !i.IsDeleted)
             .Include(i => i.LabRoom)
             .Include(i => i.IncidentEquipments)
                 .ThenInclude(ie => ie.Equipment)

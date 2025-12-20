@@ -13,40 +13,41 @@ public class GetIncidentsQueryHandler(
         var currentUserId = currentUserService.UserId ?? throw new UnauthorizedAccessException();
         var roles = currentUserService.Roles.ToList();
 
-        // Biến cấu hình query
         Guid? filterManagerId = null;
         Guid? filterReporterId = null;
-        bool hideSensitiveInfo = false; // Cờ ẩn tên/sđt
+        bool hideSensitiveInfo = false;
 
-        // --- PHÂN QUYỀN ---
-
+        // --- LOGIC PHÂN QUYỀN ĐÃ SỬA LẠI ---
+        // Ưu tiên quyền cao nhất trước. Nếu là Admin thì các quyền khác không cần xét nữa.
         if (roles.Contains("Admin"))
         {
-            // Admin: Xem hết, không bị giới hạn gì cả
-            filterManagerId = null;
-            filterReporterId = null;
-            hideSensitiveInfo = false;
+            // Admin: Có toàn quyền, không cần filter gì cả.
         }
         else if (roles.Contains("Manager"))
         {
-            // Manager: Chỉ xem phòng mình quản lý
+            // Manager: Bị giới hạn bởi các phòng mình quản lý.
             filterManagerId = currentUserId;
-            filterReporterId = null;
-            hideSensitiveInfo = false; // Manager cần thấy SĐT để liên hệ
+            // Quan trọng: Một manager cũng có thể tự báo cáo sự cố, nên không cần set filterReporterId.
+            // Họ sẽ thấy tất cả sự cố trong phòng của họ, bao gồm cả sự cố do chính họ tạo.
         }
-        else if (roles.Contains("Security Guard")) // Hoặc Security
+        else if (roles.Contains("SecurityGuard"))
         {
-            // Bảo vệ: Xem hết (để đi tuần tra), nhưng có thể lọc theo LabRoomId từ Frontend gửi lên
-            filterManagerId = null;
-            filterReporterId = null;
-            hideSensitiveInfo = true; // Yêu cầu của bạn: Bảo vệ không cần thấy tên/sđt người báo
+            // SecurityGuard (và các role khác như Student/Lecturer):
+            // Chỉ thấy các sự cố do chính mình tạo.
+            filterReporterId = currentUserId;
+            hideSensitiveInfo = true;
+        }
+        else
+        {
+            // Mặc định cho các vai trò khác (Student, Lecturer): chỉ xem của mình
+            filterReporterId = currentUserId;
         }
 
         // --- GỌI REPO ---
         var incidents = await repository.GetFilteredAsync(
-            filterManagerId,   // Tham số quan trọng 1
-            filterReporterId,  // Tham số quan trọng 2
-            request.LabRoomId, // Filter từ FE
+            filterManagerId,
+            filterReporterId,
+            request.LabRoomId,
             request.SearchPhrase,
             request.FromDate,
             request.ToDate,
@@ -62,8 +63,8 @@ public class GetIncidentsQueryHandler(
         {
             foreach (var item in response)
             {
-                item.ReportedByName = null;  // Ẩn
-                item.ReportedByPhone = null; // Ẩn
+                item.ReportedByName = null;
+                item.ReportedByPhone = null;
             }
         }
 

@@ -4,31 +4,36 @@ namespace LabBooking.Application.Features.RoomChecks.Commands.DeleteRoomCheck;
 
 public class DeleteRoomCheckHandler(
     IRoomCheckRepository roomCheckRepository,
-    IIncidentRepository incidentRepository, // Cần cái này để check ràng buộc
+    IIncidentRepository incidentRepository, // THÊM LẠI: Cần repository này để check ràng buộc
     ICurrentUserService currentUserService
     ) : IRequestHandler<DeleteRoomCheckCommand, Unit>
 {
     public async Task<Unit> Handle(DeleteRoomCheckCommand request, CancellationToken cancellationToken)
     {
         var currentUserId = currentUserService.UserId
-            ?? throw new UnauthorizedAccessException();
+            ?? throw new UnauthorizedAccessException("Bạn cần đăng nhập để thực hiện hành động này.");
 
-        // 1. Tìm RoomCheck
-        var roomCheck = await roomCheckRepository.GetByIdAsync(request.Id, cancellationToken);
-        if (roomCheck == null) throw new NotFoundException(nameof(RoomCheck), request.Id.ToString());
+        // 1. Tìm RoomCheck trong database
+        var roomCheck = await roomCheckRepository.GetByIdAsync(request.Id, cancellationToken)
+            ?? throw new NotFoundException(nameof(RoomCheck), request.Id.ToString());
 
-        // 2. Check quyền (Chỉ người tạo hoặc Admin mới được xóa)
-        // (Tùy logic đồ án của bạn, ở đây giả sử chỉ người tạo được xóa)
+        // --- BẮT ĐẦU CHUỖI KIỂM TRA ĐIỀU KIỆN ---
+
+        // 2. [ĐIỀU KIỆN 1] Kiểm tra quyền sở hữu
         if (roomCheck.GuardId != currentUserId)
         {
-            // Nếu muốn Manager cũng xóa được thì check thêm ở đây
-            throw new ForbiddenAccessException("Bạn không phải người tạo phiếu này.");
+            throw new ForbiddenAccessException("Chỉ người tạo phiếu kiểm tra mới có quyền xóa.");
         }
 
-        // 3. CHECK RÀNG BUỘC (QUAN TRỌNG)
-        // Nếu phiếu check này đã đẻ ra Incident -> Không được xóa
-        bool hasIncident = await incidentRepository.HasActiveIncidentForRoomCheckAsync(request.Id, cancellationToken);
+        // 3. [ĐIỀU KIỆN 2] Kiểm tra giới hạn thời gian 24 giờ
+        var timeElapsed = DateTime.UtcNow - roomCheck.CheckedAt;
+        if (timeElapsed.TotalHours > 24)
+        {
+            throw new BadRequestException("Không thể xóa phiếu kiểm tra đã được tạo quá 24 giờ.");
+        }
 
+        // 4. [ĐIỀU KIỆN 3] Kiểm tra ràng buộc với Incident (Logic cũ)
+        bool hasIncident = await incidentRepository.HasActiveIncidentForRoomCheckAsync(request.Id, cancellationToken);
         if (hasIncident)
         {
             throw new BadRequestException(
@@ -36,7 +41,7 @@ public class DeleteRoomCheckHandler(
                 "Vui lòng xóa Sự cố trước khi xóa phiếu kiểm tra.");
         }
 
-        // 4. Xóa mềm
+        // 5. Nếu vượt qua tất cả các điều kiện -> Thực hiện xóa mềm
         await roomCheckRepository.SoftDeleteAsync(roomCheck, cancellationToken);
 
         return Unit.Value;

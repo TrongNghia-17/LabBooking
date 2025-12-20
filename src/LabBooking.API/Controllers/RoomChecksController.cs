@@ -32,7 +32,7 @@ public class RoomChecksController(IMediator mediator) : ControllerBase
     /// <para>Chỉ xóa được khi phiếu này KHÔNG gắn với sự cố nào.</para>
     /// </summary>
     [HttpDelete("{id:guid}")]
-    [Authorize(Roles = "SecurityGuard, Manager")] // Manager có thể xóa nếu thấy sai sót
+    [Authorize(Roles = "SecurityGuard")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)] // Trả về nếu đang dính Incident
