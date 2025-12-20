@@ -44,5 +44,8 @@ public interface IIncidentRepository
     /// <param name="token">Cancellation Token.</param>
     /// <returns>Danh sách thống kê theo tháng.</returns>
     Task<IEnumerable<MonthlyIncidentCount>> GetMonthlyIncidentStatsAsync(int year, Guid? managerId, CancellationToken token);
-
+    Task<int> GetUnresolvedCountAsync(Guid? managerId, CancellationToken token);
+    Task<IEnumerable<StatItem>> GetStatsByTypeAsync(Guid? managerId, int lastDays, CancellationToken token);
+    Task<IEnumerable<StatItem>> GetStatsByImportanceAsync(Guid? managerId, int lastDays, CancellationToken token);
+    Task<IEnumerable<StatItem>> GetTopProblematicLabsAsync(Guid? managerId, int lastDays, int top, CancellationToken token);
 }

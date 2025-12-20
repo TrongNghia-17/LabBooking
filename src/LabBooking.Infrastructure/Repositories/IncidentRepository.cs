@@ -292,4 +292,50 @@ internal class IncidentRepository(LabBookingDbContext dbContext, INotificationRe
 
         return fullStats;
     }
+
+    public async Task<int> GetUnresolvedCountAsync(Guid? managerId, CancellationToken token)
+    {
+        var query = dbContext.Incidents.Where(i => !i.IsDeleted && !i.IsResolved);
+        if (managerId.HasValue)
+            query = query.Where(i => i.LabRoom.MainManagerId == managerId.Value);
+        return await query.CountAsync(token);
+    }
+
+    public async Task<IEnumerable<StatItem>> GetStatsByTypeAsync(Guid? managerId, int lastDays, CancellationToken token)
+    {
+        var dateLimit = DateTime.UtcNow.AddDays(-lastDays);
+        var query = dbContext.Incidents.Where(i => !i.IsDeleted && i.CreatedAt >= dateLimit);
+        if (managerId.HasValue)
+            query = query.Where(i => i.LabRoom.MainManagerId == managerId.Value);
+
+        return await query.GroupBy(i => i.Type)
+                          .Select(g => new StatItem { Label = g.Key.ToString(), Count = g.Count() })
+                          .ToListAsync(token);
+    }
+
+    public async Task<IEnumerable<StatItem>> GetStatsByImportanceAsync(Guid? managerId, int lastDays, CancellationToken token)
+    {
+        var dateLimit = DateTime.UtcNow.AddDays(-lastDays);
+        var query = dbContext.Incidents.Where(i => !i.IsDeleted && i.CreatedAt >= dateLimit);
+        if (managerId.HasValue)
+            query = query.Where(i => i.LabRoom.MainManagerId == managerId.Value);
+
+        return await query.GroupBy(i => i.ImportanceLevel)
+                          .Select(g => new StatItem { Label = g.Key.ToString(), Count = g.Count() })
+                          .ToListAsync(token);
+    }
+
+    public async Task<IEnumerable<StatItem>> GetTopProblematicLabsAsync(Guid? managerId, int lastDays, int top, CancellationToken token)
+    {
+        var dateLimit = DateTime.UtcNow.AddDays(-lastDays);
+        var query = dbContext.Incidents.Where(i => !i.IsDeleted && i.CreatedAt >= dateLimit);
+        if (managerId.HasValue)
+            query = query.Where(i => i.LabRoom.MainManagerId == managerId.Value);
+
+        return await query.GroupBy(i => i.LabRoom.LabName)
+                          .Select(g => new StatItem { Label = g.Key, Count = g.Count() })
+                          .OrderByDescending(x => x.Count)
+                          .Take(top)
+                          .ToListAsync(token);
+    }
 }

@@ -15,4 +15,5 @@ public interface IEquipmentRepository
         string? sortBy,
         SortDirection sortDirection);
     Task<bool> IsEquipmentInLabAsync(Guid equipmentId, Guid labRoomId, CancellationToken token = default);
+    Task<int> GetMaintenanceCountAsync(Guid? managerId, CancellationToken token);
 }
