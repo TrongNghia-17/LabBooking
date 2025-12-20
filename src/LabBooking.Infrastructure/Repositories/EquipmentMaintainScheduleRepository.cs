@@ -204,8 +204,6 @@ internal class EquipmentMaintainScheduleRepository(
         return conflict;
     }
 
-    // Trong EquipmentMaintainScheduleRepository.cs
-
     public async Task<(IEnumerable<EquipmentMaintainSchedule>, int)> GetByManagerIdAsync(
         Guid userId,
         DateTime? fromDate,
@@ -213,8 +211,8 @@ internal class EquipmentMaintainScheduleRepository(
         MaintenanceStatus? status,
         string? sortBy,
         bool isDescending,
-        int pageNumber,  // <--- Thêm tham số
-        int pageSize,    // <--- Thêm tham số
+        int pageNumber,
+        int pageSize,
         CancellationToken token)
     {
         // 1. Khởi tạo Query & Include
@@ -264,6 +262,59 @@ internal class EquipmentMaintainScheduleRepository(
         }
 
         // 7. Phân trang (Pagination) - THÊM MỚI
+        var schedules = await query
+            .Skip(pageSize * (pageNumber - 1))
+            .Take(pageSize)
+            .ToListAsync(token);
+
+        return (schedules, totalCount);
+    }
+
+    public async Task<(IEnumerable<EquipmentMaintainSchedule>, int)> GetAllAsync(
+        DateTime? fromDate,
+        DateTime? toDate,
+        MaintenanceStatus? status,
+        string? sortBy,
+        bool isDescending,
+        int pageNumber,
+        int pageSize,
+        CancellationToken token)
+    {
+        var query = dbContext.EquipmentMaintainSchedules
+            .Include(s => s.Details)
+                .ThenInclude(d => d.Equipment)
+                    .ThenInclude(e => e.LabRoom)
+            .AsNoTracking()
+            .AsQueryable();
+
+        if (fromDate.HasValue)
+            query = query.Where(s => s.StartTime >= fromDate.Value.ToUniversalTime());
+
+        if (toDate.HasValue)
+            query = query.Where(s => s.StartTime <= toDate.Value.ToUniversalTime());
+
+        if (status.HasValue)
+            query = query.Where(s => s.Status == status.Value);
+
+        var totalCount = await query.CountAsync(token);
+
+        if (string.IsNullOrEmpty(sortBy)) sortBy = "date";
+
+        switch (sortBy.ToLower())
+        {
+            case "status":
+                query = isDescending
+                    ? query.OrderByDescending(s => s.Status)
+                    : query.OrderBy(s => s.Status);
+                break;
+            case "date":
+            default:
+                query = isDescending
+                    ? query.OrderByDescending(s => s.StartTime)
+                    : query.OrderBy(s => s.StartTime);
+                break;
+        }
+
         var schedules = await query
             .Skip(pageSize * (pageNumber - 1))
             .Take(pageSize)

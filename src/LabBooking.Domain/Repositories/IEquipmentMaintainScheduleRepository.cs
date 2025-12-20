@@ -15,9 +15,18 @@ public interface IEquipmentMaintainScheduleRepository
         MaintenanceStatus? status,
         string? sortBy,
         bool isDescending,
-        int pageNumber,  // <--- Thêm tham số
-        int pageSize,    // <--- Thêm tham số
+        int pageNumber,
+        int pageSize,
         CancellationToken token);
+    Task<(IEnumerable<EquipmentMaintainSchedule>, int)> GetAllAsync(
+        DateTime? fromDate,
+        DateTime? toDate,
+        MaintenanceStatus? status,
+        string? sortBy,
+        bool isDescending,
+        int pageNumber,
+        int pageSize,
+        CancellationToken cancellationToken);
     Task<EquipmentMaintainSchedule?> GetByIdWithDetailsAsync(Guid id, CancellationToken token);
     Task DeleteAsync(EquipmentMaintainSchedule schedule, CancellationToken token);
 }
