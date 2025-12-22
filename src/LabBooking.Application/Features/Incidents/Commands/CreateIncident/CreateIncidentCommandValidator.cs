@@ -5,21 +5,20 @@ public class CreateIncidentCommandValidator : AbstractValidator<CreateIncidentCo
     public CreateIncidentCommandValidator(
         IEquipmentRepository equipmentRepository,
         IRoomCheckRepository roomCheckRepository,
-        ILabRoomRepository labRoomRepository) // Thêm repo này để check LabRoom tồn tại
+        ILabRoomRepository labRoomRepository)
     {
-        // --- QUY TẮC MỚI: HOẶC/HOẶC ---
+        // --- QUY TẮC MỚI: CHỈ YÊU CẦU ÍT NHẤT 1 TRONG 2 ---
         RuleFor(x => x)
             .Custom((command, context) =>
             {
-                if (command.FromRoomCheckId.HasValue && command.LabRoomId.HasValue)
-                {
-                    context.AddFailure("Không thể cung cấp đồng thời FromRoomCheckId và LabRoomId.");
-                }
-
+                // Chỉ báo lỗi nếu KHÔNG CÓ CẢ HAI
                 if (!command.FromRoomCheckId.HasValue && !command.LabRoomId.HasValue)
                 {
                     context.AddFailure("Vui lòng cung cấp FromRoomCheckId (nếu từ phiếu kiểm tra) hoặc LabRoomId (nếu báo cáo độc lập).");
                 }
+
+                // BỎ phần check conflict - cho phép truyền cả hai
+                // Nếu có cả hai, Handler sẽ ưu tiên FromRoomCheckId
             });
 
         // --- CÁC QUY TẮC CŨ KHÔNG ĐỔI ---
@@ -47,7 +46,7 @@ public class CreateIncidentCommandValidator : AbstractValidator<CreateIncidentCo
                 Guid? targetLabId = null;
                 string? labName = null;
 
-                // Lấy LabId từ một trong hai nguồn
+                // Lấy LabId từ một trong hai nguồn - ƯU TIÊN FromRoomCheckId
                 if (command.FromRoomCheckId.HasValue)
                 {
                     var roomCheck = await roomCheckRepository.GetByIdWithLabRoomAsync(command.FromRoomCheckId.Value, token);
