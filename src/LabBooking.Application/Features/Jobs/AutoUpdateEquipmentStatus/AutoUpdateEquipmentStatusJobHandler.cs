@@ -2,35 +2,59 @@
 
 public class AutoUpdateEquipmentStatusJobHandler(
     IEquipmentMaintainScheduleRepository repository,
+    INotificationRepository notificationRepository,
     ILogger<AutoUpdateEquipmentStatusJobHandler> logger
     ) : IRequestHandler<AutoUpdateEquipmentStatusJobCommand, string>
 {
     public async Task<string> Handle(AutoUpdateEquipmentStatusJobCommand request, CancellationToken cancellationToken)
     {
-        var utcNow = DateTime.UtcNow;
-        var vnTime = utcNow.AddHours(7);
-
-        // 1. Dùng ký tự đặc biệt để tách biệt Job này với các log khác
-        logger.LogInformation("===============================================================");
-        logger.LogInformation(">>> [CRON-START] AutoUpdateStatus | VN Time: {Time:HH:mm:ss dd/MM}", vnTime);
-
         try
         {
+            // 1. Chạy logic bảo trì (Giữ nguyên không đụng vào)
             var resultMessage = await repository.ProcessAutomatedMaintenanceAsync(cancellationToken);
 
-            // 2. Format lại message cho gọn
-            var finalMessage = $"Result: {resultMessage}";
+            // 2. Lấy danh sách vừa hoàn tất để thông báo
+            var finishedSchedules = await repository.GetRecentlyFinishedSchedulesAsync(10, cancellationToken);
 
-            logger.LogInformation("<<< [CRON-END]   Status: SUCCESS  | {Message}", finalMessage);
-            logger.LogInformation("===============================================================");
+            if (finishedSchedules.Any())
+            {
+                var pushQueue = new List<PushNotificationData>();
 
-            return finalMessage;
+                foreach (var schedule in finishedSchedules)
+                {
+                    // Lấy danh sách mô tả thiết bị (Dùng Description vì Entity Equipment không có Name)
+                    var deviceNames = string.Join(", ", schedule.Details
+                        .Where(d => d.Equipment != null)
+                        .Select(d => d.Equipment.Description));
+
+                    if (schedule.CreatedBy.HasValue)
+                    {
+                        var (notification, pushData) = notificationRepository.PrepareNotification(
+                            schedule.CreatedBy.Value,
+                            "🛠️ Bảo trì hoàn tất",
+                            $"Lịch bảo trì '{schedule.Description}' đã xong. Thiết bị: [{deviceNames}]",
+                            "MAINTENANCE_COMPLETED",
+                            new { scheduleId = schedule.Id }
+                        );
+
+                        // SỬA LỖI: Dùng CreateAsync thay vì AddAsync
+                        await notificationRepository.CreateAsync(notification, cancellationToken);
+
+                        pushQueue.Add(pushData);
+                    }
+                }
+
+                if (pushQueue.Any())
+                {
+                    notificationRepository.RunPushNotificationTask(pushQueue);
+                }
+            }
+
+            return resultMessage;
         }
         catch (Exception ex)
         {
-            // Log lỗi cũng cần nổi bật
-            logger.LogError("<<< [CRON-END]   Status: FAILED   | Error: {Error}", ex.Message);
-            logger.LogInformation("===============================================================");
+            logger.LogError(ex, "Lỗi khi chạy Job cập nhật bảo trì");
             throw;
         }
     }

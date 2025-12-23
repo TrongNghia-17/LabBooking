@@ -28,6 +28,7 @@ public class CreateEquipmentMaintainScheduleCommandHandler(
         schedule.EndTime = schedule.EndTime.ToUniversalTime();
         schedule.Id = Guid.NewGuid();
         schedule.Status = MaintenanceStatus.NotYet;
+        schedule.CreatedBy = currentUserId;
 
         var equipmentMap = new Dictionary<Guid, Equipment>();
 

@@ -390,5 +390,18 @@ internal class EquipmentMaintainScheduleRepository(
         // 3. Lưu tất cả thay đổi vào database
         await dbContext.SaveChangesAsync(token);
     }
+
+    public async Task<List<EquipmentMaintainSchedule>> GetRecentlyFinishedSchedulesAsync(int minutesLookback, CancellationToken token)
+    {
+        var threshold = DateTime.UtcNow.AddMinutes(-minutesLookback);
+
+        return await dbContext.EquipmentMaintainSchedules
+            .Include(s => s.Details)
+            .ThenInclude(d => d.Equipment)
+            .Where(s => s.Status == MaintenanceStatus.Done
+                     && s.EndTime >= threshold
+                     && s.EndTime <= DateTime.UtcNow)
+            .ToListAsync(token);
+    }
 }
 

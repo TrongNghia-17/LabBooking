@@ -37,4 +37,5 @@ public interface IEquipmentMaintainScheduleRepository
     /// <param name="schedule">Đối tượng lịch trình cần hoàn thành.</param>
     /// <param name="token">Cancellation Token.</param>
     Task CompleteScheduleManuallyAsync(EquipmentMaintainSchedule schedule, CancellationToken token);
+    Task<List<EquipmentMaintainSchedule>> GetRecentlyFinishedSchedulesAsync(int minutesLookback, CancellationToken token);
 }
