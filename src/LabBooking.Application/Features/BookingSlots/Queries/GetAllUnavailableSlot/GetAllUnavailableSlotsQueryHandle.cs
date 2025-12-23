@@ -23,97 +23,146 @@ namespace LabBooking.Application.Features.BookingSlots.Queries.GetAllUnavailable
             try
             {
                 // ========== BƯỚC 1: LẤY SLOT MẪU ==========
-                // Lấy 4 slot mẫu (7h-9h, 9h-11h, v.v.)
-                var (slotTemplates, any) = (await slotRepository.GetAllSlotAsync(cancellationToken));
+                var (slotTemplates, any) = await slotRepository.GetAllSlotAsync(cancellationToken);
                 if (!slotTemplates.Any())
                 {
-                    logger.LogWarning("No slot templates found in database.");
                     return Enumerable.Empty<BookingSlotResponse>();
                 }
 
                 // ========== BƯỚC 2: LẤY SLOT ĐÃ ĐẶT (BOOKED) ==========
-                // (Giả sử Repository có hàm này)
+                // Lưu ý: bookingSlotRepository cần Include: Booking, CreatedBy, Course, Project
                 var bookedSlots = await bookingSlotRepository.GetBookedSlotsForRoomAsync(
                     request.LabRoomId,
                     request.StartDate,
                     request.EndDate,
                     cancellationToken);
 
-                // ========== BƯỚC 3A: LẤY LỊCH BẢO TRÌ ==========
-                // Lấy các lịch bảo trì CÓ CHỒNG CHÉO (overlap) với tuần đang xem
+                // Xử lý mapping cho danh sách Booked
+                var bookedResponses = new List<BookingSlotResponse>();
+
+                foreach (var slot in bookedSlots)
+                {
+                    // Map cơ bản bằng AutoMapper
+                    var responseItem = mapper.Map<BookingSlotResponse>(slot);
+
+                    // --- LOGIC MỚI: ĐIỀN THÔNG TIN CHI TIẾT ---
+                    if (slot.Booking != null)
+                    {
+                        // 1. Xác định Tiêu đề (Title) dựa trên loại Booking
+                        responseItem.Title = GetBookingTitle(slot.Booking);
+
+                        // 2. Tên người đặt
+                        responseItem.BookerName = slot.Booking.CreatedBy?.FullName ?? slot.Booking.CreatedBy?.UserName ?? "Unknown";
+
+                        // 3. Mô tả
+                        responseItem.Description = slot.Booking.Description;
+
+                        // 4. Loại nhãn
+                        responseItem.TypeLabel = GetTypeLabel(slot.Booking.Type);
+
+                        // 5. Check chính chủ
+                        responseItem.IsMyBooking = request.CurrentUserId.HasValue &&
+                                                   slot.Booking.CreatedById == request.CurrentUserId.Value;
+                    }
+
+                    bookedResponses.Add(responseItem);
+                }
+
+                // ========== BƯỚC 3: XỬ LÝ LỊCH BẢO TRÌ ==========
                 var maintenanceSchedules = await maintainScheduleRepository.GetOverlappingSchedulesAsync(
                     request.LabRoomId,
                     request.StartDate,
                     request.EndDate,
                     cancellationToken);
 
-                var maintenanceSlotList = new List<BookingSlot>();
+                var maintenanceResponses = new List<BookingSlotResponse>();
 
                 if (maintenanceSchedules.Any())
                 {
-                    // --- SỬA LỖI Ở ĐÂY ---
-
-                    // 1. Định nghĩa múi giờ Local (Việt Nam)
                     var localTimeZone = TimeZoneInfo.FindSystemTimeZoneById("SE Asia Standard Time");
 
-                    // ========== BƯỚC 3B: CHUYỂN BẢO TRÌ THÀNH SLOT ==========
                     for (var day = request.StartDate; day <= request.EndDate; day = day.AddDays(1))
                     {
                         foreach (var slot in slotTemplates)
                         {
-                            // 2. Tạo DateTime cục bộ (Kind=Unspecified)
-                            // Dùng ToDateTime(TimeOnly) cho sạch
                             var localSlotStartTime = day.ToDateTime(slot.StartTime);
                             var localSlotEndTime = day.ToDateTime(slot.EndTime);
 
-                            // 3. Chuyển đổi thời gian cục bộ này sang UTC
                             var utcSlotStartTime = TimeZoneInfo.ConvertTime(localSlotStartTime, localTimeZone, TimeZoneInfo.Utc);
                             var utcSlotEndTime = TimeZoneInfo.ConvertTime(localSlotEndTime, localTimeZone, TimeZoneInfo.Utc);
 
-                            // 4. KIỂM TRA CHỒNG CHÉO (UTC vs UTC)
-                            // (m.EndTime và m.StartTime đã là UTC từ DB)
-                            bool isUnderMaintenance = maintenanceSchedules.Any(m =>
-                                utcSlotStartTime < m.EndTime && // Slot bắt đầu TRƯỚC khi bảo trì kết thúc
-                                utcSlotEndTime > m.StartTime    // Slot kết thúc SAU khi bảo trì bắt đầu
+                            // Tìm lịch bảo trì cụ thể gây ra việc trùng giờ
+                            var matchingMaintenance = maintenanceSchedules.FirstOrDefault(m =>
+                                utcSlotStartTime < m.EndTime &&
+                                utcSlotEndTime > m.StartTime
                             );
 
-                            if (isUnderMaintenance)
+                            if (matchingMaintenance != null)
                             {
-                                // 5. Tạo "BookingSlot giả"
-                                maintenanceSlotList.Add(new BookingSlot
+                                // Tạo Response trực tiếp (không qua Entity BookingSlot trung gian để giữ dữ liệu)
+                                maintenanceResponses.Add(new BookingSlotResponse
                                 {
-                                    Id = Guid.NewGuid(),
-                                    Date = day, // Date là DateOnly, gán thẳng
+                                    Id = Guid.NewGuid(), // ID giả cho frontend dùng làm key
+                                    Date = day, // DateOnly
                                     SlotId = slot.Id,
-                                    Slot = slot,
-                                    Reason = UnavailableReason.Maintenance,
-                                    Priority = 0
+                                    // --- DỮ LIỆU QUAN TRỌNG CHO TOOLTIP ---
+                                    Reason = "Maintenance",
+                                    Priority = 0, // Mức ưu tiên cao nhất
+
+                                    Title = "Bảo trì phòng",
+                                    BookerName = "Quản lý phòng",
+                                    Description = matchingMaintenance.Description, // Lấy lý do cụ thể (VD: Sửa máy chiếu)
+                                    TypeLabel = "Bảo trì",
+
+                                    IsMyBooking = false
                                 });
                             }
                         }
                     }
-                    // --- KẾT THÚC SỬA ---
                 }
 
-                // ========== BƯỚC 4: KẾT HỢP VÀ TRẢ VỀ ==========
-                var combinedSlots = bookedSlots.Concat(maintenanceSlotList);
+                // ========== BƯỚC 4: KẾT HỢP VÀ LỌC TRÙNG ==========
+                // Gộp 2 danh sách lại
+                var allResponses = bookedResponses.Concat(maintenanceResponses);
 
-                // Lọc trùng lặp (phòng trường hợp 1 slot vừa bị đặt vừa bị bảo trì)
-                // Phải so sánh .Date.Date vì `Date` trong BookingSlot là DateTime
-                var distinctSlots = combinedSlots
-                    .DistinctBy(s => new { s.Date, s.SlotId });
+                // Ưu tiên: Nếu 1 slot vừa có Booking vừa có Maintenance -> Lấy Maintenance (Priority 0)
+                // Group by Date + SlotId -> Order by Priority (0 trước, 1 sau...) -> Lấy cái đầu tiên
+                var finalResult = allResponses
+                    .GroupBy(x => new { x.Date, x.SlotId })
+                    .Select(g => g.OrderBy(x => x.Priority).First())
+                    .ToList();
 
-                logger.LogInformation("Found {BookedCount} booked slots and {MaintenanceCount} maintenance slots. Returning {TotalCount} unavailable slots.",
-                    bookedSlots.Count(), maintenanceSlotList.Count, distinctSlots.Count());
+                logger.LogInformation("Returning {TotalCount} slots (Booked + Maintenance).", finalResult.Count);
 
-                // Dùng AutoMapper để chuyển đổi sang DTO
-                return mapper.Map<IEnumerable<BookingSlotResponse>>(distinctSlots);
+                return finalResult;
             }
             catch (Exception ex)
             {
-                logger.LogError(ex, "Error occurred while handling GetUnavailableSlotsQuery for RoomId: {LabRoomId}", request.LabRoomId);
+                logger.LogError(ex, "Error handling GetUnavailableSlotsQuery");
                 throw;
             }
+        }
+
+        private string GetBookingTitle(Domain.Entities.Booking booking)
+        {
+            return booking.Type switch
+            {
+                BookingType.Teaching => $"{booking.Course?.CourseCode} - {booking.Course?.CourseName}", // VD: CS101 - Java
+                BookingType.Project => booking.Project?.ProjectName ?? booking.Title ?? "Dự án nhóm",
+                BookingType.UniversityEvent => booking.Title ?? "Sự kiện trường",
+                _ => booking.Title ?? "Đã đặt"
+            };
+        }
+
+        private string GetTypeLabel(BookingType? type)
+        {
+            return type switch
+            {
+                BookingType.Teaching => "Lớp học",
+                BookingType.Project => "Dự án",
+                BookingType.UniversityEvent => "Sự kiện",
+                _ => "Hoạt động"
+            };
         }
     }
 }

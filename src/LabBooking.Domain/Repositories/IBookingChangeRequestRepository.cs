@@ -11,6 +11,7 @@ namespace LabBooking.Domain.Repositories
         Task<BookingChangeRequest> CreateAsync(BookingChangeRequest request);
         Task<bool> IsBookingOwnerAndApprovedAsync(Guid bookingId, Guid userId);
         Task<List<BookingChangeRequest>> GetPendingRequestsAsync(Guid? userId);
+        Task<List<BookingChangeRequest>> GetAllRequestsAsync(Guid? userId);
         Task RejectChangeRequestAsync(Guid requestId, Guid managerId, string reason);
         Task<bool> CheckBookingChangeRequestIsBelongToThisManager(Guid bookingChangeId, Guid managerId);
 

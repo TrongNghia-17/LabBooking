@@ -8,6 +8,7 @@
         Task<Booking?> GetBookingDetailsAsync(Guid id);
         Task<List<Booking>> GetPendingBookingsAsync(Guid? userId);
 
+        Task<List<Booking>> GetHistoryBookingsAsync(Guid? userId);
         //Task<BookingApprovalResult> ApproveBookingAsync(Guid bookingId, Guid approverId);
         Task<Booking?> GetBookingByIdWithSlotsAsync(Guid id);
         Task<List<BookingSlot>> GetConflictingSlotsAsync(Guid labRoomId, List<BookingSlot> requestedSlots, Guid? excludeBookingId = null);

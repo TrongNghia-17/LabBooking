@@ -242,6 +242,32 @@ namespace LabBooking.Infrastructure.Repositories
                 .ToListAsync();
         }
 
+        public async Task<List<Booking>> GetHistoryBookingsAsync(Guid? userId)
+        {
+            var query = dbContext.Bookings
+                .Include(b => b.LabRoom)             // Lấy tên phòng
+                .Include(b => b.Slots)               // Lấy các slot đã chọn
+                .ThenInclude(s => s.Slot)            // Lấy chi tiết giờ (Ca 1: 7h-9h...)
+                .Include(b => b.BookingPriorityDetail) // Lấy lý do ưu tiên (quan trọng để duyệt)
+                .Include(b => b.Project)             // Lấy tên dự án
+                .Include(b => b.Course)              // Lấy tên môn học
+                .Include(b => b.ExternalEquipments)
+                .Include(b => b.OutSideGuests).AsQueryable();      //.Include(b => b.CreatedBy)         // (Optional) Nếu bạn có relationship với bảng User để hiện tên người đặt
+                                                                   //.Where(b => b.Status == BookingStatus.Pending);
+
+            // Nếu có truyền LabId thì lọc, không thì lấy hết
+            if (userId.HasValue)
+            {
+                query = query.Where(b => b.LabRoom.MainManagerId == userId);
+            }
+
+            // Sắp xếp: Đơn ưu tiên (VIP) lên đầu, hoặc đơn mới nhất lên đầu
+            return await query
+                .OrderByDescending(b => b.Priority) // Đơn Priority (1) lên trước Standard (2) (Lưu ý: Check lại Enum của bạn, số nào nhỏ hơn hay lớn hơn là VIP)
+                .ThenBy(b => b.CreatedAt)           // Cùng mức ưu tiên thì đơn nào đến trước xử trước
+                .ToListAsync();
+        }
+
         public async Task<Booking?> GetBookingByIdWithSlotsAsync(Guid id)
         {
             return await dbContext.Bookings

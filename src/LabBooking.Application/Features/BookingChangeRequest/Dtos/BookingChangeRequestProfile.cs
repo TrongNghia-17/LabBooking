@@ -19,6 +19,7 @@ namespace LabBooking.Application.Features.BookingChangeRequest.Dtos
             CreateMap<Domain.Entities.BookingChangeRequest, BookingChangeRequestResponse>()
                 // Map các trường cơ bản tự động (vì trùng tên: NewTitle -> NewTitle)
                 .ForMember(dest => dest.Status, opt => opt.MapFrom(src => src.Status.ToString()))
+                .ForMember(dest => dest.Reason, opt => opt.MapFrom(src => src.ManagerReason.ToString()))
 
                 // --- MAP CÁC TRƯỜNG JSON ---
 
