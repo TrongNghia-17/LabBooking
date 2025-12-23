@@ -6,6 +6,7 @@ public class CreateDoorRequestHandler(
     IDoorRequestRepository doorRequestRepository,
     IBookingRepository bookingRepository,
     ICurrentUserService currentUserService,
+    INotificationRepository notificationRepository,
     IMapper mapper,
     ILogger<CreateDoorRequestHandler> logger
     ) : IRequestHandler<CreateDoorRequestCommand, Guid>
@@ -44,6 +45,33 @@ public class CreateDoorRequestHandler(
             throw new BadRequestException("Phòng Lab này chưa có quản lý để duyệt yêu cầu.");
         }
 
-        return await doorRequestRepository.AddAsync(entity);
+        // 5. Lưu yêu cầu vào DB
+        var requestId = await doorRequestRepository.AddAsync(entity);
+
+        // 6. GỬI THÔNG BÁO CHO MANAGER
+        var pushQueue = new List<PushNotificationData>();
+
+        var (_, pushData) = notificationRepository.PrepareNotification(
+            entity.ManagerId.Value, // Manager ID
+            "🔔 Yêu cầu mở cửa mới",
+            $"Có yêu cầu mở cửa mới cho mã đặt phòng {request.BookingCode}. Vui lòng kiểm tra và duyệt.",
+            "DOOR_REQUEST_PENDING",
+            new
+            {
+                requestId = requestId,
+                bookingCode = request.BookingCode,
+                reason = request.Reason,
+                requestedById = currentUserId.Value
+            }
+        );
+
+        pushQueue.Add(pushData);
+
+        // Chạy background task gửi push notification
+        notificationRepository.RunPushNotificationTask(pushQueue);
+
+        logger.LogInformation($"Đã tạo yêu cầu mở cửa {requestId} và gửi thông báo cho Manager {entity.ManagerId}");
+
+        return requestId;
     }
 }
