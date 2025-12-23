@@ -4,6 +4,7 @@ namespace LabBooking.Application.Features.DoorRequests.Commands.UpdateStatus;
 
 public class UpdateDoorRequestStatusHandler(
     IDoorRequestRepository doorRequestRepository,
+    INotificationRepository notificationRepository,
     ICurrentUserService currentUserService,
     UserManager<User> userManager,
     ILogger<UpdateDoorRequestStatusHandler> logger
@@ -46,6 +47,61 @@ public class UpdateDoorRequestStatusHandler(
         await doorRequestRepository.UpdateAsync(doorRequest);
 
         logger.LogInformation("Successfully updated door request status. RequestId: {RequestId}, Status: {Status}", request.Id, request.NewStatus);
+
+        // 6. GỬI THÔNG BÁO CHO USER (Người tạo yêu cầu)
+        var pushQueue = new List<PushNotificationData>();
+
+        // Kiểm tra trạng thái để gửi notification phù hợp
+        if (request.NewStatus == DoorRequestStatus.Accepted)
+        {
+            // ĐƯỢC DUYỆT
+            var (_, pushData) = notificationRepository.PrepareNotification(
+                doorRequest.RequestedById,
+                "✅ Yêu cầu mở cửa được duyệt",
+                $"Yêu cầu mở cửa cho mã đặt phòng {doorRequest.BookingCode} đã được chấp nhận. {request.Note}",
+                "DOOR_REQUEST_ACCEPTED",
+                new
+                {
+                    requestId = request.Id,
+                    bookingCode = doorRequest.BookingCode,
+                    status = "Accepted",
+                    note = request.Note,
+                    processedBy = manager.FullName,
+                    processedAt = DateTime.UtcNow
+                }
+            );
+            pushQueue.Add(pushData);
+
+            logger.LogInformation("Notification prepared for accepted request. UserId: {UserId}", doorRequest.RequestedById);
+        }
+        else if (request.NewStatus == DoorRequestStatus.Rejected)
+        {
+            // BỊ TỪ CHỐI
+            var (_, pushData) = notificationRepository.PrepareNotification(
+                doorRequest.RequestedById,
+                "⛔ Yêu cầu mở cửa bị từ chối",
+                $"Yêu cầu mở cửa cho mã đặt phòng {doorRequest.BookingCode} đã bị từ chối. Lý do: {request.Note}",
+                "DOOR_REQUEST_REJECTED",
+                new
+                {
+                    requestId = request.Id,
+                    bookingCode = doorRequest.BookingCode,
+                    status = "Rejected",
+                    reason = request.Note,
+                    processedBy = manager.FullName,
+                    processedAt = DateTime.UtcNow
+                }
+            );
+            pushQueue.Add(pushData);
+
+            logger.LogInformation("Notification prepared for rejected request. UserId: {UserId}", doorRequest.RequestedById);
+        }
+
+        // Gửi push notification (background task)
+        if (pushQueue.Any())
+        {
+            notificationRepository.RunPushNotificationTask(pushQueue);
+        }
 
         return Unit.Value;
     }
