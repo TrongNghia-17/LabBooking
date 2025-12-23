@@ -7,9 +7,13 @@ using System.Threading.Tasks;
 
 namespace LabBooking.Application.Features.BookingSlots.Queries.GetAllUnavailableSlot
 {
-    public record GetAllUnavailableSlotsQuery(
-        Guid LabRoomId,
-        DateOnly StartDate, // FE gửi ngày Thứ 2
-        DateOnly EndDate    // FE gửi ngày Chủ Nhật
-    ) : IRequest<IEnumerable<BookingSlotResponse>>;
+    public class GetAllUnavailableSlotsQuery : IRequest<IEnumerable<BookingSlotResponse>>
+    {
+        public Guid LabRoomId { get; set; }
+        public DateOnly StartDate { get; set; }
+        public DateOnly EndDate { get; set; }
+
+        // Phải có dòng này thì ở Controller mới gán được
+        public Guid? CurrentUserId { get; set; }
+    }
 }
