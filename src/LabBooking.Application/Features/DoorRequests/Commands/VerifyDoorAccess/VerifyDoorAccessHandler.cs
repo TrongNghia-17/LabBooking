@@ -32,22 +32,36 @@ public class VerifyDoorAccessHandler(
         }
 
         // 4. CHECK THỜI GIAN (Time Window Check)
-        var now = DateTime.UtcNow;
+        // Lấy giờ Việt Nam (UTC+7) - BỎ TIMEZONE để so sánh thuần túy
+        var vietnamTimeZone = TimeZoneInfo.FindSystemTimeZoneById("SE Asia Standard Time");
+        var nowWithTimezone = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, vietnamTimeZone);
+
+        // Chuyển về DateTime không timezone để so sánh
+        var now = DateTime.SpecifyKind(nowWithTimezone, DateTimeKind.Unspecified);
+        var today = DateOnly.FromDateTime(now);
+
         bool isTimeValid = false;
         string currentSlotString = "";
 
         foreach (var slot in booking.Slots)
         {
-            // Convert sang DateTime chuẩn để so sánh
-            var start = slot.Date.ToDateTime(slot.Slot.StartTime);
-            var end = slot.Date.ToDateTime(slot.Slot.EndTime);
+            // Kiểm tra đúng ngày
+            if (slot.Date != today)
+                continue;
 
-            // Cho phép vào sớm 15 phút và trễ tới khi hết giờ
-            // (Bạn có thể sửa logic này tùy nghiệp vụ trường)
-            if (now >= start.AddMinutes(-15) && now <= end)
+            // Convert sang DateTime (cũng không có timezone)
+            var slotStart = slot.Date.ToDateTime(slot.Slot.StartTime);
+            var slotEnd = slot.Date.ToDateTime(slot.Slot.EndTime);
+
+            // Cho phép vào sớm 1 tiếng 30 phút để chuẩn bị và ở lại đến hết giờ
+            var allowedStart = slotStart.AddMinutes(-90); // Sớm 90 phút (1h30)
+            var allowedEnd = slotEnd;
+
+            // So sánh 2 DateTime đều không có timezone
+            if (now >= allowedStart && now <= allowedEnd)
             {
                 isTimeValid = true;
-                currentSlotString = $"{slot.Slot.StartTime} - {slot.Slot.EndTime}";
+                currentSlotString = $"{slot.Date:dd/MM/yyyy} ({slot.Slot.StartTime:HH\\:mm} - {slot.Slot.EndTime:HH\\:mm})";
                 break; // Tìm thấy slot hợp lệ thì dừng
             }
         }
