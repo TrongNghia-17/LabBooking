@@ -1,5 +1,6 @@
-﻿namespace LabBooking.Application.Features.DoorRequests.Commands.Create;
+﻿namespace LabBooking.Application.Features.DoorRequests.Commands.CreateDoorRequest;
 
 public record CreateDoorRequestCommand(
-    Guid LabRoomId
+    string BookingCode,
+    string Reason
 ) : IRequest<Guid>;

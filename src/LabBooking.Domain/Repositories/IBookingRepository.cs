@@ -19,6 +19,15 @@
         Task<List<Guid>> GetBookedLabIdsAsync(DateOnly date, Guid slotId, CancellationToken ct);
         Task<List<Booking>> GetHistoryByUserIdAsync(Guid userId);
         Task<List<Booking>> GetApprovedHistoryByUserIdAsync(Guid userId, CancellationToken cancellationToken);
+
+        //------NghiaHT-------//
+
+        // Tìm Booking để check tồn tại và lấy ManagerId
+        Task<(bool Exists, Guid? ManagerId)> GetBookingAndManagerInfoAsync(string bookingCode);
+
+        // Hoặc kiểm tra xem User hiện tại có sở hữu Booking này không (bảo mật)
+        Task<bool> IsBookingOwnedByUserAsync(string bookingCode, Guid userId);
+        Task<Booking?> GetByCodeAsync(string code, CancellationToken cancellationToken);
     }
 
     public enum BookingApprovalResult

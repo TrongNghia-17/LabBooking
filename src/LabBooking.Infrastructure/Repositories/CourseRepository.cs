@@ -3,11 +3,11 @@
     internal class CourseRepository(LabBookingDbContext dbContext) : ICourseRepository
     {
         public async Task<(IEnumerable<Course>, int)> GetAllMatchingAsync(
-        string? searchPhrase,
-        int pageSize,
-        int pageNumber,
-        string? sortBy,
-        SortDirection sortDirection)
+            string? searchPhrase,
+            int pageSize,
+            int pageNumber,
+            string? sortBy,
+            SortDirection sortDirection)
         {
             var searchPhraseLower = searchPhrase?.ToLower();
 

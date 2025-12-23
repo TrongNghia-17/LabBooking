@@ -1,11 +1,10 @@
 ﻿using LabBooking.Application.Common.Interfaces;
-using LabBooking.Application.Features.DoorRequests.Commands.Create;
 
 namespace LabBooking.Application.Features.DoorRequests.Commands.CreateDoorRequest;
 
 public class CreateDoorRequestHandler(
     IDoorRequestRepository doorRequestRepository,
-    ILabRoomRepository labRoomRepository,
+    IBookingRepository bookingRepository,
     ICurrentUserService currentUserService,
     IMapper mapper,
     ILogger<CreateDoorRequestHandler> logger
@@ -13,31 +12,38 @@ public class CreateDoorRequestHandler(
 {
     public async Task<Guid> Handle(CreateDoorRequestCommand request, CancellationToken cancellationToken)
     {
-        // 1. Check Login
-        var currentUserId = currentUserService.UserId
-            ?? throw new UnauthorizedAccessException("Bạn cần đăng nhập.");
+        var currentUserId = currentUserService.UserId;
+        // 1. Validate User
+        if (currentUserId == Guid.Empty) throw new UnauthorizedAccessException("Bạn cần đăng nhập.");
 
-        // 2. Check Phòng tồn tại & Trạng thái cửa (Optional)
-        var labRoom = await labRoomRepository.GetByIdAsync(request.LabRoomId, cancellationToken)
-            ?? throw new NotFoundException(nameof(LabRoom), request.LabRoomId.ToString());
-
-        // 3. Check Spam (Chống bấm liên tục)
-        bool hasPending = await doorRequestRepository.HasPendingRequestAsync(currentUserId, request.LabRoomId, cancellationToken);
-        if (hasPending)
+        // 2. Validate quyền sở hữu Booking
+        var isOwner = await bookingRepository.IsBookingOwnedByUserAsync(request.BookingCode, currentUserId!.Value);
+        if (!isOwner)
         {
-            throw new BadRequestException("Yêu cầu của bạn đang chờ bảo vệ xử lý.");
+            throw new BadRequestException("Mã đặt phòng không hợp lệ hoặc bạn không có quyền.");
         }
 
-        // 4. Tạo Request (Không cần check Booking - Tin tưởng người dùng)
-        var newRequest = mapper.Map<DoorOpeningRequest>(request);
+        // 3. Lấy thông tin Manager từ Booking -> LabRoom -> MainManagerId
+        var (Exists, ManagerId) = await bookingRepository.GetBookingAndManagerInfoAsync(request.BookingCode);
+        if (!Exists)
+        {
+            throw new NotFoundException(nameof(Booking), request.BookingCode);
+        }
 
-        // Gán nốt thông tin User (Vì thông tin này lấy từ Token, không có trong Command)
-        newRequest.RequestedById = currentUserId;
+        // 4. Map và gán dữ liệu
+        var entity = mapper.Map<DoorOpeningRequest>(request);
+        entity.RequestedById = currentUserId!.Value;
 
-        await doorRequestRepository.CreateAsync(newRequest, cancellationToken);
+        // Gán Manager tìm được vào Request
+        entity.ManagerId = ManagerId;
 
-        logger.LogInformation("User {User} yêu cầu mở cửa phòng {Lab}", currentUserId, request.LabRoomId);
+        // Log nếu phòng không có Manager
+        if (entity.ManagerId == null)
+        {
+            logger.LogWarning($"Booking {request.BookingCode} thuộc phòng Lab chưa có MainManager.");
+            throw new BadRequestException("Phòng Lab này chưa có quản lý để duyệt yêu cầu.");
+        }
 
-        return newRequest.Id;
+        return await doorRequestRepository.AddAsync(entity);
     }
 }

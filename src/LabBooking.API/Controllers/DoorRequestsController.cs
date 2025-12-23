@@ -1,74 +1,126 @@
-﻿using LabBooking.Application.Common.Interfaces;
-using LabBooking.Application.Features.DoorRequests.Commands.AcceptDoorRequest;
-using LabBooking.Application.Features.DoorRequests.Commands.CancelDoorRequest;
-using LabBooking.Application.Features.DoorRequests.Commands.Create;
+﻿using LabBooking.Application.Common.Wrappers;
+using LabBooking.Application.Features.DoorRequests.Commands.CreateDoorRequest;
+using LabBooking.Application.Features.DoorRequests.Commands.DeleteDoorRequest;
+using LabBooking.Application.Features.DoorRequests.Commands.UpdateStatus;
+using LabBooking.Application.Features.DoorRequests.Commands.VerifyDoorAccess;
 using LabBooking.Application.Features.DoorRequests.Dtos;
-using LabBooking.Application.Features.DoorRequests.Queries.GetGuardPendingRequests;
-using LabBooking.Application.Features.DoorRequests.Queries.GetHistory;
-using LabBooking.Application.Features.DoorRequests.Queries.GetOpenableBooking;
+using LabBooking.Application.Features.DoorRequests.Queries.GetDoorRequestDetail;
+using LabBooking.Application.Features.DoorRequests.Queries.GetDoorRequestQr;
+using LabBooking.Application.Features.DoorRequests.Queries.GetDoorRequests;
 
 namespace LabBooking.API.Controllers;
 
 [Route("api/[controller]")]
 [ApiController]
-public class DoorRequestsController(IMediator mediator,
-    ICurrentUserService currentUserService) : ControllerBase
+public class DoorRequestsController(IMediator mediator) : ControllerBase
 {
+    /// <summary>
+    /// Tạo yêu cầu mở cửa cho một Booking (Chỉ chủ booking mới được tạo)
+    /// </summary>
     [HttpPost]
-    [Authorize(Roles = "Manager, Lecturer, Student")]
-    public async Task<IActionResult> Create([FromBody] CreateDoorRequestCommand command)
+    [Authorize(Roles = "Lecturer, Student")]
+    [ProducesResponseType(typeof(Guid), StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    public async Task<ActionResult<Guid>> Create([FromBody] CreateDoorRequestCommand command)
     {
         var id = await mediator.Send(command);
-        return Ok(new { Id = id, Message = "Đã gửi yêu cầu cho bảo vệ!" });
+        return Ok(id);
     }
 
-    [HttpGet("pending")]
-    [Authorize(Roles = "SecurityGuard")]
-    public async Task<IActionResult> GetPendingForGuard()
+    /// <summary>
+    /// Hủy yêu cầu mở cửa (Chỉ áp dụng cho yêu cầu đang chờ duyệt)
+    /// </summary>
+    [HttpDelete("{id}")]
+    [Authorize(Roles = "Lecturer, Student")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> Delete(Guid id)
     {
-        var result = await mediator.Send(new GetGuardPendingRequestsQuery());
-        return Ok(result);
+        await mediator.Send(new DeleteDoorRequestCommand(id));
+        return NoContent();
     }
 
-    [HttpPost("accept/{id}")]
-    [Authorize(Roles = "SecurityGuard")]
-    public async Task<IActionResult> AcceptRequest(Guid id)
-    {
-        await mediator.Send(new AcceptDoorRequestCommand(id));
-        return Ok(new { Message = "Đã nhận việc thành công! Hãy đi mở cửa ngay." });
-    }
-
-    [HttpGet("history")]
-    [Authorize(Roles = "Manager, Lecturer, Student, SecurityGuard")]
-    public async Task<IActionResult> GetHistory([FromQuery] GetDoorRequestHistoryQuery query)
+    /// <summary>
+    /// Lấy danh sách yêu cầu mở cửa (Đa năng).
+    /// <para>- Nếu là Manager: Xem các yêu cầu gửi đến phòng Lab mình quản lý.</para>
+    /// <para>- Nếu là Student/Lecturer: Xem danh sách yêu cầu do chính mình tạo.</para>
+    /// </summary>
+    [HttpGet]
+    [Authorize]
+    [ProducesResponseType(typeof(PagedResult<DoorRequestDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    public async Task<ActionResult<PagedResult<DoorRequestDto>>> GetAll([FromQuery] GetDoorRequestsQuery query)
     {
         var result = await mediator.Send(query);
         return Ok(result);
     }
 
-    [HttpDelete("{id}")] // 1. Dùng HttpDelete
-    [Authorize(Roles = "Lecturer, Student")]
-    public async Task<IActionResult> DeleteRequest(Guid id)
+    [HttpPut("{id}/status")]
+    [Authorize(Roles = "Manager")]
+    public async Task<IActionResult> UpdateStatus(Guid id, [FromBody] UpdateDoorRequestStatusDto requestBody)
     {
-        // Lưu ý: Tên Command vẫn là CancelDoorRequestCommand cũng được, 
-        // hoặc bạn có thể đổi tên class Command thành DeleteDoorRequestCommand cho đồng bộ tên gọi.
-        await mediator.Send(new CancelDoorRequestCommand(id));
+        var command = new UpdateDoorRequestStatusCommand(
+            id,
+            requestBody.NewStatus,
+            requestBody.Note
+        );
 
-        // 2. Thông báo rõ là đã xóa
-        return Ok(new { Message = "Đã xóa yêu cầu thành công." });
+        await mediator.Send(command);
+
+        return NoContent();
     }
 
-    [HttpGet("openable")]
-    [Authorize(Roles = "Lecturer, Student")]
-    [ProducesResponseType(typeof(List<BookingForDoorOpenDto>), StatusCodes.Status200OK)]
-    public async Task<ActionResult<List<BookingForDoorOpenDto>>> GetOpenableBookings()
+    /// <summary>
+    /// Xem chi tiết yêu cầu mở cửa.
+    /// <para>
+    /// API này tự động hiển thị thông tin liên hệ dựa trên người gọi:
+    /// <br/>- <b>Manager:</b> Xem thông tin người gửi yêu cầu (SV/GV).
+    /// <br/>- <b>Student/Lecturer:</b> Xem thông tin Manager quản lý phòng để liên hệ.
+    /// </para>
+    /// </summary>
+    /// <param name="id">ID của Door Request</param>
+    [HttpGet("{id}")]
+    [Authorize] // Đã mở cho tất cả User đã đăng nhập
+    [ProducesResponseType(typeof(DoorRequestDetailDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)] // Trả về nếu không phải Manager phòng đó hoặc chủ đơn
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<DoorRequestDetailDto>> GetById(Guid id)
     {
-        var userId = currentUserService.UserId;
-        if (userId == null) return Unauthorized();
+        var query = new GetDoorRequestDetailQuery(id);
+        var result = await mediator.Send(query);
+        return Ok(result);
+    }
 
-        // Đóng gói ID vào Query và ném cho Handler xử lý
-        var result = await mediator.Send(new GetOpenableBookingsQuery(userId.Value));
+    /// <summary>
+    /// [APP USER] Lấy thông tin vé để tạo mã QR.
+    /// </summary>
+    [HttpGet("{id}/qr-code")]
+    [Authorize]
+    [ProducesResponseType(typeof(DoorRequestQrDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<DoorRequestQrDto>> GetQrData(Guid id)
+    {
+        // Gửi Query sang Handler xử lý
+        var result = await mediator.Send(new GetDoorRequestQrQuery(id));
+        return Ok(result);
+    }
 
+    /// <summary>
+    /// [SECURITY GUARD] Kiểm tra mã QR (Verify).
+    /// </summary>
+    [HttpPost("verify-access")]
+    [Authorize(Roles = "SecurityGuard, Manager, Admin")]
+    [ProducesResponseType(typeof(VerifyAccessResponse), StatusCodes.Status200OK)]
+    public async Task<ActionResult<VerifyAccessResponse>> VerifyAccess([FromBody] VerifyAccessRequest requestBody)
+    {
+        // Gửi Command sang Handler xử lý
+        // Lưu ý: Dùng requestBody.RequestId để tạo Command
+        var result = await mediator.Send(new VerifyDoorAccessCommand(requestBody.RequestId));
         return Ok(result);
     }
 }

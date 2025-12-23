@@ -2,20 +2,22 @@
 
 public interface IDoorRequestRepository
 {
-    Task<bool> HasPendingRequestAsync(Guid userId, Guid labRoomId, CancellationToken token);
-    Task DeleteAsync(DoorOpeningRequest request, CancellationToken token); // <--- Thêm dòng này
-    Task CreateAsync(DoorOpeningRequest request, CancellationToken token);
-    Task<IEnumerable<DoorOpeningRequest>> GetPendingRequestsForGuardAsync(CancellationToken token);
-    Task<DoorOpeningRequest?> GetByIdAsync(Guid id, CancellationToken token);
-    Task UpdateAsync(DoorOpeningRequest request, CancellationToken token);
-    Task<IEnumerable<DoorOpeningRequest>> GetHistoryAsync(
-    Guid currentUserId,
-    bool canViewAll, // True: Xem hết, False: Chỉ xem của mình
-    Guid? roomId,
-    DoorRequestStatus? status,
-    DateTime? from,
-    DateTime? to,
-    CancellationToken token);
-
-    Task<List<BookingSlot>> GetBookingsEligibleForDoorOpenAsync(Guid userId);
+    Task<Guid> AddAsync(DoorOpeningRequest entity);
+    Task<bool> HasPendingRequestAsync(string bookingCode);
+    Task<DoorOpeningRequest?> GetByIdAsync(Guid id);
+    Task DeleteAsync(DoorOpeningRequest request);
+    Task<(IEnumerable<DoorOpeningRequest> Items, int TotalCount)> GetPagedListAsync(
+        Guid? managerId,      // Nếu có giá trị -> Lọc theo Manager
+        Guid? requestedById,  // Nếu có giá trị -> Lọc theo Người tạo
+        string? searchPhrase,
+        int pageSize,
+        int pageNumber,
+        string? sortBy,
+        SortDirection sortDirection,
+        DateOnly? filterDate,
+        DoorRequestStatus? filterStatus, // Trạng thái cụ thể (Pending/Approved...)
+        bool? isHistory,                 // [MỚI] True: Lấy (Approved + Rejected), False: Lấy Pending
+        CancellationToken cancellationToken);
+    Task UpdateAsync(DoorOpeningRequest request);
+    Task<DoorOpeningRequest?> GetByIdWithUserAsync(Guid id);
 }

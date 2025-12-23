@@ -1,7 +1,9 @@
-﻿using LabBooking.Application.Features.EquipmentMaintainSchedules.Commands.CreateEquipmentMaintainSchedule;
+﻿using LabBooking.Application.Features.EquipmentMaintainSchedules.Commands.CompleteManually;
+using LabBooking.Application.Features.EquipmentMaintainSchedules.Commands.CreateEquipmentMaintainSchedule;
 using LabBooking.Application.Features.EquipmentMaintainSchedules.Commands.Delete;
 using LabBooking.Application.Features.EquipmentMaintainSchedules.Dtos;
 using LabBooking.Application.Features.EquipmentMaintainSchedules.Queries.GetAll;
+using LabBooking.Domain.Constants;
 
 namespace LabBooking.API.Controllers;
 
@@ -36,5 +38,17 @@ public class EquipmentMaintainScheduleController(IMediator mediator) : Controlle
         await mediator.Send(new DeleteMaintainScheduleCommand(id));
 
         return NoContent();
+    }
+
+    [HttpPost("{id:guid}/complete")]
+    [Authorize(Roles = Roles.Manager)] // Chỉ Manager mới có thể gọi endpoint này
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    public async Task<IActionResult> CompleteManually(Guid id)
+    {
+        var command = new CompleteMaintenanceManuallyCommand { ScheduleId = id };
+        await mediator.Send(command);
+        return NoContent(); // Trả về 204 khi thành công
     }
 }

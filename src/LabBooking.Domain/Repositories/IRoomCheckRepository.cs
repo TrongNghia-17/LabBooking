@@ -1,0 +1,21 @@
+﻿namespace LabBooking.Domain.Repositories;
+
+public interface IRoomCheckRepository
+{
+    Task AddAsync(RoomCheck roomCheck, CancellationToken token);
+    Task<RoomCheck?> GetByIdWithLabRoomAsync(Guid id, CancellationToken token);
+    Task<RoomCheck?> GetByIdAsync(Guid id, CancellationToken token);
+    Task SoftDeleteAsync(RoomCheck roomCheck, CancellationToken token);
+    Task<bool> ExistsAsync(Guid labRoomId, Guid slotId, DateTime date, CancellationToken token);
+    Task<bool> ExistsAsync(Guid labRoomId, Guid slotId, CheckType type, DateTime date, CancellationToken token);
+    Task<(IEnumerable<RoomCheck> Items, int TotalCount)> GetPagedListAsync(
+        Guid userId,            // ID người đang xem
+        bool isManager,         // True: Lọc theo phòng quản lý, False: Lọc theo người tạo
+        string? searchPhrase,
+        CheckType? type,
+        DateTime? fromDate,
+        DateTime? toDate,
+        int pageNumber,
+        int pageSize,
+        CancellationToken token);
+}

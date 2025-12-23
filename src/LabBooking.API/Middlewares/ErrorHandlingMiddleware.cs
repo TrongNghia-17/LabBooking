@@ -79,7 +79,7 @@ public class ErrorHandlingMiddleware(ILogger<ErrorHandlingMiddleware> logger) : 
                 logger.LogWarning(notFound.Message);
                 break;
 
-            case ForbidException forbid:
+            case ForbiddenAccessException forbid:
                 context.Response.StatusCode = StatusCodes.Status403Forbidden;
                 responseModel.StatusCode = 403;
                 responseModel.Message = forbid.Message;

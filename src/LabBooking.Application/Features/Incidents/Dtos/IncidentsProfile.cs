@@ -9,9 +9,9 @@ public class IncidentProfile : Profile
             .ForMember(dest => dest.ReportedById, opt => opt.Ignore())
             .ForMember(dest => dest.CreatedAt, opt => opt.Ignore())
             .ForMember(dest => dest.IsResolved, opt => opt.Ignore())
-            .ForMember(dest => dest.SlotId, opt => opt.Ignore())
             .ForMember(dest => dest.LabRoom, opt => opt.Ignore())
             .ForMember(dest => dest.IncidentEquipments, opt => opt.Ignore())
+            .ForMember(dest => dest.RoomCheckId, opt => opt.MapFrom(src => src.FromRoomCheckId))
             .ForMember(dest => dest.ReportedBy, opt => opt.Ignore());
 
         CreateMap<Incident, IncidentResponse>()

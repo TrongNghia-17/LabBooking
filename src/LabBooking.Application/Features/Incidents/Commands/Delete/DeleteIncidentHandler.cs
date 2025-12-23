@@ -4,78 +4,70 @@ namespace LabBooking.Application.Features.Incidents.Commands.Delete;
 
 public class DeleteIncidentHandler(
     IIncidentRepository incidentRepository,
-    IEquipmentRepository equipmentRepository,
     ICurrentUserService currentUserService,
     ILogger<DeleteIncidentHandler> logger
     ) : IRequestHandler<DeleteIncidentCommand, bool>
 {
     public async Task<bool> Handle(DeleteIncidentCommand request, CancellationToken cancellationToken)
     {
-        // 1. Check Login
+        // 1. Lấy thông tin người dùng và vai trò
         var currentUserId = currentUserService.UserId
             ?? throw new UnauthorizedAccessException("Bạn cần đăng nhập.");
         var roles = currentUserService.Roles.ToList();
-        bool isAdmin = roles.Contains("Admin");
 
-        // 2. Lấy Incident từ DB
-        // LƯU Ý: Repository cần Include(i => i.IncidentEquipments).ThenInclude(ie => ie.Equipment)
+        // 2. Lấy Incident và các thông tin chi tiết cần thiết
         var incident = await incidentRepository.GetByIdWithDetailsAsync(request.Id, cancellationToken)
             ?? throw new NotFoundException(nameof(Incident), request.Id.ToString());
 
-        // 3. CHECK QUYỀN
-        bool isReporter = incident.ReportedById == currentUserId;
-        bool isManager = incident.LabRoom?.MainManagerId == currentUserId;
+        // --- BẮT ĐẦU LOGIC PHÂN QUYỀN VÀ KIỂM TRA ĐIỀU KIỆN ---
 
-        if (!isAdmin && !isManager && !isReporter)
+        bool isManagerOfLab = incident.LabRoom?.MainManagerId == currentUserId;
+        bool isReporter = incident.ReportedById == currentUserId;
+
+        if (roles.Contains("Admin"))
         {
-            logger.LogWarning("User {User} cố xóa Incident {Id} nhưng không có quyền.", currentUserId, request.Id);
-            throw new ForbidException("Bạn không có quyền xóa báo cáo sự cố này.");
+            // Admin có toàn quyền, không cần kiểm tra thêm.
+        }
+        else if (roles.Contains("Manager") && isManagerOfLab)
+        {
+            // Manager của phòng lab đó có quyền xóa, không giới hạn thời gian.
+        }
+        else if (roles.Contains("SecurityGuard") && isReporter)
+        {
+            // Bảo vệ là người tạo sự cố -> Kiểm tra thêm điều kiện thời gian.
+            var timeElapsed = DateTime.UtcNow - incident.CreatedAt;
+            if (timeElapsed.TotalHours > 24)
+            {
+                // Đã quá 24 giờ, không cho phép xóa.
+                throw new BadRequestException("Bảo vệ chỉ có thể xóa sự cố trong vòng 24 giờ sau khi tạo.");
+            }
+        }
+        else
+        {
+            // Nếu không rơi vào các trường hợp trên, người dùng không có quyền.
+            logger.LogWarning("User {User} không có quyền xóa Incident {Id}.", currentUserId, request.Id);
+            throw new ForbiddenAccessException("Bạn không có quyền xóa báo cáo sự cố này.");
         }
 
-        // 4. RULE: Không được xóa sự cố đã xử lý xong
+        // 4. VALIDATE LOGIC NGHIỆP VỤ (Sau khi đã xác nhận có quyền)
         if (incident.IsResolved)
         {
-            throw new BadRequestException("Sự cố này đã được xử lý xong. Không thể xóa (Cần giữ lại làm lịch sử).");
+            throw new BadRequestException("Sự cố đã được xử lý xong, không thể xóa.");
         }
 
-        // 5. [SỬA ĐỔI] RULE: Kiểm tra xem có thiết bị nào đang Bảo trì không
-        // Lặp qua danh sách IncidentEquipments để kiểm tra
         var maintainingDevice = incident.IncidentEquipments
             .Select(ie => ie.Equipment)
-            .FirstOrDefault(e => e.Status == EquipmentStatus.Maintain);
+            .FirstOrDefault(e => e != null && e.Status == EquipmentStatus.Maintain);
 
         if (maintainingDevice != null)
         {
-            throw new BadRequestException($"Thiết bị '{maintainingDevice.EquipmentName}' đang được bảo trì. Vui lòng hủy lịch bảo trì trước khi xóa báo cáo.");
+            throw new BadRequestException($"Thiết bị '{maintainingDevice.EquipmentName}' đang được bảo trì. Không thể xóa báo cáo.");
         }
 
-        // 6. [SỬA ĐỔI] RULE: Hoàn trả trạng thái thiết bị (Nếu là lỗi thiết bị)
-        if (incident.Type == IncidentType.EquipmentFailure && incident.IncidentEquipments.Any())
-        {
-            foreach (var incidentEq in incident.IncidentEquipments)
-            {
-                var equipment = incidentEq.Equipment;
+        // 5. GỌI REPO ĐỂ XỬ LÝ
+        await incidentRepository.SoftDeleteWithRestoreDevicesAsync(incident, cancellationToken);
 
-                // Nếu thiết bị đang bị đánh dấu là Hỏng (Broken), trả về Sẵn sàng (Available)
-                if (equipment != null && equipment.Status == EquipmentStatus.Broken)
-                {
-                    equipment.Status = EquipmentStatus.Available;
-                    equipment.IsAvailable = true;
-
-                    // Update từng thiết bị
-                    await equipmentRepository.UpdateAsync(equipment, cancellationToken);
-
-                    logger.LogInformation("Restore: Thiết bị {Name} đã được trả về Available do xóa báo cáo hỏng.", equipment.EquipmentName);
-                }
-            }
-        }
-
-        // 7. Xóa Incident
-        // EF Core sẽ tự động xóa các dòng con trong bảng IncidentEquipment (Cascade Delete)
-        await incidentRepository.DeleteAsync(incident, cancellationToken);
-
-        logger.LogInformation("Deleted: Incident {Id} đã bị xóa bởi {User}.", request.Id, currentUserId);
-
+        logger.LogInformation("Deleted (Soft): Incident {Id} bởi {User}.", request.Id, currentUserId);
         return true;
     }
 }

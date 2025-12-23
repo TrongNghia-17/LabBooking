@@ -7,26 +7,36 @@ public class AssignRoleToUserCommandHandler(
 {
     public async Task<Unit> Handle(AssignRoleToUserCommand request, CancellationToken cancellationToken)
     {
-        logger.LogInformation("Đang gán role {RoleName} cho user {UserId}", request.RoleName, request.UserId);
+        logger.LogInformation("Đang THAY THẾ role thành {RoleName} cho user {UserId}", request.RoleName, request.UserId);
 
         var user = await userManager.FindByIdAsync(request.UserId.ToString())
             ?? throw new NotFoundException(nameof(User), request.UserId.ToString());
 
-        if (await userManager.IsInRoleAsync(user, request.RoleName))
+        // 1. Lấy danh sách tất cả các role hiện tại của user
+        var currentRoles = await userManager.GetRolesAsync(user);
+
+        // 2. Xóa tất cả các role cũ
+        // Chỉ thực hiện xóa nếu user thực sự đang có role nào đó
+        if (currentRoles.Any())
         {
-            logger.LogWarning("User {UserId} đã có role {RoleName}", request.UserId, request.RoleName);
-            return Unit.Value;
+            var removeResult = await userManager.RemoveFromRolesAsync(user, currentRoles);
+            if (!removeResult.Succeeded)
+            {
+                logger.LogError("Xóa các role cũ của user {UserId} thất bại", request.UserId);
+                throw new Exception("Lỗi khi xóa các vai trò cũ của người dùng.");
+            }
         }
 
-        var result = await userManager.AddToRoleAsync(user, request.RoleName);
+        // 3. Thêm role mới
+        var addResult = await userManager.AddToRoleAsync(user, request.RoleName);
 
-        if (!result.Succeeded)
+        if (!addResult.Succeeded)
         {
-            logger.LogError("Gán role {RoleName} cho user {UserId} thất bại", request.RoleName, request.UserId);
-            throw new Exception(string.Join("\n", result.Errors.Select(e => e.Description)));
+            logger.LogError("Gán role mới {RoleName} cho user {UserId} thất bại", request.RoleName, request.UserId);
+            throw new Exception(string.Join("\n", addResult.Errors.Select(e => e.Description)));
         }
 
-        logger.LogInformation("Gán role thành công");
+        logger.LogInformation("Thay thế role thành công. User {UserId} bây giờ có role là {RoleName}", request.UserId, request.RoleName);
         return Unit.Value;
     }
 }
