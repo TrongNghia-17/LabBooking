@@ -50,12 +50,13 @@ public class UpdateDoorRequestStatusHandler(
 
         // 6. GỬI THÔNG BÁO CHO USER (Người tạo yêu cầu)
         var pushQueue = new List<PushNotificationData>();
+        Notification? notiEntity = null;
 
         // Kiểm tra trạng thái để gửi notification phù hợp
         if (request.NewStatus == DoorRequestStatus.Accepted)
         {
             // ĐƯỢC DUYỆT
-            var (_, pushData) = notificationRepository.PrepareNotification(
+            var (entity, pushData) = notificationRepository.PrepareNotification(
                 doorRequest.RequestedById,
                 "✅ Yêu cầu mở cửa được duyệt",
                 $"Yêu cầu mở cửa cho mã đặt phòng {doorRequest.BookingCode} đã được chấp nhận. {request.Note}",
@@ -70,6 +71,7 @@ public class UpdateDoorRequestStatusHandler(
                     processedAt = DateTime.UtcNow
                 }
             );
+            notiEntity = entity;
             pushQueue.Add(pushData);
 
             logger.LogInformation("Notification prepared for accepted request. UserId: {UserId}", doorRequest.RequestedById);
@@ -77,7 +79,7 @@ public class UpdateDoorRequestStatusHandler(
         else if (request.NewStatus == DoorRequestStatus.Rejected)
         {
             // BỊ TỪ CHỐI
-            var (_, pushData) = notificationRepository.PrepareNotification(
+            var (entity, pushData) = notificationRepository.PrepareNotification(
                 doorRequest.RequestedById,
                 "⛔ Yêu cầu mở cửa bị từ chối",
                 $"Yêu cầu mở cửa cho mã đặt phòng {doorRequest.BookingCode} đã bị từ chối. Lý do: {request.Note}",
@@ -92,9 +94,15 @@ public class UpdateDoorRequestStatusHandler(
                     processedAt = DateTime.UtcNow
                 }
             );
+            notiEntity = entity;
             pushQueue.Add(pushData);
 
             logger.LogInformation("Notification prepared for rejected request. UserId: {UserId}", doorRequest.RequestedById);
+        }
+
+        if (notiEntity != null)
+        {
+            await notificationRepository.CreateAsync(notiEntity, cancellationToken);
         }
 
         // Gửi push notification (background task)

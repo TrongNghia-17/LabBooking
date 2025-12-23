@@ -51,7 +51,7 @@ public class CreateDoorRequestHandler(
         // 6. GỬI THÔNG BÁO CHO MANAGER
         var pushQueue = new List<PushNotificationData>();
 
-        var (_, pushData) = notificationRepository.PrepareNotification(
+        var (notiEntity, pushData) = notificationRepository.PrepareNotification(
             entity.ManagerId.Value, // Manager ID
             "🔔 Yêu cầu mở cửa mới",
             $"Có yêu cầu mở cửa mới cho mã đặt phòng {request.BookingCode}. Vui lòng kiểm tra và duyệt.",
@@ -66,6 +66,8 @@ public class CreateDoorRequestHandler(
         );
 
         pushQueue.Add(pushData);
+
+        await notificationRepository.CreateAsync(notiEntity, cancellationToken);
 
         // Chạy background task gửi push notification
         notificationRepository.RunPushNotificationTask(pushQueue);
