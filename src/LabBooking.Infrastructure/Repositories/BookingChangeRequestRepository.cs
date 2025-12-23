@@ -104,6 +104,33 @@ namespace LabBooking.Infrastructure.Repositories
                 .ToListAsync();
         }
 
+        public async Task<List<BookingChangeRequest>> GetAllRequestsAsync(Guid? userId)
+        {
+            var query = dbContext.BookingChangeRequests
+                .Include(r => r.NewSlots)        // Lấy danh sách slot mới
+                .Include(r => r.Booking)         // [QUAN TRỌNG] Join sang Booking gốc
+                    .ThenInclude(b => b.LabRoom) // Lấy thông tin phòng
+                .Include(r => r.Booking)
+                    .ThenInclude(b => b.Slots)   // Lấy Slot cũ
+                .Include(r => r.Booking)
+                    .ThenInclude(b => b.ExternalEquipments)
+                .Include(r => r.Booking)
+                    .ThenInclude(b => b.OutSideGuests)
+                // .Where(r => r.Status == ... )  <-- BỎ DÒNG NÀY ĐỂ LẤY TẤT CẢ
+                .AsQueryable();
+
+            // Vẫn phải lọc theo Manager để họ chỉ thấy request của phòng mình quản lý
+            if (userId.HasValue)
+            {
+                query = query.Where(r => r.Booking.CreatedById == userId);
+            }
+
+            // Sắp xếp: Mới nhất lên đầu (Descending) để dễ theo dõi lịch sử
+            return await query
+                .OrderByDescending(r => r.CreatedAt)
+                .ToListAsync();
+        }
+
         public async Task RejectChangeRequestAsync(Guid requestId, Guid managerId, string reason)
         {
             var pushQueue = new List<PushNotificationData>();
@@ -119,6 +146,7 @@ namespace LabBooking.Infrastructure.Repositories
 
             // 2. Update trạng thái
             request.Status = BookingChangeRequestStatus.Rejected;
+            request.ManagerReason = reason;
             //request.RejectedById = managerId; // (Optional)
 
             var (_, rejectPush) = notificationRepo.PrepareNotification(

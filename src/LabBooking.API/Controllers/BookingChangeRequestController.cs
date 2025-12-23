@@ -4,6 +4,7 @@ using LabBooking.Application.Features.BookingChangeRequest.Commands.ApproveBooki
 using LabBooking.Application.Features.BookingChangeRequest.Commands.CreateBookingChangeRequest;
 using LabBooking.Application.Features.BookingChangeRequest.Commands.RejectBookingChangeRequest;
 using LabBooking.Application.Features.BookingChangeRequest.Dtos;
+using LabBooking.Application.Features.BookingChangeRequest.Queries.GetBookingChangeRequest;
 using LabBooking.Application.Features.BookingChangeRequest.Queries.GetPendingBookingChangeRequest;
 using LabBooking.Application.Features.Bookings.Commands.CreateBooking;
 using MediatR;
@@ -45,6 +46,29 @@ namespace LabBooking.API.Controllers
                 return Unauthorized();
             }
             var query = new GetPendingChangeRequestQuery(userId);
+            var result = await mediator.Send(query);
+
+            return Ok(result);
+        }
+
+        [HttpGet] // Hoặc [HttpGet("all")] nếu muốn rõ ràng đường dẫn
+        [ProducesResponseType(typeof(List<BookingChangeRequestResponse>), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        [Authorize(Roles = "Student, Lecturer")]
+        public async Task<ActionResult<List<BookingChangeRequestResponse>>> GetAll()
+        {
+            // Lấy UserID từ Token
+            var userIdString = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            if (!Guid.TryParse(userIdString, out var userId))
+            {
+                return Unauthorized();
+            }
+
+            // Tạo Query
+            var query = new GetAllChangeRequestsQuery(userId);
+
+            // Gửi qua Mediator
             var result = await mediator.Send(query);
 
             return Ok(result);

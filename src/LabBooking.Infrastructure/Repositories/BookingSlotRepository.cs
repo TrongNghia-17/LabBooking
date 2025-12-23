@@ -27,6 +27,12 @@ namespace LabBooking.Infrastructure.Repositories
 
             var bookedSlots = await dbContext.BookingSlots
                 .Include(bs => bs.Booking)
+                .Include(bs => bs.Booking)
+            .ThenInclude(b => b.Project)
+            .Include(bs => bs.Booking)
+            .ThenInclude(b => b.Course)
+            .Include(bs => bs.Booking)              // Include Booking cha
+            .ThenInclude(b => b.CreatedBy)
                 .Include(bs => bs.Slot)
                 .Where(bs =>
                     bs.Booking.LabRoomId == labRoomId &&
