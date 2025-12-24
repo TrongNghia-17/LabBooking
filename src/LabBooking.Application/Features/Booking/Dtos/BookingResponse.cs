@@ -55,6 +55,7 @@ namespace LabBooking.Application.Features.Booking.Dtos
         public bool? HasPendingChangeRequest { get; set; }
 
         public ICollection<OutSideGuestResponse>? OutSideGuests { get; set; }
+        public string? QrCodeString { get; set; }
     }
 
     public record ProjectResponse
