@@ -27,6 +27,7 @@ namespace LabBooking.Application.Features.Booking.Dtos
                 .ForMember(dest => dest.ExternalEquipments, opt => opt.MapFrom(src => src.ExternalEquipments));
 
 
+
             // =========================================================
             // 2. KHAI BÁO CÁC MAP CON (BẮT BUỘC PHẢI CÓ)
             // =========================================================
