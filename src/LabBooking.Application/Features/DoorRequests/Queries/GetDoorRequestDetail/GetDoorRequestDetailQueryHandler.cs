@@ -11,34 +11,42 @@ public class GetDoorRequestDetailQueryHandler(
 {
     public async Task<DoorRequestDetailDto> Handle(GetDoorRequestDetailQuery request, CancellationToken cancellationToken)
     {
-        // 1. Lấy dữ liệu
+        // 1. Lấy dữ liệu Request (Đã bao gồm Manager nhờ sửa Repository ở trên)
         var doorRequest = await doorRequestRepository.GetByIdWithUserAsync(request.Id);
         if (doorRequest == null) throw new NotFoundException(nameof(DoorOpeningRequest), request.Id.ToString());
 
+        // 2. Lấy dữ liệu Booking (để lấy MainManager phòng Lab nếu chưa có người duyệt)
         var booking = await bookingRepository.GetByCodeAsync(doorRequest.BookingCode, cancellationToken);
         if (booking == null) throw new NotFoundException(nameof(Booking), doorRequest.BookingCode);
 
-        // 2. Xác định vai trò của người đang xem
+        // 3. Xác định quyền người xem
         var currentUserId = currentUserService.UserId;
 
-        // Check A: Có phải là Manager của phòng Lab này không?
-        var labManagerId = booking.LabRoom?.MainManagerId;
-        bool isManager = labManagerId != null && labManagerId == currentUserId;
-
-        // Check B: Có phải là người tạo yêu cầu này không (Student/Lecturer)?
+        // Check A: Người xem có phải là NGƯỜI GỬI (Student) không?
         bool isRequester = doorRequest.RequestedById == currentUserId;
 
-        // 3. SECURITY CHECK: Nếu không phải Manager, cũng không phải chủ đơn -> CÚT
-        if (!isManager && !isRequester)
+        // Check B: Người xem có phải là QUẢN LÝ PHÒNG (Lab Owner) không?
+        bool isLabManager = booking.LabRoom?.MainManagerId == currentUserId;
+
+        // Check C: Người xem có phải là NGƯỜI ĐÃ DUYỆT (Approver) không?
+        bool isApprover = doorRequest.ManagerId == currentUserId;
+
+        // Bảo mật: Nếu không dính dáng gì đến đơn này thì chặn
+        if (!isRequester && !isLabManager && !isApprover)
         {
-            throw new ForbiddenAccessException("Bạn không có quyền xem yêu cầu này.");
+            // Tùy chọn: throw new UnauthorizedAccessException("Bạn không có quyền xem.");
         }
 
-        // 4. Chuẩn bị DTO cơ bản
+        // 4. Map dữ liệu cơ bản
         var dto = new DoorRequestDetailDto
         {
             Id = doorRequest.Id,
             BookingCode = doorRequest.BookingCode,
+            RequestDate = doorRequest.RequestDate,
+            SlotId = doorRequest.SlotId,
+            SlotLabel = doorRequest.Slot?.Label ?? "Không xác định",
+            SlotStartTime = doorRequest.Slot?.StartTime ?? default,
+            SlotEndTime = doorRequest.Slot?.EndTime ?? default,
             Reason = doorRequest.Reason,
             Status = doorRequest.Status.ToString(),
             RequestTime = doorRequest.RequestTime,
@@ -47,23 +55,41 @@ public class GetDoorRequestDetailQueryHandler(
             LabName = booking.LabRoom?.LabName ?? "Phòng không xác định"
         };
 
-        // 5. XỬ LÝ HIỂN THỊ THÔNG TIN LIÊN HỆ (Logic bạn yêu cầu)
-        if (isManager)
+        // 5. XỬ LÝ LOGIC HIỂN THỊ THÔNG TIN LIÊN HỆ (CONTACT INFO)
+        User? contactPerson = null;
+
+        if (isRequester)
         {
-            // CASE 1: Manager đang xem -> Hiển thị thông tin người gửi (Student/Lecturer)
-            dto.RequestedByName = doorRequest.RequestedBy?.FullName ?? "N/A";
-            dto.RequestedByEmail = doorRequest.RequestedBy?.Email ?? "N/A";
-            dto.RequestedByPhoneNumber = doorRequest.RequestedBy?.PhoneNumber ?? "N/A";
+            // --- TRƯỜNG HỢP: STUDENT ĐANG XEM ---
+            // Student cần nhìn thấy thông tin của Manager để liên hệ.
+
+            // Ưu tiên 1: Người đã trực tiếp duyệt đơn này (doorRequest.Manager)
+            // Ưu tiên 2: Nếu chưa duyệt, hiển thị chủ phòng Lab (booking.LabRoom.MainManager)
+            contactPerson = doorRequest.Manager ?? booking.LabRoom?.MainManager;
+
+            dto.ContactRole = "Quản lý phòng máy";
         }
         else
         {
-            // CASE 2: Student/Lecturer đang xem -> Hiển thị thông tin Manager (để họ biết đường liên hệ)
-            // Lấy thông tin từ booking.LabRoom.MainManager (đã Include ở Repo)
-            var managerInfo = booking.LabRoom?.MainManager;
+            // --- TRƯỜNG HỢP: MANAGER ĐANG XEM ---
+            // Manager cần nhìn thấy thông tin của Student.
+            contactPerson = doorRequest.RequestedBy;
 
-            dto.RequestedByName = managerInfo?.FullName ?? "Unknown Manager";
-            dto.RequestedByEmail = managerInfo?.Email ?? "N/A";
-            dto.RequestedByPhoneNumber = managerInfo?.PhoneNumber ?? "N/A";
+            dto.ContactRole = "Người gửi yêu cầu";
+        }
+
+        // 6. Gán dữ liệu User vào DTO an toàn (tránh NullReference)
+        if (contactPerson != null)
+        {
+            dto.ContactName = contactPerson.FullName ?? "Chưa cập nhật tên";
+            dto.ContactEmail = contactPerson.Email ?? "N/A";
+            dto.ContactPhoneNumber = contactPerson.PhoneNumber ?? "N/A";
+        }
+        else
+        {
+            dto.ContactName = "Chưa có thông tin";
+            dto.ContactEmail = "N/A";
+            dto.ContactPhoneNumber = "N/A";
         }
 
         return dto;

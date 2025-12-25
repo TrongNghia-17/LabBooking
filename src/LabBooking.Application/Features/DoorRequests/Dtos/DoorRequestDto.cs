@@ -1,15 +1,20 @@
 ﻿namespace LabBooking.Application.Features.DoorRequests.Dtos;
 
-public class DoorRequestDto
+public record DoorRequestDto
 {
-    public Guid Id { get; set; }
-    public string BookingCode { get; set; } = default!;
-    public string Reason { get; set; } = default!;
-
-    public string ContactName { get; set; } = default!;
-    public string RequestedByPhoneNumber { get; set; } = default!;
-
-    public string? RequestedByEmail { get; set; }
-    public DateTime RequestTime { get; set; }
-    public string Status { get; set; } = default!;
+    public Guid Id { get; init; }
+    public string BookingCode { get; init; } = string.Empty;
+    public DateOnly RequestDate { get; init; }
+    public Guid SlotId { get; init; }
+    public string SlotLabel { get; init; } = string.Empty;
+    public TimeOnly SlotStartTime { get; init; }
+    public TimeOnly SlotEndTime { get; init; }
+    public string Reason { get; init; } = string.Empty;
+    public string? ManagerNote { get; init; }
+    public string Status { get; init; } = string.Empty;
+    public DateTime RequestTime { get; init; }
+    public DateTime? AcceptedTime { get; init; }
+    public string ContactName { get; set; } = string.Empty;
+    public string RequestedByEmail { get; set; } = string.Empty;
+    public string RequestedByPhoneNumber { get; set; } = string.Empty;
 }

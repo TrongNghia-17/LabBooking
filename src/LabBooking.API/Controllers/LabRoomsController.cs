@@ -1,5 +1,7 @@
 ﻿using LabBooking.Application.Common.Wrappers;
 using LabBooking.Application.Features.LabRooms.Commands.DeleteLabRoom;
+using LabBooking.Application.Features.LabRooms.Queries.GetAvailableLabsByDate;
+using LabBooking.Application.Features.LabRooms.Queries.GetDailyLabSchedule;
 using LabBooking.Application.Features.LabRooms.Queries.GetLabStatistics;
 using LabBooking.Application.Features.LabRooms.Queries.GetTopLabs;
 using LabBooking.Application.Features.LabRooms.Queries.GetUnmaintainedLabRooms;
@@ -149,6 +151,31 @@ public class LabRoomsController(
         if (year <= 0) year = DateTime.Now.Year;
 
         var result = await mediator.Send(new GetLabStatisticsQuery(year));
+        return Ok(result);
+    }
+
+    /// <summary>
+    /// API cho Coze/Frontend kiểm tra phòng trống theo ngày
+    /// </summary>
+    /// <param name="date">Định dạng yyyy-MM-dd</param>
+    [HttpGet("check-availability")]
+    [AllowAnonymous] // Mở public để Coze gọi được (nếu dùng Ngrok free)
+    [ProducesResponseType(typeof(IEnumerable<LabRoomAvailabilityDto>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> CheckAvailability([FromQuery] DateOnly date)
+    {
+        // ASP.NET Core tự động parse chuỗi "2025-12-20" thành DateOnly
+        var query = new GetAvailableLabsByDateQuery(date);
+
+        var result = await mediator.Send(query);
+
+        return Ok(result);
+    }
+
+    [HttpGet("daily-schedule")]
+    [Authorize(Roles = "SecurityGuard")] // Chỉ bảo vệ 
+    public async Task<IActionResult> GetDailySchedule([FromQuery] DateOnly? date)
+    {
+        var result = await mediator.Send(new GetDailyLabScheduleQuery(date));
         return Ok(result);
     }
 }

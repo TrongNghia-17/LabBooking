@@ -1,9 +1,14 @@
-﻿namespace LabBooking.Domain.Repositories;
+﻿using LabBooking.Domain.NonEntities;
+
+namespace LabBooking.Domain.Repositories;
 
 public interface IDoorRequestRepository
 {
     Task<Guid> AddAsync(DoorOpeningRequest entity);
-    Task<bool> HasPendingRequestAsync(string bookingCode);
+    Task<bool> HasPendingRequestAsync(
+        string bookingCode,
+        DateOnly requestDate,
+        Guid slotId);
     Task<DoorOpeningRequest?> GetByIdAsync(Guid id);
     Task DeleteAsync(DoorOpeningRequest request);
     Task<(IEnumerable<DoorOpeningRequest> Items, int TotalCount)> GetPagedListAsync(
@@ -20,4 +25,5 @@ public interface IDoorRequestRepository
         CancellationToken cancellationToken);
     Task UpdateAsync(DoorOpeningRequest request);
     Task<DoorOpeningRequest?> GetByIdWithUserAsync(Guid id);
+    Task<List<DailyManagerNoteDto>> GetManagerNotesByDateAsync(DateOnly date, CancellationToken cancellationToken);
 }

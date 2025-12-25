@@ -4,6 +4,12 @@ public class DoorOpeningRequest
 {
     public Guid Id { get; set; } = (Guid)Uuid7.NewUuid7();
     public string BookingCode { get; set; } = default!;
+
+    public DateOnly RequestDate { get; set; }
+    public Guid SlotId { get; set; }
+    [ForeignKey(nameof(SlotId))]
+    public Slot? Slot { get; set; }
+
     public string Reason { get; set; } = default!;
     public string? ManagerNote { get; set; }
 

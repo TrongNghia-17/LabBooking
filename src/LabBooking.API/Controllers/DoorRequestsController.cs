@@ -4,9 +4,11 @@ using LabBooking.Application.Features.DoorRequests.Commands.DeleteDoorRequest;
 using LabBooking.Application.Features.DoorRequests.Commands.UpdateStatus;
 using LabBooking.Application.Features.DoorRequests.Commands.VerifyDoorAccess;
 using LabBooking.Application.Features.DoorRequests.Dtos;
+using LabBooking.Application.Features.DoorRequests.Queries.GetDailyManagerNotes;
 using LabBooking.Application.Features.DoorRequests.Queries.GetDoorRequestDetail;
 using LabBooking.Application.Features.DoorRequests.Queries.GetDoorRequestQr;
 using LabBooking.Application.Features.DoorRequests.Queries.GetDoorRequests;
+using LabBooking.Domain.NonEntities;
 
 namespace LabBooking.API.Controllers;
 
@@ -121,6 +123,24 @@ public class DoorRequestsController(IMediator mediator) : ControllerBase
         // Gửi Command sang Handler xử lý
         // Lưu ý: Dùng requestBody.RequestId để tạo Command
         var result = await mediator.Send(new VerifyDoorAccessCommand(requestBody.RequestId));
+        return Ok(result);
+    }
+
+    /// <summary>
+    /// [SECURITY GUARD] Lấy danh sách ghi chú của Manager trong ngày (Dashboard bảo vệ).
+    /// <para>Giúp bảo vệ biết trước ai sẽ đến, vào phòng nào và Manager dặn dò gì.</para>
+    /// </summary>
+    /// <param name="date">Ngày cần xem (Format: yyyy-MM-dd). Nếu để trống sẽ lấy ngày hôm nay.</param>
+    [HttpGet("daily-notes")]
+    // Chỉ Bảo vệ, Manager hoặc Admin mới được xem danh sách này
+    [Authorize(Roles = "SecurityGuard")]
+    [ProducesResponseType(typeof(List<DailyManagerNoteDto>), StatusCodes.Status200OK)]
+    public async Task<ActionResult<List<DailyManagerNoteDto>>> GetDailyManagerNotes([FromQuery] DateOnly? date)
+    {
+        // Gửi Query sang Handler xử lý
+        var query = new GetDailyManagerNotesQuery(date);
+        var result = await mediator.Send(query);
+
         return Ok(result);
     }
 }

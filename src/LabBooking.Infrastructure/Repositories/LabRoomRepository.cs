@@ -190,4 +190,183 @@ internal class LabRoomRepository(LabBookingDbContext dbContext) : ILabRoomReposi
             })
             .ToListAsync(cancellationToken);
     }
+
+    public async Task<IEnumerable<LabAvailabilityModel>> GetAvailableLabsByDateAsync(DateOnly date, CancellationToken token = default)
+    {
+        // 1. Lấy danh sách tất cả các Slot (Ca học) chuẩn
+        var allSlots = await dbContext.Slots
+            .AsNoTracking()
+            .OrderBy(s => s.SlotIndex)
+            .ToListAsync(token);
+
+        // 2. Lấy danh sách tất cả Phòng Lab đang hoạt động
+        var allLabs = await dbContext.LabRooms
+            .AsNoTracking()
+            .Where(r => r.IsActive)
+            .ToListAsync(token);
+
+        // 3. Tìm các Booking Slot đã ĐƯỢC DUYỆT (Active) vào ngày này
+        // (Những slot này làm phòng bị bận)
+        var bookedSlots = await dbContext.BookingSlots
+            .AsNoTracking()
+            .Include(bs => bs.Booking) // Include để check LabId
+            .Where(bs => bs.Date == date
+                         && bs.Status == BookingSlotStatus.Active // Chỉ lấy slot active
+                         && bs.Booking.Status == BookingStatus.Approved) // Chỉ lấy đơn đã duyệt
+            .Select(bs => new
+            {
+                LabId = bs.Booking.LabRoomId,
+                SlotId = bs.SlotId
+            })
+            .ToListAsync(token);
+
+        // 4. Tìm các Slot bị chiếm bởi LỊCH BẢO TRÌ (Maintenance)
+        // Cần convert ngày chọn sang khoảng thời gian UTC để so sánh với StartTime/EndTime của bảng Maintenance
+
+        // Giả sử múi giờ VN là UTC+7 (Cần nhất quán với logic lưu trữ của bạn)
+        var vnTimeZone = TimeZoneInfo.FindSystemTimeZoneById("SE Asia Standard Time");
+
+        // Ngày bắt đầu (00:00 VN) -> UTC
+        var startOfDayLocal = date.ToDateTime(TimeOnly.MinValue);
+        var startOfDayUtc = TimeZoneInfo.ConvertTimeToUtc(startOfDayLocal, vnTimeZone);
+
+        // Ngày kết thúc (23:59 VN) -> UTC
+        var endOfDayLocal = date.ToDateTime(TimeOnly.MaxValue);
+        var endOfDayUtc = TimeZoneInfo.ConvertTimeToUtc(endOfDayLocal, vnTimeZone);
+
+        var maintenanceSchedules = await dbContext.RoomMaintainSchedules
+            .AsNoTracking()
+            .Where(m => m.RoomMaintainStatus == RoomMaintainStatus.NotYet // Chưa xong thì tính là bận
+                                                                          // Logic trùng lặp thời gian: (StartA < EndB) && (EndA > StartB)
+                        && m.StartTime < endOfDayUtc
+                        && m.EndTime > startOfDayUtc)
+            .Select(m => new { m.LabRoomId, m.StartTime, m.EndTime })
+            .ToListAsync(token);
+
+        // 5. Xử lý Logic tính toán (In-Memory)
+        var result = new List<LabAvailabilityModel>();
+
+        foreach (var lab in allLabs)
+        {
+            // Danh sách các slot bị bận của phòng này
+            var busySlotIds = new HashSet<Guid>();
+
+            // a. Check bận do Booking
+            var bookingConflicts = bookedSlots
+                .Where(b => b.LabId == lab.Id)
+                .Select(b => b.SlotId);
+
+            foreach (var id in bookingConflicts) busySlotIds.Add(id);
+
+            // b. Check bận do Bảo Trì
+            // (Phải so sánh giờ của Slot với khoảng thời gian bảo trì)
+            var labMaintenances = maintenanceSchedules.Where(m => m.LabRoomId == lab.Id).ToList();
+
+            if (labMaintenances.Any())
+            {
+                foreach (var slot in allSlots)
+                {
+                    // Convert giờ Slot sang UTC (dựa trên ngày đang check)
+                    var slotStartLocal = date.ToDateTime(slot.StartTime);
+                    var slotEndLocal = date.ToDateTime(slot.EndTime);
+
+                    var slotStartUtc = TimeZoneInfo.ConvertTimeToUtc(slotStartLocal, vnTimeZone);
+                    var slotEndUtc = TimeZoneInfo.ConvertTimeToUtc(slotEndLocal, vnTimeZone);
+
+                    // Nếu slot này nằm trong khoảng bảo trì -> Bận
+                    bool isMaintain = labMaintenances.Any(m =>
+                        m.StartTime < slotEndUtc && m.EndTime > slotStartUtc);
+
+                    if (isMaintain)
+                    {
+                        busySlotIds.Add(slot.Id);
+                    }
+                }
+            }
+
+            // c. Tìm các Slot còn trống (Total - Busy)
+            var availableSlots = allSlots
+              .Where(s => !busySlotIds.Contains(s.Id))
+              .Select(s => new SlotTimeModel
+              {
+                  Id = s.Id,
+                  SlotIndex = s.SlotIndex,
+                  StartTime = s.StartTime, // Giữ nguyên TimeOnly
+                  EndTime = s.EndTime      // Giữ nguyên TimeOnly
+              })
+              .ToList();
+
+            // d. Thêm vào kết quả
+            result.Add(new LabAvailabilityModel
+            {
+                LabId = lab.Id,
+                LabName = lab.LabName ?? "",
+                Location = lab.Location ?? "",
+                Capacity = lab.MaximumLimit ?? 0,
+                AvailableSlots = availableSlots
+            });
+        }
+
+        return result;
+    }
+
+    public async Task<List<LabDailySchedule>> GetDailyScheduleAsync(DateOnly date, CancellationToken cancellationToken)
+    {
+        var labsData = await dbContext.LabRooms
+            .AsNoTracking()
+            .OrderBy(l => l.LabName)
+            .Select(lab => new
+            {
+                lab.Id,
+                lab.LabName,
+                Location = "Tầng 2", // Fix cứng tạm nếu entity chưa có Location
+
+                TodaysSlots = lab.Bookings
+                    .SelectMany(b => b.Slots)
+                    .Where(s => s.Date == date && s.Status == BookingSlotStatus.Active)
+                    .Select(s => new
+                    {
+                        s.Slot.StartTime,
+                        s.Slot.EndTime,
+                        BookingTitle = s.Booking.Title ?? "Sự kiện",
+
+                        // SỬA LỖI 2: Dùng Id nếu không có BookingCode, hoặc Title
+                        BookingCodeString = s.Booking.Title,
+
+                        RequesterName = s.Booking.CreatedBy.FullName,
+
+                        // SỬA LỖI 3: Kiểm tra kỹ tên trường trong Course (ví dụ Name thay vì Code)
+                        // Nếu Course null hoặc không có Code, lấy null
+                        CourseName = s.Booking.Course != null ? s.Booking.Course.CourseCode : null
+                    })
+                    .OrderBy(x => x.StartTime)
+                    .ToList()
+            })
+            .ToListAsync(cancellationToken);
+
+        // Map sang DTO
+        var result = labsData.Select(lab => new LabDailySchedule
+        {
+            LabId = lab.Id,
+            LabName = lab.LabName,
+            Location = lab.Location,
+
+            // Thay vì new LabSlotScheduleDto, hãy new LabSlotSchedule
+            Schedules = lab.TodaysSlots.Select(s => new LabSlotSchedule
+            {
+                StartTime = s.StartTime,
+                TimeRange = $"{s.StartTime:HH:mm} - {s.EndTime:HH:mm}",
+
+                ActivityTitle = !string.IsNullOrEmpty(s.CourseName)
+                                 ? $"Môn: {s.CourseName}"
+                                 : s.BookingTitle,
+
+                ResponsiblePerson = s.RequesterName ?? "N/A",
+                BookingCode = s.BookingCodeString ?? "", // Map từ dữ liệu thô
+                Status = "Active"
+            }).ToList()
+        }).ToList();
+
+        return result;
+    }
 }
