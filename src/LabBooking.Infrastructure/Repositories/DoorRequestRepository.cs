@@ -12,10 +12,17 @@ internal class DoorRequestRepository(LabBookingDbContext dbContext) : IDoorReque
         return entity.Id;
     }
 
-    public async Task<bool> HasPendingRequestAsync(string bookingCode)
+    public async Task<bool> HasPendingRequestAsync(
+        string bookingCode,
+        DateOnly requestDate,
+        Guid slotId)
     {
         return await dbContext.DoorOpeningRequests
-            .AnyAsync(x => x.BookingCode == bookingCode && x.Status == DoorRequestStatus.Pending);
+            .AnyAsync(x =>
+                x.BookingCode == bookingCode &&
+                x.RequestDate == requestDate &&
+                x.SlotId == slotId &&
+                x.Status == DoorRequestStatus.Pending);
     }
 
     public async Task<DoorOpeningRequest?> GetByIdAsync(Guid id)
