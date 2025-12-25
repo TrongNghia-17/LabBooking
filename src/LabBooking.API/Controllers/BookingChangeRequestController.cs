@@ -1,15 +1,18 @@
 ﻿using LabBooking.Application.Features.Booking.Dtos;
 using LabBooking.Application.Features.Booking.Queries.GetPendingBooking;
 using LabBooking.Application.Features.BookingChangeRequest.Commands.ApproveBookingChangeRequest;
+using LabBooking.Application.Features.BookingChangeRequest.Commands.CancelBookingChangeRequest;
 using LabBooking.Application.Features.BookingChangeRequest.Commands.CreateBookingChangeRequest;
 using LabBooking.Application.Features.BookingChangeRequest.Commands.RejectBookingChangeRequest;
 using LabBooking.Application.Features.BookingChangeRequest.Dtos;
 using LabBooking.Application.Features.BookingChangeRequest.Queries.GetBookingChangeRequest;
 using LabBooking.Application.Features.BookingChangeRequest.Queries.GetPendingBookingChangeRequest;
 using LabBooking.Application.Features.Bookings.Commands.CreateBooking;
+using LabBooking.Application.Features.Courses.Commands.DeleteCourse;
 using MediatR;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using static Microsoft.EntityFrameworkCore.DbLoggerCategory.Database;
 
 namespace LabBooking.API.Controllers
 {
@@ -108,6 +111,33 @@ namespace LabBooking.API.Controllers
             await mediator.Send(command);
 
             return Ok(new { message = "Đã duyệt yêu cầu thay đổi." });
+        }
+
+        /// <summary>
+        /// Xóa một học phần
+        /// </summary>
+        /// <param name="id">ID của booking request cần xóa</param>
+        [HttpDelete("{id:guid}")]
+        [Authorize(Roles = "Lecturer, Student")]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> Delete([FromRoute] Guid id)
+        {
+            try
+            {
+                var userIdString = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+                if (!Guid.TryParse(userIdString, out var userId))
+                {
+                    return Unauthorized();
+                }
+                var query = new CancelBookingChangeRequestCommand(id, userId);
+                await mediator.Send(query);
+                return NoContent(); // Trả về 204 khi xóa thành công
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(ex.Message);
+            }
         }
     }
 }

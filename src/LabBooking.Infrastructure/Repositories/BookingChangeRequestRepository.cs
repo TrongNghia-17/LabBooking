@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection.Metadata;
 using System.Text;
+using System.Text.Json.Nodes;
 using System.Threading.Tasks;
 using static Microsoft.EntityFrameworkCore.DbLoggerCategory.Database;
 
@@ -182,12 +183,83 @@ namespace LabBooking.Infrastructure.Repositories
 
                     // Cập nhật nội dung cho hợp ngữ cảnh
                     notification.Message = $"Yêu cầu đổi lịch của bạn bị từ chối. Lý do: {reason}. Vui lòng chọn lại.";
+                    try
+                    {
+                        var jsonNode = JsonNode.Parse(notification.DataPayload);
+                        if (jsonNode != null)
+                        {
+                            jsonNode["consentStatus"] = "Pending"; // Báo FE quay về trạng thái chờ
+                            notification.DataPayload = jsonNode.ToJsonString();
+                        }
+                    }
+                    catch
+                    {
+                        // Nếu lỗi parse JSON thì bỏ qua, không làm crash app
+                    }
                 }
             }
 
             // 3. Save
             await dbContext.SaveChangesAsync();
             notificationRepo.RunPushNotificationTask(pushQueue);
+        }
+
+        public async Task CancelChangeRequestAsync(Guid requestId, Guid userId)
+        {
+            // 1. Tìm Request
+            var request = await dbContext.BookingChangeRequests
+                .FirstOrDefaultAsync(r => r.Id == requestId);
+
+
+            if (request == null)
+                throw new BadRequestException("Không tìm thấy yêu cầu thay đổi.");
+
+
+            if (request.RequestedById != userId)
+                throw new BadRequestException("Bạn không có quyền thay đổi.");
+
+            if (request.Status != BookingChangeRequestStatus.Pending)
+                throw new BadRequestException("Yêu cầu này không còn ở trạng thái chờ.");
+
+            // 2. Update trạng thái
+            //request.RejectedById = managerId; // (Optional)
+
+            var relatedConsent = await dbContext.BookingConsentRequests
+            .FirstOrDefaultAsync(c =>
+            c.BookingId == request.BookingId &&       // Cùng Booking gốc
+            c.CreatedById == request.RequestedById && // Cùng người yêu cầu
+            c.Status == ConsentStatus.Rescheduled);   // Đang trong trạng thái chờ
+
+            if (relatedConsent != null)
+            {
+                relatedConsent.Status = ConsentStatus.Pending;
+
+                var notification = await dbContext.Notifications
+                .FirstOrDefaultAsync(n => n.DataPayload.Contains(relatedConsent.Id.ToString()));
+
+                if (notification != null)
+                {
+                    notification.IsRead = false; // 👈 QUAN TRỌNG: Bắt buộc user phải đọc lại
+                    notification.CreatedAt = DateTime.UtcNow; // (Tuỳ chọn) Đẩy lên đầu danh sách
+
+                    // Cập nhật nội dung cho hợp ngữ cảnh
+                    notification.Message = $"Yêu cầu đổi lịch của bạn đã được cancel.Vui lòng chọn lại.";
+                    try
+                    {
+                        var jsonNode = JsonNode.Parse(notification.DataPayload);
+                        if (jsonNode != null)
+                        {
+                            jsonNode["consentStatus"] = "Pending";
+                            notification.DataPayload = jsonNode.ToJsonString();
+                        }
+                    }
+                    catch { }
+                }
+            }
+
+            dbContext.BookingChangeRequests.Remove(request);
+            // 3. Save
+            await dbContext.SaveChangesAsync();
         }
 
         public Task<bool> CheckBookingChangeRequestIsBelongToThisManager(Guid bookingChangeId, Guid managerId)
