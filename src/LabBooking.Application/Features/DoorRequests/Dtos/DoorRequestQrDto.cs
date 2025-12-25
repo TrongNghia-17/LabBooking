@@ -23,5 +23,6 @@ public class VerifyAccessResponse
     // Thông tin bổ sung để bảo vệ đối chiếu (nếu Hợp lệ)
     public string? StudentName { get; set; }
     public string? LabName { get; set; }
+    public string? BookingCode { get; set; }
     public string? TimeSlot { get; set; }
 }

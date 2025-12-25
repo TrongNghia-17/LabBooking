@@ -9,7 +9,7 @@ public class VerifyDoorAccessHandler(
 {
     public async Task<VerifyAccessResponse> Handle(VerifyDoorAccessCommand request, CancellationToken cancellationToken)
     {
-        // 1. Tìm Request
+        // 1. Tìm Request (Repository đã Include Slot, User, Manager rồi)
         var doorRequest = await doorRequestRepository.GetByIdWithUserAsync(request.RequestId);
 
         if (doorRequest == null)
@@ -17,73 +17,72 @@ public class VerifyDoorAccessHandler(
             return new VerifyAccessResponse { IsValid = false, Message = "Mã QR không tồn tại." };
         }
 
-        // 2. Check trạng thái
+        // 2. Check trạng thái đơn
         if (doorRequest.Status != DoorRequestStatus.Accepted)
         {
             return new VerifyAccessResponse { IsValid = false, Message = $"Đơn không hợp lệ (Trạng thái: {doorRequest.Status})." };
         }
 
-        // 3. Lấy Booking để check giờ
+        // 3. Lấy tên phòng Lab (để hiển thị cho bảo vệ)
         var booking = await bookingRepository.GetByCodeAsync(doorRequest.BookingCode, cancellationToken);
+        string labName = booking?.LabRoom?.LabName ?? "Phòng Lab";
+        string studentName = doorRequest.RequestedBy?.FullName ?? "Sinh viên";
 
-        if (booking == null || booking.Slots == null || !booking.Slots.Any())
+        // 4. KIỂM TRA THỜI GIAN (LOGIC MỚI - QUAN TRỌNG)
+        // Không lặp qua booking.Slots nữa, mà check trực tiếp vào doorRequest.Slot
+
+        if (doorRequest.Slot == null)
         {
-            return new VerifyAccessResponse { IsValid = false, Message = "Không tìm thấy lịch đặt phòng." };
+            return new VerifyAccessResponse { IsValid = false, Message = "Lỗi dữ liệu: Không tìm thấy thông tin Slot trong yêu cầu." };
         }
 
-        // 4. CHECK THỜI GIAN (Time Window Check)
-        // Lấy giờ Việt Nam (UTC+7) - BỎ TIMEZONE để so sánh thuần túy
-        var vietnamTimeZone = TimeZoneInfo.FindSystemTimeZoneById("SE Asia Standard Time");
-        var nowWithTimezone = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, vietnamTimeZone);
+        // Thời điểm hiện tại (Server time)
+        var now = DateTime.Now;
 
-        // Chuyển về DateTime không timezone để so sánh
-        var now = DateTime.SpecifyKind(nowWithTimezone, DateTimeKind.Unspecified);
-        var today = DateOnly.FromDateTime(now);
+        // Tính toán thời gian cho phép vào
+        // Combine DateOnly + TimeOnly -> DateTime
+        var requestDate = doorRequest.RequestDate;
+        var startDateTime = requestDate.ToDateTime(doorRequest.Slot.StartTime);
+        var endDateTime = requestDate.ToDateTime(doorRequest.Slot.EndTime);
 
-        bool isTimeValid = false;
-        string currentSlotString = "";
+        // Quy định: Được vào sớm 30 phút (hoặc 90 phút tùy bạn config) để chuẩn bị
+        // Ví dụ: Ca bắt đầu 07:00 -> 06:30 được vào.
+        var allowedStart = startDateTime.AddMinutes(-30);
+        var allowedEnd = endDateTime; // Hết giờ là phải ra, hoặc cho trễ thêm 15p dọn dẹp tùy bạn: .AddMinutes(15)
 
-        foreach (var slot in booking.Slots)
-        {
-            // Kiểm tra đúng ngày
-            if (slot.Date != today)
-                continue;
-
-            // Convert sang DateTime (cũng không có timezone)
-            var slotStart = slot.Date.ToDateTime(slot.Slot.StartTime);
-            var slotEnd = slot.Date.ToDateTime(slot.Slot.EndTime);
-
-            // Cho phép vào sớm 1 tiếng 30 phút để chuẩn bị và ở lại đến hết giờ
-            var allowedStart = slotStart.AddMinutes(-90); // Sớm 90 phút (1h30)
-            var allowedEnd = slotEnd;
-
-            // So sánh 2 DateTime đều không có timezone
-            if (now >= allowedStart && now <= allowedEnd)
-            {
-                isTimeValid = true;
-                currentSlotString = $"{slot.Date:dd/MM/yyyy} ({slot.Slot.StartTime:HH\\:mm} - {slot.Slot.EndTime:HH\\:mm})";
-                break; // Tìm thấy slot hợp lệ thì dừng
-            }
-        }
-
-        if (!isTimeValid)
+        // LOGIC SO SÁNH
+        if (now < allowedStart)
         {
             return new VerifyAccessResponse
             {
                 IsValid = false,
-                Message = "Chưa đến giờ hoặc đã hết giờ vào phòng.",
-                LabName = booking.LabRoom?.LabName
+                Message = $"Chưa đến giờ vào. Vui lòng quay lại lúc {allowedStart:HH:mm}.",
+                LabName = labName
             };
         }
 
-        // 5. Success
+        if (now > allowedEnd)
+        {
+            return new VerifyAccessResponse
+            {
+                IsValid = false,
+                Message = "Đã hết giờ sử dụng phòng.",
+                LabName = labName
+            };
+        }
+
+        // 5. Success - Hợp lệ
+        // Format chuỗi hiển thị: "25/12 (07:00 - 09:00)"
+        string timeDisplay = $"{requestDate:dd/MM} ({doorRequest.Slot.StartTime} - {doorRequest.Slot.EndTime})";
+
         return new VerifyAccessResponse
         {
             IsValid = true,
             Message = "Hợp lệ. Mời vào.",
-            StudentName = doorRequest.RequestedBy?.FullName,
-            LabName = booking.LabRoom?.LabName,
-            TimeSlot = currentSlotString
+            StudentName = studentName,
+            LabName = labName,
+            BookingCode = doorRequest.BookingCode,
+            TimeSlot = timeDisplay
         };
     }
 }

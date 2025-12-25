@@ -13,13 +13,13 @@ public class GetDoorRequestQrQueryHandler(
     {
         var currentUserId = currentUserService.UserId;
 
-        // 1. Lấy thông tin Request
+        // 1. Lấy thông tin Request (đã Include Slot)
         var doorRequest = await doorRequestRepository.GetByIdWithUserAsync(request.Id);
 
         if (doorRequest == null)
             throw new NotFoundException(nameof(DoorOpeningRequest), request.Id.ToString());
 
-        // 2. CHECK QUYỀN: Chỉ người tạo đơn mới được lấy
+        // 2. CHECK QUYỀN
         if (doorRequest.RequestedById != currentUserId)
         {
             throw new ForbiddenAccessException("Bạn không có quyền lấy mã QR của yêu cầu này.");
@@ -31,34 +31,37 @@ public class GetDoorRequestQrQueryHandler(
             throw new BadRequestException($"Yêu cầu chưa được duyệt (Status: {doorRequest.Status}).");
         }
 
-        // 4. Lấy thông tin Booking
+        // 4. Lấy tên phòng Lab
         var booking = await bookingRepository.GetByCodeAsync(doorRequest.BookingCode, cancellationToken);
+        var labName = booking?.LabRoom?.LabName ?? "Phòng Lab";
 
-        // 5. Xử lý hiển thị thời gian
+        // 5. XỬ LÝ THỜI GIAN
+        DateTime startDateTime = DateTime.MinValue;
+        DateTime endDateTime = DateTime.MinValue;
         string timeDisplay = "Chưa xác định";
-        DateTime start = DateTime.MinValue;
-        DateTime end = DateTime.MinValue;
 
-        if (booking?.Slots != null && booking.Slots.Any())
+        if (doorRequest.Slot != null)
         {
-            // Lấy slot đầu tiên làm chuẩn hiển thị
-            var firstSlot = booking.Slots.OrderBy(s => s.Date).ThenBy(s => s.Slot.StartTime).First();
+            startDateTime = doorRequest.RequestDate.ToDateTime(doorRequest.Slot.StartTime);
+            endDateTime = doorRequest.RequestDate.ToDateTime(doorRequest.Slot.EndTime);
 
-            // Logic convert ngày giờ
-            start = firstSlot.Date.ToDateTime(firstSlot.Slot.StartTime);
-            end = firstSlot.Date.ToDateTime(firstSlot.Slot.EndTime);
-
-            timeDisplay = $"{firstSlot.Date:dd/MM} ({firstSlot.Slot.StartTime} - {firstSlot.Slot.EndTime})";
+            // Format chuỗi hiển thị
+            timeDisplay = $"{doorRequest.RequestDate:dd/MM} ({doorRequest.Slot.StartTime} - {doorRequest.Slot.EndTime})";
         }
 
+        // 6. TRẢ VỀ DTO (Đã sửa tên biến cho khớp file của bạn)
         return new DoorRequestQrDto
         {
             RequestId = doorRequest.Id,
-            LabRoomName = booking?.LabRoom?.LabName ?? "Phòng Lab",
-            UserFullName = doorRequest.RequestedBy?.FullName ?? "Người dùng",
-            ValidTimeSlot = timeDisplay,
-            StartTime = start,
-            EndTime = end
+            LabRoomName = labName,
+            UserFullName = doorRequest.RequestedBy?.FullName ?? "Unknown User",
+
+            // --- CÁC TRƯỜNG ĐÃ SỬA ---
+            StartTime = startDateTime,      // Sửa từ ValidFrom -> StartTime
+            EndTime = endDateTime,          // Sửa từ ValidTo -> EndTime
+            ValidTimeSlot = timeDisplay     // Sửa từ TimeDisplay -> ValidTimeSlot
+
+            // Bỏ UserStudentCode vì DTO không có
         };
     }
 }
