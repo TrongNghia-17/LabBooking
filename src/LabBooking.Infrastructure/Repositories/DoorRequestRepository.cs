@@ -1,5 +1,6 @@
 ﻿using LabBooking.Application.Features.DoorRequests.Dtos;
 using LabBooking.Domain.Enums;
+using LabBooking.Domain.NonEntities;
 
 namespace LabBooking.Infrastructure.Repositories;
 
@@ -143,5 +144,55 @@ internal class DoorRequestRepository(LabBookingDbContext dbContext) : IDoorReque
     {
         dbContext.DoorOpeningRequests.Update(request);
         await dbContext.SaveChangesAsync();
+    }
+
+    public async Task<List<DailyManagerNoteDto>> GetManagerNotesByDateAsync(DateOnly date, CancellationToken cancellationToken)
+    {
+        // Query: Join bảng Request với Booking để lấy tên phòng Lab
+        // Chỉ lấy những đơn trạng thái Accepted (Đã duyệt)
+
+        var query = from req in dbContext.DoorOpeningRequests
+                    join booking in dbContext.Bookings
+                         on req.BookingCode equals booking.QrCodeString // (Hoặc booking.Title tùy DB của bạn)
+                    where req.RequestDate == date
+                          && req.Status == DoorRequestStatus.Accepted
+                    // Chỉ lấy những đơn CÓ NOTE (hoặc lấy tất cả tùy bạn)
+                    // && !string.IsNullOrEmpty(req.ManagerNote) 
+                    select new
+                    {
+                        req.Id,
+                        req.ManagerNote,
+                        req.BookingCode,
+                        RequesterName = req.RequestedBy.FullName,
+
+                        // Lấy thông tin Slot
+                        StartTime = req.Slot.StartTime,
+                        EndTime = req.Slot.EndTime,
+
+                        // Lấy tên phòng từ bảng Booking
+                        LabName = booking.LabRoom.LabName
+                    };
+
+        var data = await query
+            .Distinct()
+            .OrderBy(x => x.StartTime) // Sắp xếp theo giờ tăng dần để bảo vệ dễ theo dõi
+            .ToListAsync(cancellationToken);
+
+        // Map sang DTO
+        return data.Select(x => new DailyManagerNoteDto
+        {
+            RequestId = x.Id,
+            LabName = x.LabName ?? "Phòng Lab",
+            RequesterName = x.RequesterName,
+            BookingCode = x.BookingCode,
+
+            // Format khung giờ: "13:00 - 15:00"
+            SlotTime = $"{x.StartTime:HH:mm} - {x.EndTime:HH:mm}",
+
+            // Hiển thị note (nếu null thì ghi chú mặc định)
+            ManagerNote = string.IsNullOrWhiteSpace(x.ManagerNote)
+                          ? "Cho phép vào (Không có ghi chú thêm)"
+                          : x.ManagerNote
+        }).ToList();
     }
 }

@@ -1,4 +1,6 @@
-﻿namespace LabBooking.Domain.Repositories;
+﻿using LabBooking.Domain.NonEntities;
+
+namespace LabBooking.Domain.Repositories;
 
 public interface IDoorRequestRepository
 {
@@ -23,4 +25,5 @@ public interface IDoorRequestRepository
         CancellationToken cancellationToken);
     Task UpdateAsync(DoorOpeningRequest request);
     Task<DoorOpeningRequest?> GetByIdWithUserAsync(Guid id);
+    Task<List<DailyManagerNoteDto>> GetManagerNotesByDateAsync(DateOnly date, CancellationToken cancellationToken);
 }
