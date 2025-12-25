@@ -63,6 +63,7 @@ internal class DoorRequestRepository(LabBookingDbContext dbContext) : IDoorReque
         var baseQuery = dbContext.DoorOpeningRequests
             .Include(x => x.RequestedBy)
             .Include(x => x.Manager)
+            .Include(x => x.Slot)
             .AsNoTracking();
 
         // 2. PHÂN QUYỀN DỮ LIỆU (QUAN TRỌNG)

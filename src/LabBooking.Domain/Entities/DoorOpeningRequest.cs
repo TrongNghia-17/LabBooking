@@ -7,6 +7,8 @@ public class DoorOpeningRequest
 
     public DateOnly RequestDate { get; set; }
     public Guid SlotId { get; set; }
+    [ForeignKey(nameof(SlotId))]
+    public Slot? Slot { get; set; }
 
     public string Reason { get; set; } = default!;
     public string? ManagerNote { get; set; }
