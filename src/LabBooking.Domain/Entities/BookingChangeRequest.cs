@@ -69,7 +69,8 @@ namespace LabBooking.Domain.Entities
     {
         Pending,
         Approved,
-        Rejected
+        Rejected,
+        Cancelled
     }
 
     public enum RequestType

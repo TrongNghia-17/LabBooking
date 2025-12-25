@@ -13,6 +13,7 @@ namespace LabBooking.Domain.Repositories
         Task<List<BookingChangeRequest>> GetPendingRequestsAsync(Guid? userId);
         Task<List<BookingChangeRequest>> GetAllRequestsAsync(Guid? userId);
         Task RejectChangeRequestAsync(Guid requestId, Guid managerId, string reason);
+        Task CancelChangeRequestAsync(Guid requestId, Guid userId);
         Task<bool> CheckBookingChangeRequestIsBelongToThisManager(Guid bookingChangeId, Guid managerId);
 
         // Hàm này sẽ chứa toàn bộ logic "Apply Changes" phức tạp
