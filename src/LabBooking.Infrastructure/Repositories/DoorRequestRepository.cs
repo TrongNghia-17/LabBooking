@@ -35,7 +35,9 @@ internal class DoorRequestRepository(LabBookingDbContext dbContext) : IDoorReque
     {
         return await dbContext.DoorOpeningRequests
             .AsNoTracking()
-            .Include(x => x.RequestedBy) // <--- QUAN TRỌNG: Include User để lấy Email/SDT
+            .Include(x => x.RequestedBy)
+            .Include(x => x.Slot)
+            .Include(x => x.Manager)
             .FirstOrDefaultAsync(x => x.Id == id);
     }
 
