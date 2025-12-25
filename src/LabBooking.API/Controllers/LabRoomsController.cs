@@ -1,6 +1,7 @@
 ﻿using LabBooking.Application.Common.Wrappers;
 using LabBooking.Application.Features.LabRooms.Commands.DeleteLabRoom;
 using LabBooking.Application.Features.LabRooms.Queries.GetAvailableLabsByDate;
+using LabBooking.Application.Features.LabRooms.Queries.GetDailyLabSchedule;
 using LabBooking.Application.Features.LabRooms.Queries.GetLabStatistics;
 using LabBooking.Application.Features.LabRooms.Queries.GetTopLabs;
 using LabBooking.Application.Features.LabRooms.Queries.GetUnmaintainedLabRooms;
@@ -167,6 +168,14 @@ public class LabRoomsController(
 
         var result = await mediator.Send(query);
 
+        return Ok(result);
+    }
+
+    [HttpGet("daily-schedule")]
+    [Authorize(Roles = "SecurityGuard")] // Chỉ bảo vệ 
+    public async Task<IActionResult> GetDailySchedule([FromQuery] DateOnly? date)
+    {
+        var result = await mediator.Send(new GetDailyLabScheduleQuery(date));
         return Ok(result);
     }
 }

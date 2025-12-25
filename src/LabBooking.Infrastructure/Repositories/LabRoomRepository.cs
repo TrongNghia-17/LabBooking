@@ -191,8 +191,6 @@ internal class LabRoomRepository(LabBookingDbContext dbContext) : ILabRoomReposi
             .ToListAsync(cancellationToken);
     }
 
-    // Trong file LabRoomRepository.cs
-
     public async Task<IEnumerable<LabAvailabilityModel>> GetAvailableLabsByDateAsync(DateOnly date, CancellationToken token = default)
     {
         // 1. Lấy danh sách tất cả các Slot (Ca học) chuẩn
@@ -308,6 +306,66 @@ internal class LabRoomRepository(LabBookingDbContext dbContext) : ILabRoomReposi
                 AvailableSlots = availableSlots
             });
         }
+
+        return result;
+    }
+
+    public async Task<List<LabDailySchedule>> GetDailyScheduleAsync(DateOnly date, CancellationToken cancellationToken)
+    {
+        var labsData = await dbContext.LabRooms
+            .AsNoTracking()
+            .OrderBy(l => l.LabName)
+            .Select(lab => new
+            {
+                lab.Id,
+                lab.LabName,
+                Location = "Tầng 2", // Fix cứng tạm nếu entity chưa có Location
+
+                TodaysSlots = lab.Bookings
+                    .SelectMany(b => b.Slots)
+                    .Where(s => s.Date == date && s.Status == BookingSlotStatus.Active)
+                    .Select(s => new
+                    {
+                        s.Slot.StartTime,
+                        s.Slot.EndTime,
+                        BookingTitle = s.Booking.Title ?? "Sự kiện",
+
+                        // SỬA LỖI 2: Dùng Id nếu không có BookingCode, hoặc Title
+                        BookingCodeString = s.Booking.Title,
+
+                        RequesterName = s.Booking.CreatedBy.FullName,
+
+                        // SỬA LỖI 3: Kiểm tra kỹ tên trường trong Course (ví dụ Name thay vì Code)
+                        // Nếu Course null hoặc không có Code, lấy null
+                        CourseName = s.Booking.Course != null ? s.Booking.Course.Id.ToString() : null
+                    })
+                    .OrderBy(x => x.StartTime)
+                    .ToList()
+            })
+            .ToListAsync(cancellationToken);
+
+        // Map sang DTO
+        var result = labsData.Select(lab => new LabDailySchedule
+        {
+            LabId = lab.Id,
+            LabName = lab.LabName,
+            Location = lab.Location,
+
+            // Thay vì new LabSlotScheduleDto, hãy new LabSlotSchedule
+            Schedules = lab.TodaysSlots.Select(s => new LabSlotSchedule
+            {
+                StartTime = s.StartTime,
+                TimeRange = $"{s.StartTime:HH:mm} - {s.EndTime:HH:mm}",
+
+                ActivityTitle = !string.IsNullOrEmpty(s.CourseName)
+                                 ? $"Môn: {s.CourseName}"
+                                 : s.BookingTitle,
+
+                ResponsiblePerson = s.RequesterName ?? "N/A",
+                BookingCode = s.BookingCodeString ?? "", // Map từ dữ liệu thô
+                Status = "Active"
+            }).ToList()
+        }).ToList();
 
         return result;
     }
