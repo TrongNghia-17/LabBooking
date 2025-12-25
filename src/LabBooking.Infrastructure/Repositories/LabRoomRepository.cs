@@ -337,7 +337,7 @@ internal class LabRoomRepository(LabBookingDbContext dbContext) : ILabRoomReposi
 
                         // SỬA LỖI 3: Kiểm tra kỹ tên trường trong Course (ví dụ Name thay vì Code)
                         // Nếu Course null hoặc không có Code, lấy null
-                        CourseName = s.Booking.Course != null ? s.Booking.Course.Id.ToString() : null
+                        CourseName = s.Booking.Course != null ? s.Booking.Course.CourseCode : null
                     })
                     .OrderBy(x => x.StartTime)
                     .ToList()
