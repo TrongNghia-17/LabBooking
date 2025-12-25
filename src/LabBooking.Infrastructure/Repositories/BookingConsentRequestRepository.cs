@@ -1,11 +1,5 @@
 ﻿using LabBooking.Domain.Exceptions;
 using LabBooking.Domain.NonEntities;
-using Microsoft.EntityFrameworkCore;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace LabBooking.Infrastructure.Repositories
 {
@@ -118,10 +112,15 @@ namespace LabBooking.Infrastructure.Repositories
             consentRequest.Status = ConsentStatus.Rescheduled;
             consentRequest.ResolvedAt = DateTime.UtcNow;
 
+            var creatorName = await dbContext.Users
+                .Where(u => u.Id == changeRequest.RequestedById)
+                .Select(u => u.UserName) // Hoặc u.FullName nếu có
+                .FirstOrDefaultAsync() ?? "Người dùng";
+
             var (_, mgrPush) = notificationRepo.PrepareNotification(
                 managerId,
-                "🔄 User đã gửi lịch bù",
-                $"User đã chọn lịch mới cho đơn '{bookingTitle}' bị trùng. Vui lòng vào duyệt yêu cầu thay đổi.",
+                $"🔄 {creatorName} đã gửi lịch bù",
+                $"{creatorName} đã chọn lịch mới cho đơn '{bookingTitle}' bị trùng. Vui lòng vào duyệt yêu cầu thay đổi.",
                 "MANAGER_NEW_CHANGE_REQUEST", // Loại này sẽ dẫn Manager vào màn hình duyệt ChangeRequest
                 new { requestId = changeRequest.Id, bookingId = consentRequest.BookingId }
             );

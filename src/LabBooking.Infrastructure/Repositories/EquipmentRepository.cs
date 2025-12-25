@@ -1,4 +1,6 @@
-﻿namespace LabBooking.Infrastructure.Repositories;
+﻿using LabBooking.Domain.Enums;
+
+namespace LabBooking.Infrastructure.Repositories;
 
 internal class EquipmentRepository(LabBookingDbContext dbContext) : IEquipmentRepository
 {
@@ -19,6 +21,13 @@ internal class EquipmentRepository(LabBookingDbContext dbContext) : IEquipmentRe
     {
         var equipment = await dbContext.Equipments.FindAsync(id);
         return equipment;
+    }
+
+    public async Task<List<Equipment>> GetByIdsAsync(List<Guid> ids, CancellationToken token)
+    {
+        return await dbContext.Equipments
+            .Where(e => ids.Contains(e.Id))
+            .ToListAsync(token);
     }
 
     public async Task UpdateAsync(Equipment equipment, CancellationToken token = default)
@@ -95,5 +104,16 @@ internal class EquipmentRepository(LabBookingDbContext dbContext) : IEquipmentRe
         // Check xem có thiết bị nào ID như thế VÀ LabRoomId khớp không
         return await dbContext.Equipments
             .AnyAsync(e => e.Id == equipmentId && e.LabRoomId == labRoomId, token);
+    }
+
+    public async Task<int> GetMaintenanceCountAsync(Guid? managerId, CancellationToken token)
+    {
+        var query = dbContext.Equipments.Where(e => e.Status == EquipmentStatus.Maintain);
+        if (managerId.HasValue)
+        {
+            // Giả sử Equipment có liên kết đến LabRoom để lọc theo Manager
+            query = query.Where(e => e.LabRoom.MainManagerId == managerId.Value);
+        }
+        return await query.CountAsync(token);
     }
 }

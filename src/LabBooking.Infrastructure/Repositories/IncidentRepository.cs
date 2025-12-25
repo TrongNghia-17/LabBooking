@@ -1,5 +1,6 @@
 ﻿using LabBooking.Domain.Enums;
 using LabBooking.Domain.Exceptions;
+using LabBooking.Domain.NonEntities;
 
 namespace LabBooking.Infrastructure.Repositories;
 
@@ -90,15 +91,6 @@ internal class IncidentRepository(LabBookingDbContext dbContext, INotificationRe
                         && x.Type == type
                         && x.CreatedAt > oneMinuteAgo, token);
     }
-    public async Task<Incident?> GetByIdWithDetailsAsync(Guid id, CancellationToken token)
-    {
-        return await dbContext.Incidents
-            .Include(i => i.ReportedBy) // Lấy thông tin người báo
-            .Include(i => i.LabRoom)    // Lấy thông tin phòng (để check Manager)
-            .Include(i => i.IncidentEquipments)
-        .ThenInclude(ie => ie.Equipment)  // Lấy thiết bị (để revert status)
-            .FirstOrDefaultAsync(i => i.Id == id, token);
-    }
 
     public async Task DeleteAsync(Incident incident, CancellationToken token)
     {
@@ -133,20 +125,22 @@ internal class IncidentRepository(LabBookingDbContext dbContext, INotificationRe
     }
 
     public async Task<IEnumerable<Incident>> GetFilteredAsync(
-    Guid? managerId,   // Nếu != null -> Chỉ lấy phòng do ông này quản lý
-    Guid? reporterId,  // Nếu != null -> Chỉ lấy incident do ông này tạo
-    Guid? labRoomId,   // Lọc theo phòng cụ thể
-    DateTime? from,
-    DateTime? to,
-    bool? isResolved,
-    LevelOfImportance? importance,
-    bool isDescending,
-    CancellationToken token)
+        Guid? managerId,   // Nếu != null -> Chỉ lấy phòng do ông này quản lý
+        Guid? reporterId,  // Nếu != null -> Chỉ lấy incident do ông này tạo
+        Guid? labRoomId,
+        string? searchPhrase,// Lọc theo phòng cụ thể
+        DateTime? from,
+        DateTime? to,
+        bool? isResolved,
+        LevelOfImportance? importance,
+        bool isDescending,
+        CancellationToken token)
     {
         var query = dbContext.Incidents
+            .Where(i => !i.IsDeleted)
             .Include(i => i.LabRoom)
             .Include(i => i.IncidentEquipments)
-        .ThenInclude(ie => ie.Equipment)
+                .ThenInclude(ie => ie.Equipment)
             .Include(i => i.ReportedBy)
             .AsQueryable();
 
@@ -169,6 +163,20 @@ internal class IncidentRepository(LabBookingDbContext dbContext, INotificationRe
             query = query.Where(i => i.LabRoomId == labRoomId.Value);
         }
 
+        // [THÊM MỚI] LOGIC TÌM KIẾM
+        if (!string.IsNullOrWhiteSpace(searchPhrase))
+        {
+            var lowerPhrase = searchPhrase.ToLower();
+            query = query.Where(i =>
+                // Tìm trong mô tả sự cố
+                i.Description.ToLower().Contains(lowerPhrase) ||
+                // Tìm theo tên phòng
+                (i.LabRoom != null && i.LabRoom.LabName.ToLower().Contains(lowerPhrase)) ||
+                // Tìm theo tên thiết bị hỏng (Nâng cao)
+                i.IncidentEquipments.Any(ie => ie.Equipment.EquipmentName.ToLower().Contains(lowerPhrase))
+            );
+        }
+
         // 4. CÁC BỘ LỌC KHÁC (Chung cho tất cả)
         if (from.HasValue)
             query = query.Where(i => i.CreatedAt >= from.Value.ToUniversalTime());
@@ -188,5 +196,146 @@ internal class IncidentRepository(LabBookingDbContext dbContext, INotificationRe
             : query.OrderBy(i => i.CreatedAt);
 
         return await query.ToListAsync(token);
+    }
+
+    public async Task<Incident?> GetByIdWithDetailsAsync(Guid id, CancellationToken token)
+    {
+        return await dbContext.Incidents
+            .Include(i => i.ReportedBy)
+            .Include(i => i.LabRoom)
+            .Include(i => i.IncidentEquipments)
+                .ThenInclude(ie => ie.Equipment) // Include sâu để lấy trạng thái thiết bị
+            .FirstOrDefaultAsync(i => i.Id == id && !i.IsDeleted, token); // Chỉ lấy cái chưa xóa
+    }
+
+    public async Task SoftDeleteWithRestoreDevicesAsync(Incident incident, CancellationToken token)
+    {
+        using var transaction = await dbContext.Database.BeginTransactionAsync(token);
+        try
+        {
+            // 1. Phục hồi thiết bị (Nếu là lỗi thiết bị)
+            if (incident.Type == IncidentType.EquipmentFailure && incident.IncidentEquipments.Any())
+            {
+                foreach (var incidentEq in incident.IncidentEquipments)
+                {
+                    var equipment = incidentEq.Equipment;
+                    // Chỉ phục hồi nếu nó đang bị đánh dấu là Broken
+                    if (equipment != null && equipment.Status == EquipmentStatus.Broken)
+                    {
+                        equipment.Status = EquipmentStatus.Available;
+                        equipment.IsAvailable = true;
+                        // Đánh dấu update
+                        dbContext.Equipments.Update(equipment);
+                    }
+                }
+            }
+
+            // 2. Soft Delete Incident
+            incident.IsDeleted = true;
+            incident.DeletedAt = DateTime.UtcNow;
+            dbContext.Incidents.Update(incident);
+
+            // 3. Lưu tất cả
+            await dbContext.SaveChangesAsync(token);
+            await transaction.CommitAsync(token);
+        }
+        catch
+        {
+            await transaction.RollbackAsync(token);
+            throw;
+        }
+    }
+
+    public async Task<bool> HasActiveIncidentForRoomCheckAsync(Guid roomCheckId, CancellationToken token)
+    {
+        return await dbContext.Incidents
+            .AnyAsync(i => i.RoomCheckId == roomCheckId && !i.IsDeleted, token);
+    }
+
+    public async Task<IEnumerable<MonthlyIncidentCount>> GetMonthlyIncidentStatsAsync(int year, Guid? managerId, CancellationToken token)
+    {
+        // 1. Khởi tạo query cơ bản
+        var query = dbContext.Incidents
+            .Include(i => i.LabRoom) // Cần include để lọc theo Manager
+            .AsQueryable();
+
+        // 2. Lọc theo năm
+        query = query.Where(i => i.CreatedAt.Year == year);
+
+        // 3. Lọc theo quyền Manager (nếu có)
+        // Nếu managerId là null, có nghĩa là Admin đang xem và sẽ lấy tất cả
+        if (managerId.HasValue)
+        {
+            query = query.Where(i => i.LabRoom.MainManagerId == managerId.Value);
+        }
+
+        // 4. Thực hiện GroupBy theo tháng và Count
+        var dbResults = await query
+            .GroupBy(i => i.CreatedAt.Month) // Nhóm theo thuộc tính Month của DateTime
+            .Select(g => new MonthlyIncidentCount
+            {
+                Month = g.Key,      // Key chính là tháng (1-12)
+                Count = g.Count()   // Đếm số lượng phần tử trong mỗi nhóm
+            })
+            .ToListAsync(token);
+
+        // 5. Hoàn thiện kết quả: Đảm bảo trả về đủ 12 tháng, kể cả những tháng có count = 0
+        var allMonths = Enumerable.Range(1, 12);
+        var fullStats = from month in allMonths
+                        join dbResult in dbResults on month equals dbResult.Month into monthGroup
+                        from item in monthGroup.DefaultIfEmpty()
+                        select new MonthlyIncidentCount
+                        {
+                            Month = month,
+                            Count = item?.Count ?? 0
+                        };
+
+        return fullStats;
+    }
+
+    public async Task<int> GetUnresolvedCountAsync(Guid? managerId, CancellationToken token)
+    {
+        var query = dbContext.Incidents.Where(i => !i.IsDeleted && !i.IsResolved);
+        if (managerId.HasValue)
+            query = query.Where(i => i.LabRoom.MainManagerId == managerId.Value);
+        return await query.CountAsync(token);
+    }
+
+    public async Task<IEnumerable<StatItem>> GetStatsByTypeAsync(Guid? managerId, int lastDays, CancellationToken token)
+    {
+        var dateLimit = DateTime.UtcNow.AddDays(-lastDays);
+        var query = dbContext.Incidents.Where(i => !i.IsDeleted && i.CreatedAt >= dateLimit);
+        if (managerId.HasValue)
+            query = query.Where(i => i.LabRoom.MainManagerId == managerId.Value);
+
+        return await query.GroupBy(i => i.Type)
+                          .Select(g => new StatItem { Label = g.Key.ToString(), Count = g.Count() })
+                          .ToListAsync(token);
+    }
+
+    public async Task<IEnumerable<StatItem>> GetStatsByImportanceAsync(Guid? managerId, int lastDays, CancellationToken token)
+    {
+        var dateLimit = DateTime.UtcNow.AddDays(-lastDays);
+        var query = dbContext.Incidents.Where(i => !i.IsDeleted && i.CreatedAt >= dateLimit);
+        if (managerId.HasValue)
+            query = query.Where(i => i.LabRoom.MainManagerId == managerId.Value);
+
+        return await query.GroupBy(i => i.ImportanceLevel)
+                          .Select(g => new StatItem { Label = g.Key.ToString(), Count = g.Count() })
+                          .ToListAsync(token);
+    }
+
+    public async Task<IEnumerable<StatItem>> GetTopProblematicLabsAsync(Guid? managerId, int lastDays, int top, CancellationToken token)
+    {
+        var dateLimit = DateTime.UtcNow.AddDays(-lastDays);
+        var query = dbContext.Incidents.Where(i => !i.IsDeleted && i.CreatedAt >= dateLimit);
+        if (managerId.HasValue)
+            query = query.Where(i => i.LabRoom.MainManagerId == managerId.Value);
+
+        return await query.GroupBy(i => i.LabRoom.LabName)
+                          .Select(g => new StatItem { Label = g.Key, Count = g.Count() })
+                          .OrderByDescending(x => x.Count)
+                          .Take(top)
+                          .ToListAsync(token);
     }
 }

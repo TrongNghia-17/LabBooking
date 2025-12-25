@@ -44,5 +44,7 @@ namespace LabBooking.Application.Features.BookingChangeRequest.Dtos
         public Guid LabRoomId { get; set; }
         public RequestType RequestType { get; set; }
         public string? OriginalOverriddenSlotsJson { get; set; }
+
+        public string? Reason { get; set; }
     }
 }

@@ -28,7 +28,7 @@ public class CreateRoomMaintainScheduleCommandHandler(
         if (labRoom.MainManagerId != currentUserId)
         {
             logger.LogWarning("User {UserId} cố gắng tạo lịch bảo trì cho Lab {LabId} nhưng không phải là quản lý.", currentUserId, request.LabRoomId);
-            throw new ForbidException("Bạn không có quyền tạo lịch bảo trì cho phòng Lab này vì bạn không phải là người quản lý nó.");
+            throw new ForbiddenAccessException("Bạn không có quyền tạo lịch bảo trì cho phòng Lab này vì bạn không phải là người quản lý nó.");
         }
 
         logger.LogInformation("Đang tạo một RoomMaintainSchedule mới cho LabRoom {LabRoomId} bởi Manager {ManagerId}", request.LabRoomId, currentUserId);

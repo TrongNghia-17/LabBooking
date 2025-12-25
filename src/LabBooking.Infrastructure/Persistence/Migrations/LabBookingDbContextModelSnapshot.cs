@@ -70,6 +70,9 @@ namespace LabBooking.Application.Migrations
                     b.Property<Guid?>("ProjectId")
                         .HasColumnType("uuid");
 
+                    b.Property<string>("QrCodeString")
+                        .HasColumnType("text");
+
                     b.Property<int?>("Status")
                         .HasColumnType("integer");
 
@@ -315,14 +318,22 @@ namespace LabBooking.Application.Migrations
                     b.Property<DateTime?>("AcceptedTime")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<Guid?>("BookingId")
+                    b.Property<string>("BookingCode")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<Guid?>("ManagerId")
                         .HasColumnType("uuid");
 
-                    b.Property<Guid?>("HandledById")
-                        .HasColumnType("uuid");
+                    b.Property<string>("ManagerNote")
+                        .HasColumnType("text");
 
-                    b.Property<Guid>("LabRoomId")
-                        .HasColumnType("uuid");
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateOnly>("RequestDate")
+                        .HasColumnType("date");
 
                     b.Property<DateTime>("RequestTime")
                         .HasColumnType("timestamp with time zone");
@@ -330,19 +341,15 @@ namespace LabBooking.Application.Migrations
                     b.Property<Guid>("RequestedById")
                         .HasColumnType("uuid");
 
-                    b.Property<int>("Status")
-                        .HasColumnType("integer");
+                    b.Property<Guid>("SlotId")
+                        .HasColumnType("uuid");
 
-                    b.Property<int>("Type")
+                    b.Property<int>("Status")
                         .HasColumnType("integer");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("BookingId");
-
-                    b.HasIndex("HandledById");
-
-                    b.HasIndex("LabRoomId");
+                    b.HasIndex("ManagerId");
 
                     b.HasIndex("RequestedById");
 
@@ -405,6 +412,9 @@ namespace LabBooking.Application.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("CreatedBy")
                         .HasColumnType("uuid");
 
                     b.Property<string>("Description")
@@ -486,12 +496,18 @@ namespace LabBooking.Application.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<string>("Description")
                         .IsRequired()
                         .HasColumnType("text");
 
                     b.Property<int>("ImportanceLevel")
                         .HasColumnType("integer");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
 
                     b.Property<bool>("IsResolved")
                         .HasColumnType("boolean");
@@ -505,7 +521,7 @@ namespace LabBooking.Application.Migrations
                     b.Property<DateTime?>("ResolvedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<Guid?>("SlotId")
+                    b.Property<Guid?>("RoomCheckId")
                         .HasColumnType("uuid");
 
                     b.Property<int>("Type")
@@ -517,7 +533,7 @@ namespace LabBooking.Application.Migrations
 
                     b.HasIndex("ReportedById");
 
-                    b.HasIndex("SlotId");
+                    b.HasIndex("RoomCheckId");
 
                     b.ToTable("Incidents");
                 });
@@ -716,6 +732,50 @@ namespace LabBooking.Application.Migrations
                     b.HasIndex("UserId");
 
                     b.ToTable("RefreshTokens");
+                });
+
+            modelBuilder.Entity("LabBooking.Domain.Entities.RoomCheck", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CheckedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("GuardId")
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsPassed")
+                        .HasColumnType("boolean");
+
+                    b.Property<Guid>("LabRoomId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Note")
+                        .HasColumnType("text");
+
+                    b.Property<Guid?>("SlotId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Type")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("GuardId");
+
+                    b.HasIndex("LabRoomId");
+
+                    b.HasIndex("SlotId");
+
+                    b.ToTable("RoomChecks");
                 });
 
             modelBuilder.Entity("LabBooking.Domain.Entities.RoomMaintainSchedule", b =>
@@ -1176,19 +1236,9 @@ namespace LabBooking.Application.Migrations
 
             modelBuilder.Entity("LabBooking.Domain.Entities.DoorOpeningRequest", b =>
                 {
-                    b.HasOne("LabBooking.Domain.Entities.Booking", "Booking")
+                    b.HasOne("LabBooking.Domain.Entities.User", "Manager")
                         .WithMany()
-                        .HasForeignKey("BookingId");
-
-                    b.HasOne("LabBooking.Domain.Entities.User", "HandledBy")
-                        .WithMany()
-                        .HasForeignKey("HandledById");
-
-                    b.HasOne("LabBooking.Domain.Entities.LabRoom", "LabRoom")
-                        .WithMany()
-                        .HasForeignKey("LabRoomId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .HasForeignKey("ManagerId");
 
                     b.HasOne("LabBooking.Domain.Entities.User", "RequestedBy")
                         .WithMany()
@@ -1196,11 +1246,7 @@ namespace LabBooking.Application.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.Navigation("Booking");
-
-                    b.Navigation("HandledBy");
-
-                    b.Navigation("LabRoom");
+                    b.Navigation("Manager");
 
                     b.Navigation("RequestedBy");
                 });
@@ -1268,15 +1314,15 @@ namespace LabBooking.Application.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("LabBooking.Domain.Entities.Slot", "Slot")
+                    b.HasOne("LabBooking.Domain.Entities.RoomCheck", "RoomCheck")
                         .WithMany()
-                        .HasForeignKey("SlotId");
+                        .HasForeignKey("RoomCheckId");
 
                     b.Navigation("LabRoom");
 
                     b.Navigation("ReportedBy");
 
-                    b.Navigation("Slot");
+                    b.Navigation("RoomCheck");
                 });
 
             modelBuilder.Entity("LabBooking.Domain.Entities.IncidentEquipment", b =>
@@ -1357,6 +1403,31 @@ namespace LabBooking.Application.Migrations
                         .IsRequired();
 
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("LabBooking.Domain.Entities.RoomCheck", b =>
+                {
+                    b.HasOne("LabBooking.Domain.Entities.User", "Guard")
+                        .WithMany()
+                        .HasForeignKey("GuardId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("LabBooking.Domain.Entities.LabRoom", "LabRoom")
+                        .WithMany()
+                        .HasForeignKey("LabRoomId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("LabBooking.Domain.Entities.Slot", "Slot")
+                        .WithMany()
+                        .HasForeignKey("SlotId");
+
+                    b.Navigation("Guard");
+
+                    b.Navigation("LabRoom");
+
+                    b.Navigation("Slot");
                 });
 
             modelBuilder.Entity("LabBooking.Domain.Entities.RoomMaintainSchedule", b =>

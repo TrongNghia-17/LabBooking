@@ -1,5 +1,5 @@
 ﻿namespace LabBooking.Domain.Exceptions;
 
-public class ForbidException(string message) : Exception(message)
+public class ForbiddenAccessException(string message) : Exception(message)
 {
 }

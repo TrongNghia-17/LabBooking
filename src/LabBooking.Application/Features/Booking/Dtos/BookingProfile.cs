@@ -27,6 +27,7 @@ namespace LabBooking.Application.Features.Booking.Dtos
                 .ForMember(dest => dest.ExternalEquipments, opt => opt.MapFrom(src => src.ExternalEquipments));
 
 
+
             // =========================================================
             // 2. KHAI BÁO CÁC MAP CON (BẮT BUỘC PHẢI CÓ)
             // =========================================================
@@ -50,6 +51,16 @@ namespace LabBooking.Application.Features.Booking.Dtos
             CreateMap<Domain.Entities.Booking, BookingHistoryResponse>();
             CreateMap<LabRoom, BookingHistoryLabDto>();
             CreateMap<BookingSlot, BookingHistorySlotDto>();
+
+            // -----Nghia------
+            CreateMap<Domain.Entities.Booking, BookingLookupDto>()
+               .ForMember(dest => dest.Id, opt => opt.MapFrom(src => src.Id))
+
+               // Map Code: Ưu tiên lấy QrCodeString, nếu null thì lấy Id
+               .ForMember(dest => dest.BookingCode, opt => opt.MapFrom(src => src.QrCodeString ?? src.Id.ToString()))
+
+               // Map LabName: Check null an toàn
+               .ForMember(dest => dest.LabName, opt => opt.MapFrom(src => src.LabRoom != null ? src.LabRoom.LabName : "Phòng không xác định"));
         }
     }
 }

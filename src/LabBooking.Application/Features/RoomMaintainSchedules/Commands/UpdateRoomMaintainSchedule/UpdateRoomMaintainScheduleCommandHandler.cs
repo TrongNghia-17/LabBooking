@@ -31,7 +31,7 @@ public class UpdateRoomMaintainScheduleCommandHandler(
         if (labRoom.MainManagerId != currentUserId)
         {
             logger.LogWarning("User {UserId} cố gắng update lịch {ScheduleId} nhưng không phải là quản lý của Lab {LabId}.", currentUserId, request.Id, labRoom.Id);
-            throw new ForbidException("Bạn không có quyền cập nhật lịch bảo trì này vì bạn không quản lý phòng Lab tương ứng.");
+            throw new ForbiddenAccessException("Bạn không có quyền cập nhật lịch bảo trì này vì bạn không quản lý phòng Lab tương ứng.");
         }
 
         if (scheduleToUpdate.RoomMaintainStatus == RoomMaintainStatus.Done)

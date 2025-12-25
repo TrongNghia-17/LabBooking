@@ -15,17 +15,36 @@ public class GetAllMaintainSchedulesQueryHandler(
         var userId = currentUserService.UserId
             ?? throw new UnauthorizedAccessException("Bạn cần đăng nhập.");
 
-        // Gọi Repository với tham số phân trang
-        var (schedules, totalCount) = await repository.GetByManagerIdAsync(
-            userId,
-            request.FromDate,
-            request.ToDate,
-            request.Status,
-            request.SortBy,
-            request.IsDescending,
-            request.PageNumber, // Truyền xuống
-            request.PageSize,   // Truyền xuống
-            cancellationToken);
+        IEnumerable<EquipmentMaintainSchedule> schedules;
+        int totalCount;
+
+        if (currentUserService.Roles.Contains(Roles.Admin))
+        {
+            // Nếu là Admin, gọi phương thức GetAllAsync để lấy tất cả lịch
+            (schedules, totalCount) = await repository.GetAllAsync(
+                request.FromDate,
+                request.ToDate,
+                request.Status,
+                request.SortBy,
+                request.IsDescending,
+                request.PageNumber,
+                request.PageSize,
+                cancellationToken);
+        }
+        else
+        {
+            // Nếu không phải Admin (mặc định là Manager), giữ nguyên logic cũ
+            (schedules, totalCount) = await repository.GetByManagerIdAsync(
+                userId,
+                request.FromDate,
+                request.ToDate,
+                request.Status,
+                request.SortBy,
+                request.IsDescending,
+                request.PageNumber,
+                request.PageSize,
+                cancellationToken);
+        }
 
         // Map sang DTO
         var dtos = mapper.Map<IEnumerable<EquipmentMaintainScheduleResponse>>(schedules);

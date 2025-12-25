@@ -18,6 +18,12 @@ namespace LabBooking.API.Controllers
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<ActionResult<IEnumerable<BookingSlotResponse>>> GetAll([FromQuery] GetAllUnavailableSlotsQuery query)
         {
+            var userIdString = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            if (!Guid.TryParse(userIdString, out var userId))
+            {
+                return Unauthorized();
+            }
+            query.CurrentUserId = userId;
             var slots = await mediator.Send(query);
             return Ok(slots);
         }

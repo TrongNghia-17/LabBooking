@@ -34,9 +34,9 @@ public class GoogleLoginCommandHandler(
         else if (googlePayload.Email.EndsWith("@fe.edu.vn", StringComparison.OrdinalIgnoreCase))
             userRole = "Lecturer";
         else if (googlePayload.Email.EndsWith("@gmail.com", StringComparison.OrdinalIgnoreCase))
-            userRole = "Manager";
+            userRole = "Student";
         else
-            throw new ForbidException("Email domain is not allowed.");
+            throw new ForbiddenAccessException("Email domain is not allowed.");
 
         // 3. Check the campus
         //var campusInfo = googlePayload.FamilyName;

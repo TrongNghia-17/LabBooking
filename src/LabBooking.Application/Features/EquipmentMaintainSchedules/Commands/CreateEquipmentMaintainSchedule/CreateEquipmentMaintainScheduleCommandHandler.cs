@@ -28,6 +28,7 @@ public class CreateEquipmentMaintainScheduleCommandHandler(
         schedule.EndTime = schedule.EndTime.ToUniversalTime();
         schedule.Id = Guid.NewGuid();
         schedule.Status = MaintenanceStatus.NotYet;
+        schedule.CreatedBy = currentUserId;
 
         var equipmentMap = new Dictionary<Guid, Equipment>();
 
@@ -45,7 +46,7 @@ public class CreateEquipmentMaintainScheduleCommandHandler(
             if (labRoom?.MainManagerId != currentUserId)
             {
                 logger.LogWarning("Security: User {UserId} cố gắng bảo trì thiết bị {EqId} nhưng không có quyền.", currentUserId, eqId);
-                throw new ForbidException($"Không có quyền với thiết bị {equipment.EquipmentName}.");
+                throw new ForbiddenAccessException($"Không có quyền với thiết bị {equipment.EquipmentName}.");
             }
 
             // Tạo dòng chi tiết

@@ -1,128 +1,147 @@
-﻿using LabBooking.Domain.Enums;
-using StackExchange.Redis;
+﻿using LabBooking.Application.Features.DoorRequests.Dtos;
+using LabBooking.Domain.Enums;
 
 namespace LabBooking.Infrastructure.Repositories;
 
-internal class DoorRequestRepository(LabBookingDbContext dbContext, INotificationRepository notificationRepo) : IDoorRequestRepository
+internal class DoorRequestRepository(LabBookingDbContext dbContext) : IDoorRequestRepository
 {
-    // 1. Tạo yêu cầu mới
-    public async Task CreateAsync(DoorOpeningRequest request, CancellationToken token)
+    public async Task<Guid> AddAsync(DoorOpeningRequest entity)
     {
-        var pushQueue = new List<PushNotificationData>();
+        await dbContext.DoorOpeningRequests.AddAsync(entity);
+        await dbContext.SaveChangesAsync();
+        return entity.Id;
+    }
 
-        // 1. Lấy tên phòng Lab để nội dung thông báo rõ ràng hơn
-        var labName = await dbContext.LabRooms
-            .Where(l => l.Id == request.LabRoomId)
-            .Select(l => l.LabName)
-            .FirstOrDefaultAsync(token) ?? "Phòng Lab";
+    public async Task<bool> HasPendingRequestAsync(
+        string bookingCode,
+        DateOnly requestDate,
+        Guid slotId)
+    {
+        return await dbContext.DoorOpeningRequests
+            .AnyAsync(x =>
+                x.BookingCode == bookingCode &&
+                x.RequestDate == requestDate &&
+                x.SlotId == slotId &&
+                x.Status == DoorRequestStatus.Pending);
+    }
 
-        await dbContext.DoorOpeningRequests.AddAsync(request, token);
+    public async Task<DoorOpeningRequest?> GetByIdAsync(Guid id)
+    {
+        return await dbContext.DoorOpeningRequests
+            .AsNoTracking()
+            .FirstOrDefaultAsync(x => x.Id == id);
+    }
+    public async Task<DoorOpeningRequest?> GetByIdWithUserAsync(Guid id)
+    {
+        return await dbContext.DoorOpeningRequests
+            .AsNoTracking()
+            .Include(x => x.RequestedBy)
+            .Include(x => x.Slot)
+            .Include(x => x.Manager)
+            .FirstOrDefaultAsync(x => x.Id == id);
+    }
 
-        var guardRoleName = "SecurityGuard";
 
-        var guardIds = await (from user in dbContext.Users
-                              join userRole in dbContext.UserRoles on user.Id equals userRole.UserId
-                              join role in dbContext.Roles on userRole.RoleId equals role.Id
-                              where role.Name == guardRoleName
-                              select user.Id)
-                                 .ToListAsync(token);
+    public async Task DeleteAsync(DoorOpeningRequest request)
+    {
+        dbContext.DoorOpeningRequests.Remove(request);
+        await dbContext.SaveChangesAsync();
+    }
 
-        if (guardIds.Any())
+    public async Task<(IEnumerable<DoorOpeningRequest> Items, int TotalCount)> GetPagedListAsync(
+        Guid? managerId,      // Nếu có giá trị -> Lọc theo Manager
+        Guid? requestedById,  // Nếu có giá trị -> Lọc theo Người tạo
+        string? searchPhrase,
+        int pageSize,
+        int pageNumber,
+        string? sortBy,
+        SortDirection sortDirection,
+        DateOnly? filterDate,
+        DoorRequestStatus? filterStatus, // Trạng thái cụ thể (Pending/Approved...)
+        bool? isHistory,                 // [MỚI] True: Lấy (Approved + Rejected), False: Lấy Pending
+        CancellationToken cancellationToken)
+    {
+        // 1. Base Query
+        var baseQuery = dbContext.DoorOpeningRequests
+            .Include(x => x.RequestedBy)
+            .Include(x => x.Manager)
+            .Include(x => x.Slot)
+            .AsNoTracking();
+
+        // 2. PHÂN QUYỀN DỮ LIỆU (QUAN TRỌNG)
+        if (managerId.HasValue)
         {
-            var title = "🔑 Yêu cầu mở cửa mới";
-            var message = $"Có yêu cầu mở cửa tại {labName}. Vui lòng kiểm tra.";
+            // Nếu là Manager xem -> Chỉ lấy request thuộc về manager này
+            baseQuery = baseQuery.Where(r => r.ManagerId == managerId.Value);
+        }
+        else if (requestedById.HasValue)
+        {
+            // Nếu là Student/Lecturer xem -> Chỉ lấy request của chính họ
+            baseQuery = baseQuery.Where(r => r.RequestedById == requestedById.Value);
+        }
 
-            foreach (var guardId in guardIds)
+        // 3. Xử lý logic "Lịch sử" vs "Đang xử lý" (Nâng cao)
+        if (filterStatus.HasValue)
+        {
+            // Nếu chọn cụ thể 1 status
+            baseQuery = baseQuery.Where(r => r.Status == filterStatus.Value);
+        }
+        else if (isHistory.HasValue)
+        {
+            if (isHistory.Value == true)
             {
-                var (_, pushData) = notificationRepo.PrepareNotification(
-                    guardId,
-                    title,
-                    message,
-                    "DOOR_OPENING_REQUEST",
-                    new { requestId = request.Id, labId = request.LabRoomId }
-                );
-
-                pushQueue.Add(pushData);
+                // Lịch sử = Đã duyệt HOẶC Đã từ chối (Khác Pending)
+                baseQuery = baseQuery.Where(r => r.Status != DoorRequestStatus.Pending);
+            }
+            else
+            {
+                // Đang xử lý = Pending
+                baseQuery = baseQuery.Where(r => r.Status == DoorRequestStatus.Pending);
             }
         }
-        await dbContext.SaveChangesAsync(token);
 
-        notificationRepo.RunPushNotificationTask(pushQueue);
+        // 4. Tìm kiếm
+        if (!string.IsNullOrWhiteSpace(searchPhrase))
+        {
+            var lowerSearchPhrase = searchPhrase.ToLower();
+            baseQuery = baseQuery.Where(r =>
+                r.BookingCode.ToLower().Contains(lowerSearchPhrase) ||
+                r.Reason.ToLower().Contains(lowerSearchPhrase));
+        }
+
+        // 5. Lọc theo ngày
+        if (filterDate.HasValue)
+        {
+            baseQuery = baseQuery.Where(r => DateOnly.FromDateTime(r.RequestTime) == filterDate.Value);
+        }
+
+        // 6. Sắp xếp
+        baseQuery = sortBy switch
+        {
+            nameof(DoorRequestDto.BookingCode) => sortDirection == SortDirection.Ascending
+                ? baseQuery.OrderBy(r => r.BookingCode)
+                : baseQuery.OrderByDescending(r => r.BookingCode),
+            nameof(DoorRequestDto.Status) => sortDirection == SortDirection.Ascending
+                ? baseQuery.OrderBy(r => r.Status)
+                : baseQuery.OrderByDescending(r => r.Status),
+            _ => sortDirection == SortDirection.Ascending
+                ? baseQuery.OrderBy(r => r.RequestTime)
+                : baseQuery.OrderByDescending(r => r.RequestTime)
+        };
+
+        // 7. Phân trang
+        var totalCount = await baseQuery.CountAsync(cancellationToken);
+        var items = await baseQuery
+            .Skip(pageSize * (pageNumber - 1))
+            .Take(pageSize)
+            .ToListAsync(cancellationToken);
+
+        return (items, totalCount);
     }
 
-    // 2. Check Spam: User này có đang treo yêu cầu nào ở phòng này không?
-    public async Task<bool> HasPendingRequestAsync(Guid userId, Guid labRoomId, CancellationToken token)
-    {
-        return await dbContext.DoorOpeningRequests
-            .AnyAsync(r => r.RequestedById == userId
-                        && r.LabRoomId == labRoomId
-                        && r.Status == DoorRequestStatus.Pending, token);
-    }
-
-    // 3. Lấy danh sách cho Bảo vệ xem (Kèm thông tin Sinh viên)
-    public async Task<IEnumerable<DoorOpeningRequest>> GetPendingRequestsForGuardAsync(CancellationToken token)
-    {
-        return await dbContext.DoorOpeningRequests
-            .Include(r => r.LabRoom)      // Lấy tên phòng
-            .Include(r => r.RequestedBy)  // Lấy tên & MSSV người yêu cầu
-            .Where(r => r.Status == DoorRequestStatus.Pending)
-            .OrderBy(r => r.RequestTime)  // Ai gọi trước hiện trước
-            .ToListAsync(token);
-    }
-
-    public async Task<DoorOpeningRequest?> GetByIdAsync(Guid id, CancellationToken token)
-    {
-        return await dbContext.DoorOpeningRequests
-            .FirstOrDefaultAsync(x => x.Id == id, token);
-    }
-
-    // 2. Cập nhật (Update) xuống DB
-    public async Task UpdateAsync(DoorOpeningRequest request, CancellationToken token)
+    public async Task UpdateAsync(DoorOpeningRequest request)
     {
         dbContext.DoorOpeningRequests.Update(request);
-        await dbContext.SaveChangesAsync(token);
+        await dbContext.SaveChangesAsync();
     }
-    public async Task<IEnumerable<DoorOpeningRequest>> GetHistoryAsync(
-    Guid currentUserId,
-    bool canViewAll,
-    Guid? roomId,
-    DoorRequestStatus? status,
-    DateTime? from,
-    DateTime? to,
-    CancellationToken token)
-    {
-        var query = dbContext.DoorOpeningRequests
-            .AsNoTracking()
-            .Include(x => x.LabRoom)      // Lấy tên phòng
-            .Include(x => x.RequestedBy)  // Lấy tên sinh viên
-            .Include(x => x.HandledBy)    // Lấy tên bảo vệ
-            .AsQueryable();
-
-        // 1. PHÂN QUYỀN DỮ LIỆU
-        if (!canViewAll)
-        {
-            // Nếu không phải Bảo vệ/Admin -> Chỉ lấy cái do chính mình tạo
-            query = query.Where(x => x.RequestedById == currentUserId);
-        }
-        // Nếu là Bảo vệ (canViewAll = true) -> Không filter dòng trên -> Xem hết
-
-        // 2. CÁC BỘ LỌC BỔ SUNG
-        if (roomId.HasValue)
-            query = query.Where(x => x.LabRoomId == roomId.Value);
-
-        if (status.HasValue)
-            query = query.Where(x => x.Status == status.Value);
-
-        if (from.HasValue)
-            query = query.Where(x => x.RequestTime >= from.Value.ToUniversalTime()); // Nhớ UTC
-
-        if (to.HasValue)
-            query = query.Where(x => x.RequestTime <= to.Value.ToUniversalTime());
-
-        // 3. SẮP XẾP (Mới nhất lên đầu)
-        query = query.OrderByDescending(x => x.RequestTime);
-
-        return await query.ToListAsync(token);
-    }
-
 }

@@ -23,7 +23,7 @@ namespace LabBooking.Application.Features.RoomMaintainSchedules.Commands.UpdateS
             var labRoom = await labRoomRepository.GetByIdAsync(schedule.LabRoomId, cancellationToken);
             if (labRoom == null || labRoom.MainManagerId != currentUserId)
             {
-                throw new ForbidException("Không có quyền cập nhật trạng thái lịch bảo trì này.");
+                throw new ForbiddenAccessException("Không có quyền cập nhật trạng thái lịch bảo trì này.");
             }
 
             // 4. Logic nghiệp vụ chuyển trạng thái

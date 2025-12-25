@@ -242,6 +242,32 @@ namespace LabBooking.Infrastructure.Repositories
                 .ToListAsync();
         }
 
+        public async Task<List<Booking>> GetHistoryBookingsAsync(Guid? userId)
+        {
+            var query = dbContext.Bookings
+                .Include(b => b.LabRoom)             // Lấy tên phòng
+                .Include(b => b.Slots)               // Lấy các slot đã chọn
+                .ThenInclude(s => s.Slot)            // Lấy chi tiết giờ (Ca 1: 7h-9h...)
+                .Include(b => b.BookingPriorityDetail) // Lấy lý do ưu tiên (quan trọng để duyệt)
+                .Include(b => b.Project)             // Lấy tên dự án
+                .Include(b => b.Course)              // Lấy tên môn học
+                .Include(b => b.ExternalEquipments)
+                .Include(b => b.OutSideGuests).AsQueryable();      //.Include(b => b.CreatedBy)         // (Optional) Nếu bạn có relationship với bảng User để hiện tên người đặt
+                                                                   //.Where(b => b.Status == BookingStatus.Pending);
+
+            // Nếu có truyền LabId thì lọc, không thì lấy hết
+            if (userId.HasValue)
+            {
+                query = query.Where(b => b.LabRoom.MainManagerId == userId);
+            }
+
+            // Sắp xếp: Đơn ưu tiên (VIP) lên đầu, hoặc đơn mới nhất lên đầu
+            return await query
+                .OrderByDescending(b => b.Priority) // Đơn Priority (1) lên trước Standard (2) (Lưu ý: Check lại Enum của bạn, số nào nhỏ hơn hay lớn hơn là VIP)
+                .ThenBy(b => b.CreatedAt)           // Cùng mức ưu tiên thì đơn nào đến trước xử trước
+                .ToListAsync();
+        }
+
         public async Task<Booking?> GetBookingByIdWithSlotsAsync(Guid id)
         {
             return await dbContext.Bookings
@@ -522,6 +548,8 @@ namespace LabBooking.Infrastructure.Repositories
             // 2. DUYỆT ĐƠN MỚI
             if (dbContext.Entry(booking).State == EntityState.Detached) dbContext.Bookings.Attach(booking);
             booking.Status = BookingStatus.Approved;
+            booking.ApprovedAt = DateTime.UtcNow;
+            booking.QrCodeString = GenerateBookingCode(); // Tạo mã QR mới khi duyệt
             foreach (var slot in booking.Slots) slot.Status = BookingSlotStatus.Active;
 
             // 3. THÔNG BÁO CHỦ ĐƠN
@@ -580,6 +608,15 @@ namespace LabBooking.Infrastructure.Repositories
                 // _logger.LogError(ex, "Error at GetBookedLabIdsAsync");
                 throw; // Quan trọng: giữ stack trace
             }
+        }
+        private string GenerateBookingCode(int length = 8)
+        {
+            // Tập hợp các ký tự cho phép (bỏ các ký tự dễ gây nhầm lẫn như I, O nếu muốn)
+            const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+            var random = new Random();
+
+            return new string(Enumerable.Repeat(chars, length)
+                .Select(s => s[random.Next(s.Length)]).ToArray());
         }
 
         public async Task<List<Booking>> GetHistoryByUserIdAsync(Guid userId)
@@ -724,6 +761,46 @@ namespace LabBooking.Infrastructure.Repositories
                 )
                 .OrderByDescending(b => b.CreatedAt)    // Mới nhất lên đầu
                 .ToListAsync(cancellationToken);
+        }
+
+        //------NghiaHT-------//
+
+        public async Task<(bool Exists, Guid? ManagerId)> GetBookingAndManagerInfoAsync(string bookingCode)
+        {
+            // Tìm Booking kèm thông tin phòng Lab
+            var booking = await dbContext.Bookings
+                .Include(b => b.LabRoom)
+                .AsNoTracking()
+                // Check cả QRCode và ID cho chắc chắn
+                .FirstOrDefaultAsync(b => b.QrCodeString == bookingCode || b.Id.ToString() == bookingCode);
+
+            if (booking == null) return (false, null);
+
+            // Lấy ID quản lý từ phòng Lab. 
+            // Giả sử trong LabRoom bạn đặt tên là LabManagerId, nếu tên khác hãy sửa dòng dưới
+            var managerId = booking.LabRoom?.MainManagerId;
+
+            // Fallback: Nếu LabRoom chưa gán Manager, có thể managerId sẽ null -> Cần xử lý ở Handler
+            return (true, managerId);
+        }
+
+        public async Task<bool> IsBookingOwnedByUserAsync(string bookingCode, Guid userId)
+        {
+            return await dbContext.Bookings
+               .AnyAsync(b => (b.QrCodeString == bookingCode || b.Id.ToString() == bookingCode)
+                              && b.CreatedById == userId);
+        }
+
+        public async Task<Booking?> GetByCodeAsync(string code, CancellationToken cancellationToken)
+        {
+            return await dbContext.Bookings
+                .AsNoTracking()
+                .Include(b => b.LabRoom)
+                    .ThenInclude(l => l.MainManager)
+                .Include(b => b.Slots)
+                    .ThenInclude(bs => bs.Slot)
+                .Include(b => b.CreatedBy)
+                .FirstOrDefaultAsync(b => b.QrCodeString == code, cancellationToken);
         }
     }
 }
