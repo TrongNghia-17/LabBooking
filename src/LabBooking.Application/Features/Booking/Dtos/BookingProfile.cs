@@ -60,19 +60,7 @@ namespace LabBooking.Application.Features.Booking.Dtos
                .ForMember(dest => dest.BookingCode, opt => opt.MapFrom(src => src.QrCodeString ?? src.Id.ToString()))
 
                // Map LabName: Check null an toàn
-               .ForMember(dest => dest.LabName, opt => opt.MapFrom(src => src.LabRoom != null ? src.LabRoom.LabName : "Phòng không xác định"))
-
-               // Map Date: Lấy ngày từ Slot đầu tiên, hoặc lấy ngày tạo
-               .ForMember(dest => dest.Date, opt => opt.MapFrom(src =>
-                   src.Slots != null && src.Slots.Any()
-                       ? src.Slots.First().Date
-                       : DateOnly.FromDateTime(src.CreatedAt ?? DateTime.UtcNow)))
-
-               // Map TimeSlot: Format chuỗi giờ từ Slot đầu tiên
-               .ForMember(dest => dest.TimeSlot, opt => opt.MapFrom(src =>
-                   src.Slots != null && src.Slots.Any() && src.Slots.First().Slot != null
-                       ? $"{src.Slots.First().Slot.StartTime} - {src.Slots.First().Slot.EndTime}"
-                       : "N/A"));
+               .ForMember(dest => dest.LabName, opt => opt.MapFrom(src => src.LabRoom != null ? src.LabRoom.LabName : "Phòng không xác định"));
         }
     }
 }
